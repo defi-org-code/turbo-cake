@@ -59,6 +59,8 @@ class Strategy extends TxManager {
 		this.account = null;
 		this.redisClient = null;
 
+		this.poolsInfo = {}
+
 		this.prevUpdateTime = Date.now() //- MIN_SEC_BETWEEN_REBALANCE * 1000;
 
 		this.influxClient = new Influx('TurboCake', VERSION);
@@ -126,6 +128,11 @@ class Strategy extends TxManager {
 
 	}
 
+	async gettokenRate(addr) {
+		return await this.cakeContract.methods.balanceOf(addr)
+
+	}
+
 	async fetchPools() {
 
 		// TODO: fetch from redis last block and fetch only last missing blocks
@@ -133,20 +140,18 @@ class Strategy extends TxManager {
 
 		// TODO: store on redis
 		let events = await getPastEventsLoop(this.smartchefFactoryContract, 'NewSmartChefContract', this.PAST_EVENTS_N_BLOCKS, blockNum)
+		// let events = await getPastEventsLoop(this.smartchefFactoryContract, 'NewSmartChefContract', 1, 9676518) // 9676510, TODO : remove me dbg only
 
-		let abi
-		let contract
-		let rewardToken
-		let stakedToken
-		let hasUserLimit
+		let symbol
 
 		for (const event of events) {
-			debug(event['returnValues']['smartChef'])
-			abi = await this.fetchAbi(event['returnValues']['smartChef'])
-			contract = this.getContract(abi, event['returnValues']['smartChef'])
-			rewardToken = await contract.methods.rewardToken().call()
-			stakedToken = await contract.methods.stakedToken().call()
-			hasUserLimit = await contract.methods.hasUserLimit().call()
+			let poolAddr = event['returnValues']['smartChef']
+			let abi = await this.fetchAbi(poolAddr)
+			let contract = this.getContract(abi, poolAddr)
+			let rewardToken = await contract.methods.rewardToken().call()
+			let stakedToken = await contract.methods.stakedToken().call()
+			let hasUserLimit = await contract.methods.hasUserLimit().call()
+			let rewardPerBlock = await contract.methods.rewardPerBlock().call()
 
 			debug(`rewardToken=${rewardToken}, stakedToken=${stakedToken}, hasUserLimit=${hasUserLimit}, ${hasUserLimit===true}`)
 
@@ -154,7 +159,18 @@ class Strategy extends TxManager {
 				continue
 			}
 
-			debug(rewardToken, stakedToken)
+			try {
+				contract = this.getContract(await this.fetchAbi(rewardToken), rewardToken)
+				symbol = await contract.methods.symbol().call()
+
+			} catch (e) {
+				debug(`failed to fetch rewardToken (${rewardToken}) symbol: ${e}`)
+				continue
+			}
+
+			debug(symbol, rewardToken, stakedToken)
+
+			this.poolsInfo[poolAddr] = {'rewardToken': rewardToken, 'rewardSymbol': symbol, 'hasUserLimit': hasUserLimit, 'rewardPerBlock': rewardPerBlock, 'abi': abi}
 			// TODO: store redis
 
 		}
