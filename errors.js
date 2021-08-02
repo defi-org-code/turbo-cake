@@ -58,6 +58,18 @@ class GasError extends Error {
 	}
 }
 
+class NotImplementedError extends Error {
+	constructor(msg, ...params) {
+		super(params)
+
+		if (Error.captureStackTrace) {
+			Error.captureStackTrace(this, NotImplementedError)
+		}
+
+		this.name = 'NotImplementedError'
+		this.message = msg
+	}
+}
 
 class FatalError extends Error {
 	constructor(msg, ...params) {

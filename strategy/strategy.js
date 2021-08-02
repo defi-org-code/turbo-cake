@@ -1,10 +1,10 @@
 const Web3 = require('web3');
 const BigNumber = require('bignumber.js');
-const {SMARTCHEF_FACTORY_ADDRESS, VERSION} = require('./params');
-const {SMARTCHEF_FACTORY_ABI} = require('../abis');
+const {SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS, VERSION} = require('./params');
+const {SMARTCHEF_FACTORY_ABI, CAKE_ABI} = require('../abis');
 
 require('dotenv').config();
-const {TokenError, TransactionFailure, InvalidTickerIndex, FatalError, GasError} =  require('../errors');
+const {TransactionFailure, FatalError, GasError, NotImplementedError} =  require('../errors');
 const fetch = require("node-fetch");
 const TxManager = require('./txManager')
 const {getPastEventsLoop} = require('../bscFetcher')
@@ -46,7 +46,7 @@ class Strategy extends TxManager {
 	BLOCKS_PER_DAY = this.SECONDS_PER_DAY / this.AVG_BLOCK_SEC;
 	BLOCKS_PER_YEAR = this.BLOCKS_PER_DAY * 365;
 
-	PAST_EVENTS_N_DAYS = 10;
+	PAST_EVENTS_N_DAYS = 1;
 	PAST_EVENTS_N_BLOCKS = Math.floor(this.PAST_EVENTS_N_DAYS * this.BLOCKS_PER_DAY);
 
 	constructor() {
@@ -74,8 +74,9 @@ class Strategy extends TxManager {
 	}
 
 	async fetchAbi(addr) {
-		const etherscanAbiUrl =  `https://api.bscscan.io/api?module=contract&action=getabi&address=${addr}&apiKey=${process.env.ETHERSCAN_API_KEY}`
-		const data = await fetch(etherscanAbiUrl).then(response => response.json());
+
+		const bscscanAbiUrl =  `https://api.bscscan.com/api?module=contract&action=getabi&address=${addr}&apiKey=${process.env.BSCSCAN_API_KEY}`
+		const data = await fetch(bscscanAbiUrl).then(response => response.json());
 		return JSON.parse(data.result);
 	}
 
@@ -96,7 +97,7 @@ class Strategy extends TxManager {
 
 	async init() {
 
-		this.redisInit();
+		this.redisInit()
 
 		// if (PRODUCTION === true) {
 		//
@@ -109,20 +110,54 @@ class Strategy extends TxManager {
 		// 	});
 		// }
 
-		this.account = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
-		debug(`account address: ${this.account.address}`);
+		this.account = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey())
+		debug(`account address: ${this.account.address}`)
 
-		web3.eth.defaultAccount = BOT_ADDRESS;
+		web3.eth.defaultAccount = BOT_ADDRESS
 
-		this.smartchefFactoryContract = this.getContract(SMARTCHEF_FACTORY_ABI, SMARTCHEF_FACTORY_ADDRESS);
-		await this.fetchPools();
+		this.smartchefFactoryContract = await this.getContract(SMARTCHEF_FACTORY_ABI, SMARTCHEF_FACTORY_ADDRESS)
+		this.cakeContract = await this.getContract(CAKE_ABI, CAKE_ADDRESS)
+
+		await this.fetchPools()
+	}
+
+	async getPoolTvl(addr) {
+		return await this.cakeContract.methods.balanceOf(addr)
 
 	}
 
 	async fetchPools() {
 
-		let events = await getPastEventsLoop(this.smartchefFactoryContract, 'NewSmartChefContract', this.PAST_EVENTS_N_BLOCKS, await web3.eth.getBlockNumber());
-		// TODO: store redis
+		// TODO: fetch from redis last block and fetch only last missing blocks
+		const blockNum = await web3.eth.getBlockNumber()
+
+		// TODO: store on redis
+		let events = await getPastEventsLoop(this.smartchefFactoryContract, 'NewSmartChefContract', this.PAST_EVENTS_N_BLOCKS, blockNum)
+
+		let abi
+		let contract
+		let rewardToken
+		let stakedToken
+		let hasUserLimit
+
+		for (const event of events) {
+			debug(event['returnValues']['smartChef'])
+			abi = await this.fetchAbi(event['returnValues']['smartChef'])
+			contract = this.getContract(abi, event['returnValues']['smartChef'])
+			rewardToken = await contract.methods.rewardToken().call()
+			stakedToken = await contract.methods.stakedToken().call()
+			hasUserLimit = await contract.methods.hasUserLimit().call()
+
+			debug(`rewardToken=${rewardToken}, stakedToken=${stakedToken}, hasUserLimit=${hasUserLimit}, ${hasUserLimit===true}`)
+
+			if (stakedToken !== CAKE_ADDRESS) {
+				continue
+			}
+
+			debug(rewardToken, stakedToken)
+			// TODO: store redis
+
+		}
 
 	}
 
@@ -317,12 +352,7 @@ class Strategy extends TxManager {
 
 		} catch (e) {
 
-			if (e instanceof TokenError) {
-				debug(`failed to init strategy`);
-				this.beforeExit(e);
-			}
-
-			else if (e instanceof GasError) {
+			if (e instanceof GasError) {
 				this.notif.sendDiscord(`${e} pending to gas decrease : ${e.message}`);
 				this.txState = this.TX_STATE.HIGH_GAS;
 			}
