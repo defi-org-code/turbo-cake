@@ -121,10 +121,7 @@ class Strategy extends TxManager {
 
 	async fetchPools() {
 
-		const blockNumber = await web3.eth.getBlockNumber();
-
-		await getPastEventsLoop(this.smartchefFactoryContract, 'NewSmartChefContract',
-			{'address': SMARTCHEF_FACTORY_ADDRESS}, this.PAST_EVENTS_N_BLOCKS, blockNumber);
+		await getPastEventsLoop(this.smartchefFactoryContract, 'NewSmartChefContract', this.PAST_EVENTS_N_BLOCKS, await web3.eth.getBlockNumber());
 
 	}
 
