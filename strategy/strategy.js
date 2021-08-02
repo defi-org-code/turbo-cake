@@ -121,7 +121,8 @@ class Strategy extends TxManager {
 
 	async fetchPools() {
 
-		await getPastEventsLoop(this.smartchefFactoryContract, 'NewSmartChefContract', this.PAST_EVENTS_N_BLOCKS, await web3.eth.getBlockNumber());
+		let events = await getPastEventsLoop(this.smartchefFactoryContract, 'NewSmartChefContract', this.PAST_EVENTS_N_BLOCKS, await web3.eth.getBlockNumber());
+		// TODO: store redis
 
 	}
 
