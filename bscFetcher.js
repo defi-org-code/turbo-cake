@@ -16,13 +16,13 @@ async function getPastEventsLoop(contract, eventName, filterObj, nBlocks, endBlo
 
 			events = events.concat(await contract.getPastEvents(eventName, {filter: filterObj, fromBlock: _fromBlock, toBlock: _toBlock}))
 
-			if (_fromBlock <= exitBlock) {
-				return events
-			}
-
 			_toBlock = _fromBlock - 1
 			_fromBlock = Math.max(exitBlock, _fromBlock-_chunkSize)
 			_chunkSize = chunkSize
+
+			if (_fromBlock <= exitBlock) {
+				return events
+			}
 
 		} catch (e) {
 			console.log(`${e}`)
