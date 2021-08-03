@@ -1,6 +1,9 @@
 const Web3 = require('web3')
 const BigNumber = require('bignumber.js')
-const {SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS, PANCAKESWAP_FACTORY_V2_ADDRESS, VERSION, MAX_TX_FAILURES, DEADLINE_SEC} = require('./params')
+const {SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS,
+	PANCAKESWAP_FACTORY_V2_ADDRESS, VERSION,
+	MAX_TX_FAILURES, DEADLINE_SEC, MIN_SEC_BETWEEN_REBALANCE
+} = require('./params')
 const {SMARTCHEF_FACTORY_ABI, CAKE_ABI, PANCAKESWAP_FACTORY_V2_ABI, BEP_20_ABI} = require('../abis')
 
 require('dotenv').config()
@@ -61,7 +64,7 @@ class Strategy extends TxManager {
 
 		this.poolsInfo = {}
 
-		this.prevUpdateTime = Date.now() //- MIN_SEC_BETWEEN_REBALANCE * 1000
+		this.prevUpdateTime = Date.now() - MIN_SEC_BETWEEN_REBALANCE * 1000
 
 		this.influxClient = new Influx('TurboCake', VERSION)
 
