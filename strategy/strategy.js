@@ -130,9 +130,28 @@ class Strategy extends TxManager {
 
 	}
 
-	async gettokenRate(addr) {
-		return await this.cakeContract.methods.balanceOf(addr)
+	aprToApy(apr, n=365, t=1.0) {
+		return 100 * ((1 + apr / 100 / n) ** (n*t) - 1)
+	}
 
+	async calcApy(rewardsPerBlock, tokenCakeRate, tvl) {
+		const rewardForPeriod = this.BLOCKS_PER_YEAR * rewardsPerBlock
+		const cakeForPeriod = rewardForPeriod * tokenCakeRate * (1 - this.FEE)
+		const apr = this.changePct(tvl, tvl + cakeForPeriod)
+		const apy = this.aprToApy(apr)
+
+		print('apr = {}%, apy = {}%'.format(round(apr, 2), round(apy, 2)))
+
+	}
+
+	async getTokenCakeRate(tokenAddr) {
+		throw NotImplementedError
+	}
+
+	async poolApy(poolAddr) {
+		const poolTvl = this.getPoolTvl(poolAddr)
+		const tokenCakeRate = await this.getTokenCakeRate(poolAddr['rewardToken'])
+		const apy = this.calcApy(this.poolsInfo[poolAddr]['rewardPerBlock'], tokenCakeRate, poolTvl)
 	}
 
 	async fetchListedPairs(filterList, blockNum=null, fetchNBlocks=this.PAST_EVENTS_N_BLOCKS) {
