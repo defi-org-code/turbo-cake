@@ -480,7 +480,6 @@ class Strategy extends TxManager {
 					const poolsApy = this.getPoolsApy()
 					this.policy(poolsApy)
 					break
-
 			}
 
 
@@ -488,11 +487,7 @@ class Strategy extends TxManager {
 			// TODO: web provider rate limit support
 			debug(e)
 
-			if (e instanceof TransactionFailure) {
-				await this.onTxFailure();
-			}
-
-			else if (e instanceof FatalError) {
+			if (e instanceof FatalError) {
 				this.beforeExit(e);
 			}
 
@@ -500,7 +495,9 @@ class Strategy extends TxManager {
 				this.beforeExit(e);
 			}
 		}
+
 	}
+
 }
 
 
