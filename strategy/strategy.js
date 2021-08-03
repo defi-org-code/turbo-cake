@@ -1,6 +1,6 @@
 const Web3 = require('web3');
 const BigNumber = require('bignumber.js');
-const {SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS, VERSION} = require('./params');
+const {SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS, PANCAKESWAP_FACTORY_V2_ADDRESS, VERSION} = require('./params');
 const {SMARTCHEF_FACTORY_ABI, CAKE_ABI} = require('../abis');
 
 require('dotenv').config();
@@ -119,6 +119,7 @@ class Strategy extends TxManager {
 
 		this.smartchefFactoryContract = await this.getContract(SMARTCHEF_FACTORY_ABI, SMARTCHEF_FACTORY_ADDRESS)
 		this.cakeContract = await this.getContract(CAKE_ABI, CAKE_ADDRESS)
+		this.swapFactoryContract = await this.getContract(PANCAKESWAP_FACTORY_V2_ABI, PANCAKESWAP_FACTORY_V2_ADDRESS)
 
 		await this.fetchPools()
 	}
@@ -133,13 +134,63 @@ class Strategy extends TxManager {
 
 	}
 
-	async fetchPools() {
+	async fetchListedPairs(blockNum=null, fetchNBlocks=this.PAST_EVENTS_N_BLOCKS) {
 
 		// TODO: fetch from redis last block and fetch only last missing blocks
-		const blockNum = await web3.eth.getBlockNumber()
+		if (blockNum === null) {
+			blockNum = await web3.eth.getBlockNumber()
+		}
 
 		// TODO: store on redis
-		let events = await getPastEventsLoop(this.smartchefFactoryContract, 'NewSmartChefContract', this.PAST_EVENTS_N_BLOCKS, blockNum)
+		let events = await getPastEventsLoop(this.swapFactoryContract, 'PairCreated', fetchNBlocks, blockNum)
+		// let events = await getPastEventsLoop(this.smartchefFactoryContract, 'NewSmartChefContract', 1, 9676518) // 9676510, TODO : remove me dbg only
+
+		let symbol
+
+		for (const event of events) {
+			let poolAddr = event['returnValues']['smartChef']
+			let abi = await this.fetchAbi(poolAddr)
+			let contract = this.getContract(abi, poolAddr)
+			let rewardToken = await contract.methods.rewardToken().call()
+			let stakedToken = await contract.methods.stakedToken().call()
+			let hasUserLimit = await contract.methods.hasUserLimit().call()
+			let rewardPerBlock = await contract.methods.rewardPerBlock().call()
+
+			debug(`rewardToken=${rewardToken}, stakedToken=${stakedToken}, hasUserLimit=${hasUserLimit}, ${hasUserLimit===true}`)
+
+			if (stakedToken !== CAKE_ADDRESS) {
+				continue
+			}
+
+			try {
+				contract = this.getContract(await this.fetchAbi(rewardToken), rewardToken)
+				symbol = await contract.methods.symbol().call()
+
+			} catch (e) {
+				debug(`failed to fetch rewardToken (${rewardToken}) symbol: ${e}`)
+				continue
+			}
+
+			debug(symbol, rewardToken, stakedToken)
+
+			this.poolsInfo[poolAddr] = {'rewardToken': rewardToken, 'rewardSymbol': symbol, 'hasUserLimit': hasUserLimit, 'rewardPerBlock': rewardPerBlock, 'abi': abi}
+			// TODO: store redis
+
+		}
+
+		const await this.swapFactoryContract.methods.balanceOf(addr)
+
+	}
+
+	async fetchPools(blockNum=null, fetchNBlocks=this.PAST_EVENTS_N_BLOCKS) {
+
+		// TODO: fetch from redis last block and fetch only last missing blocks
+		if (blockNum === null) {
+			blockNum = await web3.eth.getBlockNumber()
+		}
+
+		// TODO: store on redis
+		let events = await getPastEventsLoop(this.smartchefFactoryContract, 'NewSmartChefContract', fetchNBlocks, blockNum)
 		// let events = await getPastEventsLoop(this.smartchefFactoryContract, 'NewSmartChefContract', 1, 9676518) // 9676510, TODO : remove me dbg only
 
 		let symbol
