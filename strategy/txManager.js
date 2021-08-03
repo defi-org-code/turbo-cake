@@ -3,19 +3,13 @@ const Notifications = require('../notifications')
 const debug = (...messages) => console.log(...messages);
 
 
-class TxManager extends GasManager {
+class TxManager {
 
-	TX_STATE = {'IDLE': 0, 'PENDING': 1, 'EXECUTED': 2, 'FAILED': 3, 'HIGH_GAS': 4};
 	account = null
 
 	constructor(web3) {
-		super(web3);
 
-		this.txState = this.TX_STATE.IDLE;
-		this.txCnt = 0;
-		this.txMsg = null;
 		this.web3 = web3;
-
 		this.notif = new Notifications();
 	}
 
@@ -51,19 +45,13 @@ class TxManager extends GasManager {
 
 	}
 
-	async sendSignedTx(self, encodedTx, toAddress) {
-
-		self.txCnt += 1;
+	async sendSignedTx(self, encodedTx, toAddress, maxGasUnits=500000) {
 
 		debug(`sendSignedTx: ${encodedTx}`);
 
-		const gasBidPrice = await this.fastGasPrice();
-
-		console.log(`gasBidPrice: ${gasBidPrice}`);
-
 		let transactionObject = {
 			// gasBidPrice: this.web3.utils.toWei(gasBidPrice, 'Gwei'),
-			gas: 500000,
+			gas: maxGasUnits,
 			data: encodedTx,
 			from: this.account.address,
 			to: toAddress
