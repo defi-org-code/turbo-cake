@@ -127,7 +127,6 @@ class Strategy extends TxManager {
 
 	async getPoolTvl(addr) {
 		return await this.cakeContract.methods.balanceOf(addr)
-
 	}
 
 	aprToApy(apr, n=365, t=1.0) {
@@ -135,16 +134,16 @@ class Strategy extends TxManager {
 	}
 
 	async calcApy(rewardsPerBlock, tokenCakeRate, tvl) {
+
 		const rewardForPeriod = this.BLOCKS_PER_YEAR * rewardsPerBlock
 		const cakeForPeriod = rewardForPeriod * tokenCakeRate * (1 - this.FEE)
 		const apr = this.changePct(tvl, tvl + cakeForPeriod)
-		const apy = this.aprToApy(apr)
 
-		print('apr = {}%, apy = {}%'.format(round(apr, 2), round(apy, 2)))
-
+		return this.aprToApy(apr)
 	}
 
 	async getTokenCakeRate(tokenAddr) {
+		// TODO: swap path
 		throw NotImplementedError
 	}
 
