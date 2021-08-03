@@ -69,6 +69,9 @@ class Strategy extends TxManager {
 			APIKEY: process.env.BINANCE_KEY,
 			APISECRET: process.env.BINANCE_SECRET
 		});
+
+		this.STATE = {'TX_PENDING': 0}
+
 	}
 
 	getContract(contractAbi, contractAddress) {
@@ -150,7 +153,7 @@ class Strategy extends TxManager {
 	async poolApy(poolAddr) {
 		const poolTvl = this.getPoolTvl(poolAddr)
 		const tokenCakeRate = await this.getTokenCakeRate(poolAddr['rewardToken'])
-		const apy = this.calcApy(this.poolsInfo[poolAddr]['rewardPerBlock'], tokenCakeRate, poolTvl)
+		return this.calcApy(this.poolsInfo[poolAddr]['rewardPerBlock'], tokenCakeRate, poolTvl)
 	}
 
 	async fetchListedPairs(filterList, blockNum=null, fetchNBlocks=this.PAST_EVENTS_N_BLOCKS) {
@@ -407,7 +410,6 @@ class Strategy extends TxManager {
 
 		try {
 			await this.init();
-			process.exit() // TODO: remove me
 
 		} catch (e) {
 
@@ -417,13 +419,11 @@ class Strategy extends TxManager {
 			}
 
 			else {
-				debug(`unhandled error`);
-				debug(typeof e)
+				this.notif.sendDiscord(`[ERROR] unhandled error: ${e}`);
 				this.beforeExit(e);
 			}
 		}
 
-		// TODO: for low frequency swap polls set timer instead
 		setInterval(() => this.run(), 1000);
 		setInterval(() => this.positionStats(), 60000);
 	}
@@ -447,73 +447,42 @@ class Strategy extends TxManager {
 
 	beforeExit(e) {
 
-		// this.redisClient.set(`stopExecution${process.env.BOT_ID}`, true, (err, reply) => {
-		// 	if (err) throw err;
-		// 	console.log(reply);
-		// });
-
 		this.notif.sendDiscord(`Terminating process: ${e}`);
 		debug(e.stack);
 		process.exit();
+	}
+
+	async fetchNewPools() {
+
+	}
+
+	getPoolsApy() {
+		throw NotImplementedError
+	}
+
+	policy(poolsApy) {
+		throw NotImplementedError
 	}
 
 	async run() {
 
 		try {
 
-			console.log(`this.txState=${this.txState}`);
+			console.log(`STATE=${this.STATE}`);
 
-			if (!await this.validTxState()) {
-				return
+			switch (this.STATE) {
+
+				case this.STATE.TX_PENDING:
+					return
+
+				default:
+					await this.fetchNewPools()
+					const poolsApy = this.getPoolsApy()
+					this.policy(poolsApy)
+					break
+
 			}
 
-			await this.fetchLastPrice();
-			// await this.safeUpdateLastPrice();
-
-			const tickerIndices = await this.calcTickerIndices();
-
-			console.log(`tickerIndices=${tickerIndices}`);
-
-			if (this.rebalancePosition(tickerIndices)) {
-
-				debug(`position: ${this.position}`);
-
-				this.txState = this.TX_STATE.PENDING;
-				this.updateDeadline();
-
-				let to = this.nftPositionMngContract.options.address;
-				let encodedTx;
-
-				const allowanceToken0 = await this.token0Contract.methods.allowance(this.account.address, this.nftPositionMngContract.options.address).call();
-				const allowanceToken1 = await this.token1Contract.methods.allowance(this.account.address, this.nftPositionMngContract.options.address).call();
-				debug(`allowanceToken0=${allowanceToken0}, allowanceToken1=${allowanceToken1}`);
-
-				const token0Balance = await this.token0Contract.methods.balanceOf(BOT_ADDRESS).call();
-				const token1Balance = await this.token1Contract.methods.balanceOf(BOT_ADDRESS).call();
-
-				debug(`token0Balance=${token0Balance}, token1Balance=${token1Balance}`);
-
-				if (this.position !== null) {
-
-					debug(`withdraw`);
-					encodedTx = this.withdraw();
-
-				} else {
-
-					debug(`mint`);
-					await this.updateMintAmount();
-
-					if ((this.mintAmount0.integerValue().toString() === '0') || (this.mintAmount1.integerValue().toString() === '0')) {
-						this.beforeExit(new FatalError(`zero amount, can not mint new positions: (mintAmount0=${this.mintAmount0}, mintAmount1=${this.mintAmount1})`));
-					}
-
-					encodedTx = this.mint(tickerIndices);
-					this.rebalanceValidate();
-
-				}
-
-				await this.sendSignedTx(this, encodedTx, to);
-			}
 
 		} catch(e) {
 			// TODO: web provider rate limit support
@@ -523,32 +492,13 @@ class Strategy extends TxManager {
 				await this.onTxFailure();
 			}
 
-			else if (e instanceof GasError) {
-				this.notif.sendDiscord(`${e} pending to gas decrease : ${e.message}`);
-				this.txState = this.TX_STATE.HIGH_GAS;
-			}
-
-			else if (e instanceof InvalidTickerIndex) {
-				this.beforeExit(e);
-			}
-
 			else if (e instanceof FatalError) {
 				this.beforeExit(e);
 			}
 
 			else {
-				debug(`--> ${e}`);
-				if ('status' in e) {
-					debug('--status: ', e.status)
-				}
-				if ('message' in e) {
-					debug('--message: ', e.message)
-				}
-
 				this.beforeExit(e);
 			}
-
-			console.log(e)
 		}
 	}
 }
