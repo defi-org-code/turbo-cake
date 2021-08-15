@@ -19,12 +19,9 @@ contract StrategyDelegator is Ownable, ReentrancyGuard, IStrategy {
 	}
 
 	function doHardWork(address strategyAddr, DoHardWorkParams memory params) external onlyOwner nonReentrant {
-//		console.log('strategyAddr: ', strategyAddr);
-		(bool success, bytes memory data) = strategyAddr.delegatecall(
-			abi.encodeWithSignature("_doHardWork(bool,bool)",true,true));
 
-//		(bool success, bytes memory data) = address(strategyAddr).delegatecall(
-//			abi.encodeWithSignature("_doHardWork(bool,bool)",true,true));
+		(bool success, bytes memory data) = strategyAddr.delegatecall(
+			abi.encodeWithSignature("doHardWork((bool,bool,bool,address,address,uint256,uint16,uint16))",params));
 
 		console.log(success);
 		require (success == true, 'doHardWork failed');
@@ -36,7 +33,12 @@ contract StrategyDelegator is Ownable, ReentrancyGuard, IStrategy {
 			amount = IERC20(stakedToken).balanceOf(address(this));
 		}
 
+		if (amount == 0) {
+			return;
+		}
+
 		IERC20(stakedToken).safeApprove(owner(), amount);
 		IERC20(stakedToken).safeTransfer(owner(), amount);
 	}
+
 }

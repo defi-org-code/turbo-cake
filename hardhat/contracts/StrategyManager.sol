@@ -22,7 +22,6 @@ contract StrategyManager is Ownable, ReentrancyGuard, IStrategy {
 //	using SafeBEP20 for IBEP20;
 	using SafeERC20 for IERC20;
 
-	address public stakedPoolAddr = address(0);
 	address public strategy;
 	StrategyDelegator[] public delegators;
 
@@ -30,9 +29,8 @@ contract StrategyManager is Ownable, ReentrancyGuard, IStrategy {
 	event Delegators(address [] delegatorsAddr);
 	event StrategyUpdate(address indexed strategy);
 	event DelegatorsAdded(uint256 nDelegators);
-	event DoHardWork(uint16 startIndex, uint16 endIndex, address stakedPoolAddr);
+	event DoHardWork(uint16 startIndex, uint16 endIndex, address stakedPoolAddr, address newPoolAddr);
 	event TransferToDelegators(address strategy);
-	event StakedPoolAddrUpdate(address stakedPoolAddr);
 
 	constructor() {
 	}
@@ -60,7 +58,7 @@ contract StrategyManager is Ownable, ReentrancyGuard, IStrategy {
 			delegators[i].doHardWork(strategy, params);
 		}
 
-		emit DoHardWork(params.startIndex, params.endIndex, stakedPoolAddr);
+		emit DoHardWork(params.startIndex, params.endIndex, params.stakedPoolAddr, params.newPoolAddr);
 	}
 
 	function updateStrategy(address _strategy) external onlyOwner nonReentrant {
@@ -69,21 +67,23 @@ contract StrategyManager is Ownable, ReentrancyGuard, IStrategy {
 		emit StrategyUpdate(strategy);
 	}
 
-	function updateStakedPoolAddr(address _stakedPoolAddr) external onlyOwner nonReentrant {
-		stakedPoolAddr = _stakedPoolAddr;
-
-		emit StakedPoolAddrUpdate(strategy);
-	}
-
 	function transferToDelegators(TransferDelegatorsParams calldata params) external onlyOwner nonReentrant {
 
+		uint256 amount;
 		uint256 balance = IERC20(params.stakedToken).balanceOf(address(this));
 
 		require(params.amount * (params.endIndex - params.startIndex) <= balance, "Insufficient funds for all delegators");
 
-		for (uint16 i=params.startIndex; i< params.startIndex; i++) {
-			IERC20(params.stakedToken).safeApprove(address(delegators[i]), params.amount);
-			IERC20(params.stakedToken).safeTransfer(address(delegators[i]), params.amount);
+		for (uint16 i=params.startIndex; i< params.endIndex; i++) {
+
+			amount = params.amount - IERC20(stakedToken).balanceOf(address(delegators[i]));
+
+			if (amount <= 0) {
+				continue;
+			}
+
+			IERC20(params.stakedToken).safeApprove(address(delegators[i]), amount);
+			IERC20(params.stakedToken).safeTransfer(address(delegators[i]), amount);
 		}
 
 		emit TransferToDelegators(strategy);
@@ -91,7 +91,7 @@ contract StrategyManager is Ownable, ReentrancyGuard, IStrategy {
 
 	function transferFromDelegators(TransferDelegatorsParams calldata params) external onlyOwner nonReentrant {
 
-		for (uint16 i=params.startIndex; i< params.startIndex; i++) {
+		for (uint16 i=params.startIndex; i< params.endIndex; i++) {
 			delegators[i].TransferToOwner(params.stakedToken, params.amount);
 		}
 

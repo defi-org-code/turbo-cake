@@ -30,7 +30,7 @@ contract Strategy is Ownable, IStrategy {
 		console.log("swap");
 	}
 
-	function doHardWork(DoHardWorkParams memory params) external {
+	function doHardWork(DoHardWorkParams memory params) external returns (bool) {
 
 		// here we have only cakes (rewards + staked)
 		if (params.withdraw) {  // newStakedPoolAddr != stakedPoolAddr
@@ -48,6 +48,7 @@ contract Strategy is Ownable, IStrategy {
 			deposit(params.stakedPoolAddr, params.amount);
 		}
 
+		return true;
 //		emit DoHardWork(stakedPoolAddr);
 	}
 
