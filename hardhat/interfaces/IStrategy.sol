@@ -17,9 +17,9 @@ interface IStrategy {
 
 	struct TransferDelegatorsParams {
 		address stakedToken;
+		uint256 amount;
 		uint16 startIndex;
 		uint16 endIndex;
-		uint256 amount;
 	}
 
 }

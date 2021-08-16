@@ -106,10 +106,10 @@ contract StrategyManager is ReentrancyGuard, IStrategy {
 		emit TransferToDelegators();
 	}
 
-	function transferToManager(TransferDelegatorsParams calldata params) external restricted {
+	function transferToManager(address stakedToken) external restricted {
 
 		for (uint16 i=0; i< delegators.length; i++) {
-				delegators[i].transferToManager(params.stakedToken);
+				delegators[i].transferToManager(stakedToken);
 		}
 
 		emit TransferToManager();
