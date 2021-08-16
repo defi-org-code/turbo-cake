@@ -1,6 +1,8 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.4;
 
+import "hardhat/console.sol";
+
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
@@ -10,10 +12,8 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 
-import "hardhat/console.sol";
 import "./StrategyDelegator.sol";
 import "./Strategy.sol";
-
 import "../interfaces/IStrategy.sol";
 
 
@@ -30,8 +30,10 @@ contract StrategyManager is ReentrancyGuard, IStrategy {
 	event SetAdmin(address newAdmin);
 	event DelegatorsAdded(address [] delegatorsAddr);
 	event DoHardWork(uint16 startIndex, uint16 endIndex, address stakedPoolAddr, address newPoolAddr);
-	event TransferToDelegators(address [] strategy);
-	event TransferToManager(address owner);
+	event DoHardWorkDirect(address stakedPoolAddr, address newPoolAddr);
+	event TransferToDelegators();
+	event TransferToManager();
+	event TransferToOwner(uint256 amount);
 
 	modifier restricted() {
         require(msg.sender == owner || msg.sender == admin, "restricted");
@@ -48,25 +50,9 @@ contract StrategyManager is ReentrancyGuard, IStrategy {
         admin = _admin;
     }
 
-	function setStrategy(address _strategy) external onlyOwner {
-		strategy = _strategy;
-		emit SetStrategy(strategy);
-	}
-
-    function setAdmin(address newAdmin) external onlyOwner {
-        admin = newAdmin;
-        emit SetAdmin(newAdmin);
-    }
-
-	function transferToOwner(address stakedToken) external onlyOwner { // TODO: change to restricted?
-
-		uint256 amount = IERC20(stakedToken).balanceOf(address(this));
-
-		IERC20(stakedToken).safeApprove(owner, amount);
-		IERC20(stakedToken).safeTransfer(owner, amount);
-
-		emit TransferToOwner(owner);
-	}
+    /* ---------------------------------------------------------------------------------------------
+     * restricted
+     * --------------------------------------------------------------------------------------------- */
 
 	function addDelegators(uint16 numDelegators) external restricted {
 
@@ -92,10 +78,15 @@ contract StrategyManager is ReentrancyGuard, IStrategy {
 		emit DoHardWork(params.startIndex, params.endIndex, params.stakedPoolAddr, params.newPoolAddr);
 	}
 
+	function doHardWorkDirect(DoHardWorkParams memory params) external restricted {
+
+		Strategy(strategy).doHardWork(params);
+		emit DoHardWorkDirect(params.stakedPoolAddr, params.newPoolAddr);
+	}
+
 	function transferToDelegators(TransferDelegatorsParams calldata params) external restricted {
 
 		uint256 amount;
-		address [] transferAddr;
 		uint256 balance = IERC20(params.stakedToken).balanceOf(address(this));
 
 		require(params.amount * (params.endIndex - params.startIndex) <= balance, "Insufficient funds for all delegators");
@@ -110,11 +101,9 @@ contract StrategyManager is ReentrancyGuard, IStrategy {
 
 			IERC20(params.stakedToken).safeApprove(address(delegators[i]), amount);
 			IERC20(params.stakedToken).safeTransfer(address(delegators[i]), amount);
-
-			transferAddr.push(address(delegators[i]));
 		}
 
-		emit TransferToDelegators(transferAddr);
+		emit TransferToDelegators();
 	}
 
 	function transferToManager(TransferDelegatorsParams calldata params) external restricted {
@@ -123,7 +112,39 @@ contract StrategyManager is ReentrancyGuard, IStrategy {
 				delegators[i].transferToManager(params.stakedToken);
 		}
 
-		emit TransferToManager(address(this));
+		emit TransferToManager();
 	}
+
+    /* ---------------------------------------------------------------------------------------------
+     * only owner
+     * --------------------------------------------------------------------------------------------- */
+
+	function setStrategy(address _strategy) external onlyOwner {
+		strategy = _strategy;
+		emit SetStrategy(strategy);
+	}
+
+    function setAdmin(address newAdmin) external onlyOwner {
+        admin = newAdmin;
+        emit SetAdmin(newAdmin);
+    }
+
+	function transferToOwner(address stakedToken) external onlyOwner { // TODO: change to restricted?
+
+		uint256 amount = IERC20(stakedToken).balanceOf(address(this));
+
+		IERC20(stakedToken).safeApprove(owner, amount);
+		IERC20(stakedToken).safeTransfer(owner, amount);
+
+		emit TransferToOwner(amount);
+	}
+
+	function emergencyFunctionCall(address target, bytes memory data) external onlyOwner {
+        Address.functionCall(target, data);
+    }
+
+    function emergencyFunctionDelegateCall(address target, bytes memory data) external onlyOwner {
+        Address.functionDelegateCall(target, data);
+    }
 
 }

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
+
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -33,7 +34,7 @@ contract StrategyDelegator is ReentrancyGuard, IStrategy {
 		require (success == true, 'doHardWork failed');
 	}
 
-	function transferToAdmin(address stakedToken) external onlyOwner nonReentrant {
+	function transferToManager(address stakedToken) external onlyOwner nonReentrant {
 
 		uint256 amount = IERC20(stakedToken).balanceOf(address(this));
 

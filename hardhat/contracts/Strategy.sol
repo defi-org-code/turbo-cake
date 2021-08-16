@@ -2,11 +2,12 @@
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
-import "../interfaces/ICakePools.sol";
+
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "../interfaces/IStrategy.sol";
+import "../interfaces/ICakePools.sol";
 
 contract Strategy is Ownable, IStrategy {
 

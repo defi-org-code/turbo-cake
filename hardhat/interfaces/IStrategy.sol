@@ -19,6 +19,7 @@ interface IStrategy {
 		address stakedToken;
 		uint16 startIndex;
 		uint16 endIndex;
+		uint256 amount;
 	}
 
 }
