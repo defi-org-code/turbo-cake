@@ -11,15 +11,21 @@ import "./Strategy.sol";
 import "../interfaces/IStrategy.sol";
 
 
-contract StrategyDelegator is Ownable, ReentrancyGuard, IStrategy {
+contract StrategyDelegator is ReentrancyGuard, IStrategy {
 
 	using SafeERC20 for IERC20;
+    address public immutable owner;
+
+	modifier onlyOwner() {
+        require(msg.sender == owner, "onlyOwner");
+        _;
+    }
 
 	constructor() {
+		owner = msg.sender;
 	}
 
 	function doHardWork(address strategyAddr, DoHardWorkParams memory params) external onlyOwner nonReentrant {
-
 		(bool success, bytes memory data) = strategyAddr.delegatecall(
 			abi.encodeWithSignature("doHardWork((bool,bool,bool,address,address,uint256,uint16,uint16))",params));
 
@@ -27,18 +33,16 @@ contract StrategyDelegator is Ownable, ReentrancyGuard, IStrategy {
 		require (success == true, 'doHardWork failed');
 	}
 
-	function TransferToOwner(address stakedToken, uint256 amount) external onlyOwner {
+	function transferToAdmin(address stakedToken) external onlyOwner nonReentrant {
 
-		if (amount == 0) {
-			amount = IERC20(stakedToken).balanceOf(address(this));
-		}
+		uint256 amount = IERC20(stakedToken).balanceOf(address(this));
 
 		if (amount == 0) {
 			return;
 		}
 
-		IERC20(stakedToken).safeApprove(owner(), amount);
-		IERC20(stakedToken).safeTransfer(owner(), amount);
+		IERC20(stakedToken).safeApprove(owner, amount);
+		IERC20(stakedToken).safeTransfer(owner, amount);
 	}
 
 }
