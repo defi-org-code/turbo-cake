@@ -19,7 +19,6 @@ import "../interfaces/IStrategy.sol";
 
 contract StrategyManager is ReentrancyGuard, IStrategy {
 
-//	using SafeBEP20 for IBEP20;
 	using SafeERC20 for IERC20;
 
     address public immutable owner;
@@ -32,7 +31,7 @@ contract StrategyManager is ReentrancyGuard, IStrategy {
 	event DelegatorsAdded(address [] delegatorsAddr);
 	event DoHardWork(uint16 startIndex, uint16 endIndex, address stakedPoolAddr, address newPoolAddr);
 	event TransferToDelegators(address [] strategy);
-	event TransferToAdmin(address owner);
+	event TransferToManager(address owner);
 
 	modifier restricted() {
         require(msg.sender == owner || msg.sender == admin, "restricted");
@@ -44,14 +43,9 @@ contract StrategyManager is ReentrancyGuard, IStrategy {
         _;
     }
 
-    constructor(address _owner) {
+    constructor(address _owner, address _admin) {
         owner = _owner;
-        admin = _owner;
-    }
-
-    function setAdmin(address newAdmin) external onlyOwner {
-        admin = newAdmin;
-        emit SetAdmin(newAdmin);
+        admin = _admin;
     }
 
 	function setStrategy(address _strategy) external onlyOwner {
@@ -59,7 +53,12 @@ contract StrategyManager is ReentrancyGuard, IStrategy {
 		emit SetStrategy(strategy);
 	}
 
-	function transferToOwner(address stakedToken) external onlyOwner {
+    function setAdmin(address newAdmin) external onlyOwner {
+        admin = newAdmin;
+        emit SetAdmin(newAdmin);
+    }
+
+	function transferToOwner(address stakedToken) external onlyOwner { // TODO: change to restricted?
 
 		uint256 amount = IERC20(stakedToken).balanceOf(address(this));
 
@@ -118,13 +117,13 @@ contract StrategyManager is ReentrancyGuard, IStrategy {
 		emit TransferToDelegators(transferAddr);
 	}
 
-	function transferToAdmin(TransferDelegatorsParams calldata params) external restricted {
+	function transferToManager(TransferDelegatorsParams calldata params) external restricted {
 
 		for (uint16 i=0; i< delegators.length; i++) {
-				delegators[i].transferToAdmin(params.stakedToken);
+				delegators[i].transferToManager(params.stakedToken);
 		}
 
-		emit TransferToAdmin(address(this));
+		emit TransferToManager(address(this));
 	}
 
 }
