@@ -115,6 +115,16 @@ contract StrategyManager is ReentrancyGuard, IStrategy {
 		emit TransferToManager();
 	}
 
+	function transferToOwner(address stakedToken) external restricted { // TODO: change to onlyOwner?
+
+		uint256 amount = IERC20(stakedToken).balanceOf(address(this));
+
+		IERC20(stakedToken).safeApprove(owner, amount);
+		IERC20(stakedToken).safeTransfer(owner, amount);
+
+		emit TransferToOwner(amount);
+	}
+
     /* ---------------------------------------------------------------------------------------------
      * only owner
      * --------------------------------------------------------------------------------------------- */
@@ -128,16 +138,6 @@ contract StrategyManager is ReentrancyGuard, IStrategy {
         admin = newAdmin;
         emit SetAdmin(newAdmin);
     }
-
-	function transferToOwner(address stakedToken) external onlyOwner { // TODO: change to restricted?
-
-		uint256 amount = IERC20(stakedToken).balanceOf(address(this));
-
-		IERC20(stakedToken).safeApprove(owner, amount);
-		IERC20(stakedToken).safeTransfer(owner, amount);
-
-		emit TransferToOwner(amount);
-	}
 
 	function emergencyFunctionCall(address target, bytes memory data) external onlyOwner {
         Address.functionCall(target, data);
