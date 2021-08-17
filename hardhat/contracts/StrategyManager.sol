@@ -27,8 +27,8 @@ contract StrategyManager is ReentrancyGuard, IWorker {
 	event SetAdmin(address newAdmin);
 	event WorkersAdded(address [] workersAddr);
 	event DoHardWork(uint16 startIndex, uint16 endIndex, address stakedPoolAddr, address newPoolAddr);
-	event TransferToWorkers();
-	event TransferToManager();
+	event TransferToWorkers(uint16 startIndex, uint16 endIndex, uint256 amount, address stakedToken);
+	event TransferToManager(uint16 startIndex, uint16 endIndex, address stakedToken);
 	event TransferToOwner(uint256 amount);
 
 	modifier restricted() {
@@ -57,7 +57,7 @@ contract StrategyManager is ReentrancyGuard, IWorker {
 			workers.push(address(worker));
 		}
 
-		emit WorkersAdded(workers);
+		emit WorkersAdded(workers); // TODO: array events costs
 	}
 
 	function doHardWork(DoHardWorkParams memory params) external restricted {
@@ -90,16 +90,16 @@ contract StrategyManager is ReentrancyGuard, IWorker {
 			IERC20(params.stakedToken).safeTransfer(workers[i], amount);
 		}
 
-		emit TransferToWorkers();
+		emit TransferToWorkers(params.startIndex, params.endIndex, params.amount, params.stakedToken);
 	}
 
-	function transferToManager(TransferWorkersParams calldata params) external restricted {
+	function transferToManager(TransferMngParams calldata params) external restricted {
 
 		for (uint16 i=params.startIndex; i< params.endIndex; i++) {
 				Worker(workers[i]).transferToManager(params.stakedToken);
 		}
 
-		emit TransferToManager();
+		emit TransferToManager(params.startIndex, params.endIndex, params.stakedToken);
 	}
 
 	function transferToOwner(address stakedToken) external restricted { // TODO: change to onlyOwner?

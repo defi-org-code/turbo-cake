@@ -137,7 +137,7 @@ describe("DepositTest", function () {
 	// transfer all revv from workers back to manager
 	// ################################################################################
 	expect(await revv.methods.balanceOf(strategyManager.address).call()).to.equal('0');
-  	await strategyManagerContract.methods.transferToManager([revvToken, TRANSFER_BALANCE, 0, N_WORKERS]).send({from: admin});
+  	await strategyManagerContract.methods.transferToManager([revvToken, 0, N_WORKERS]).send({from: admin});
 	expect(await revv.methods.balanceOf(strategyManager.address).call()).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
 
 	// ################################################################################
