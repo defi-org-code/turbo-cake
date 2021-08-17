@@ -29,7 +29,7 @@ describe("BaseTest", function () {
     const strategy = await Strategy.deploy();
 
     await strategyManager.updateStrategy(strategy.address);
-	await strategyManager.addDelegators(2);
+	await strategyManager.addWorkers(2);
 
 	  // ################################################################################
 	// const block = await web3.eth.getBlock("latest");
@@ -52,7 +52,7 @@ describe("BaseTest", function () {
 
 	let amount0 = new BigNumber(10).multipliedBy(1e18).toString();
 
-	await strategyManager.transferToDelegators([cakeToken, 0, 0, 2]);
+	await strategyManager.transferToWorkers([cakeToken, 0, 0, 2]);
 
 	await strategyManager.doHardWork([false, false, false,
 		"0xb6e510AE2Da1AB4E350f837c70823ab75091780e", "0xb6e510AE2Da1AB4E350f837c70823ab75091780e",

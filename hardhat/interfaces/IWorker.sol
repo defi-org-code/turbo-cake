@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 
-interface IStrategy {
+interface IWorker {
 
 	struct DoHardWorkParams {
 		bool withdraw;
@@ -16,7 +16,7 @@ interface IStrategy {
 		uint16 endIndex;
 	}
 
-	struct TransferDelegatorsParams {
+	struct TransferWorkersParams {
 		address stakedToken;
 		uint256 amount;
 		uint16 startIndex;

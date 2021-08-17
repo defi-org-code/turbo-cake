@@ -11,30 +11,25 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-
-import "./StrategyDelegator.sol";
-import "./StrategyDelegator.sol";
-import "./Strategy.sol";
-import "../interfaces/IStrategy.sol";
+import "./Worker.sol";
+import "../interfaces/IWorker.sol";
 
 
-contract StrategyManager is ReentrancyGuard, IStrategy {
+contract StrategyManager is ReentrancyGuard, IWorker {
 
 	using SafeERC20 for IERC20;
 
     address public immutable owner;
     address public admin;
 	address public strategy;
-	StrategyDelegator[] public delegators;
+	Worker[] public workers;
 
 	// TODO: improve events params
-	event SetStrategy(address indexed strategy);
 	event SetAdmin(address newAdmin);
-	event DelegatorsAdded(address [] delegatorsAddr);
+	event WorkersAdded(address [] workersAddr);
 	event DoHardWork(uint16 startIndex, uint16 endIndex, address stakedPoolAddr, address newPoolAddr);
 	event DoHardWorkDirect(address stakedPoolAddr, address newPoolAddr);
-	event TransferToDelegators();
-	event TransferBnbToDelegators();
+	event TransferToWorkers();
 	event TransferToManager();
 	event TransferToOwner(uint256 amount);
 
@@ -48,9 +43,6 @@ contract StrategyManager is ReentrancyGuard, IStrategy {
         _;
     }
 
-    receive() external payable {
-    }
-
     constructor(address _owner, address _admin) {
         owner = _owner;
         admin = _admin;
@@ -60,25 +52,25 @@ contract StrategyManager is ReentrancyGuard, IStrategy {
      * restricted
      * --------------------------------------------------------------------------------------------- */
 
-	function addDelegators(uint16 numDelegators) external restricted {
+	function addWorkers(uint16 numWorkers) external restricted {
 
-		address [] memory delegatorsAddr = new address[](numDelegators);
+		address [] memory workersAddr = new address[](numWorkers);
 
-		for (uint256 i=delegators.length; i < numDelegators; i++) {
-			StrategyDelegator delegator = new StrategyDelegator();
-			delegators.push(delegator);
-			delegatorsAddr[i] = address(delegator);
+		for (uint256 i=workers.length; i < numWorkers; i++) {
+			Worker worker = new Worker();
+			workers.push(worker);
+			workersAddr[i] = address(worker);
 		}
 
-		emit DelegatorsAdded(delegatorsAddr);
+		emit WorkersAdded(workersAddr);
 	}
 
 	function doHardWork(DoHardWorkParams memory params) external restricted {
 
-		require ((params.endIndex <= delegators.length) && (params.startIndex < params.endIndex), "Invalid start or end index");
+		require ((params.endIndex <= workers.length) && (params.startIndex < params.endIndex), "Invalid start or end index");
 
 		for (uint16 i=params.startIndex; i < params.endIndex; i++) {
-			delegators[i].doHardWork(strategy, params);
+			workers[i].doHardWork(params);
 		}
 
 		emit DoHardWork(params.startIndex, params.endIndex, params.stakedPoolAddr, params.newPoolAddr);
@@ -90,55 +82,32 @@ contract StrategyManager is ReentrancyGuard, IStrategy {
 		emit DoHardWorkDirect(params.stakedPoolAddr, params.newPoolAddr);
 	}
 
-	function transferToDelegators(TransferDelegatorsParams calldata params) external restricted {
+	function transferToWorkers(TransferWorkersParams calldata params) external restricted {
 
 		uint256 amount;
 		uint256 balance = IERC20(params.stakedToken).balanceOf(address(this));
 
-		require(params.amount * (params.endIndex - params.startIndex) <= balance, "Insufficient funds for all delegators");
+		require(params.amount * (params.endIndex - params.startIndex) <= balance, "Insufficient funds for all workers");
 
 		for (uint16 i=params.startIndex; i< params.endIndex; i++) {
 
-			amount = params.amount - IERC20(params.stakedToken).balanceOf(address(delegators[i]));
+			amount = params.amount - IERC20(params.stakedToken).balanceOf(address(workers[i]));
 
 			if (amount <= 0) {
 				continue;
 			}
 
-			IERC20(params.stakedToken).safeApprove(address(delegators[i]), amount);
-			IERC20(params.stakedToken).safeTransfer(address(delegators[i]), amount);
+			IERC20(params.stakedToken).safeApprove(address(workers[i]), amount);
+			IERC20(params.stakedToken).safeTransfer(address(workers[i]), amount);
 		}
 
-		emit TransferToDelegators();
-	}
-
-	function transferBnbToDelegators(TransferDelegatorsParams calldata params) payable external restricted {
-
-		uint256 amount;
-		uint256 balance = address(this).balance;
-
-		console.log(balance);
-		require(params.amount * (params.endIndex - params.startIndex) <= balance, "Insufficient funds for all delegators");
-
-		for (uint16 i=params.startIndex; i< params.endIndex; i++) {
-
-			amount = params.amount - address(delegators[i]).balance;
-
-			if (amount <= 0) {
-				continue;
-			}
-
-			address payable testPayable = payable(address(delegators[i]));
-			testPayable.send(amount);
-		}
-
-		emit TransferBnbToDelegators();
+		emit TransferToWorkers();
 	}
 
 	function transferToManager(address stakedToken) external restricted {
 
-		for (uint16 i=0; i< delegators.length; i++) {
-				delegators[i].transferToManager(stakedToken);
+		for (uint16 i=0; i< workers.length; i++) {
+				workers[i].transferToManager(stakedToken);
 		}
 
 		emit TransferToManager();
@@ -157,11 +126,6 @@ contract StrategyManager is ReentrancyGuard, IStrategy {
     /* ---------------------------------------------------------------------------------------------
      * only owner
      * --------------------------------------------------------------------------------------------- */
-
-	function setStrategy(address _strategy) external onlyOwner {
-		strategy = _strategy;
-		emit SetStrategy(strategy);
-	}
 
     function setAdmin(address newAdmin) external onlyOwner {
         admin = newAdmin;

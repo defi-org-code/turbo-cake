@@ -7,11 +7,11 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "../interfaces/IStrategy.sol";
+import "../interfaces/IWorker.sol";
 import "../interfaces/ICakePools.sol";
 
 
-contract Strategy is IStrategy {
+contract Strategy is IWorker {
 
 	using SafeERC20 for IERC20;
 	event DoHardWork(address stakedPoolAddr);
@@ -31,10 +31,10 @@ contract Strategy is IStrategy {
 		}
 		else {
 			console.log('msg.sender=', msg.sender);
-			(success, data) = (ICakePools(stakedPoolAddr).stakedToken()).delegatecall(abi.encodeWithSignature("approve(address,uint256)",stakedPoolAddr,amount));
+			(success, data) = (ICakePools(stakedPoolAddr).stakedToken()).call(abi.encodeWithSignature("approve(address,uint256)",stakedPoolAddr,amount));
 			require (success == true, 'approve');
 
-			(success, data) = (stakedPoolAddr).delegatecall(abi.encodeWithSignature("deposit(uint256)",amount));
+			(success, data) = (stakedPoolAddr).call(abi.encodeWithSignature("deposit(uint256)",amount));
 			require (success == true, 'deposit');
 		}
 	}

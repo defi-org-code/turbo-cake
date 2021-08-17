@@ -25,7 +25,7 @@ const revv = new web3.eth.Contract(cakeAbi, revvToken);
 const revvAbi = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"tokenRecovered","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"AdminTokenRecovery","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Deposit","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"EmergencyWithdraw","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"poolLimitPerUser","type":"uint256"}],"name":"NewPoolLimit","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"rewardPerBlock","type":"uint256"}],"name":"NewRewardPerBlock","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"startBlock","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"endBlock","type":"uint256"}],"name":"NewStartAndEndBlocks","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"blockNumber","type":"uint256"}],"name":"RewardsStop","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Withdraw","type":"event"},{"inputs":[],"name":"PRECISION_FACTOR","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"SMART_CHEF_FACTORY","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"accTokenPerShare","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"bonusEndBlock","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_amount","type":"uint256"}],"name":"deposit","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"_amount","type":"uint256"}],"name":"emergencyRewardWithdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"emergencyWithdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"hasUserLimit","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"contract IBEP20","name":"_stakedToken","type":"address"},{"internalType":"contract IBEP20","name":"_rewardToken","type":"address"},{"internalType":"uint256","name":"_rewardPerBlock","type":"uint256"},{"internalType":"uint256","name":"_startBlock","type":"uint256"},{"internalType":"uint256","name":"_bonusEndBlock","type":"uint256"},{"internalType":"uint256","name":"_poolLimitPerUser","type":"uint256"},{"internalType":"address","name":"_admin","type":"address"}],"name":"initialize","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"isInitialized","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"lastRewardBlock","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_user","type":"address"}],"name":"pendingReward","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"poolLimitPerUser","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_tokenAddress","type":"address"},{"internalType":"uint256","name":"_tokenAmount","type":"uint256"}],"name":"recoverWrongTokens","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"renounceOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"rewardPerBlock","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"rewardToken","outputs":[{"internalType":"contract IBEP20","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"stakedToken","outputs":[{"internalType":"contract IBEP20","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"startBlock","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"stopReward","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bool","name":"_hasUserLimit","type":"bool"},{"internalType":"uint256","name":"_poolLimitPerUser","type":"uint256"}],"name":"updatePoolLimitPerUser","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"_rewardPerBlock","type":"uint256"}],"name":"updateRewardPerBlock","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"_startBlock","type":"uint256"},{"internalType":"uint256","name":"_bonusEndBlock","type":"uint256"}],"name":"updateStartAndEndBlocks","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"userInfo","outputs":[{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"rewardDebt","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_amount","type":"uint256"}],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"}]
 const revvContract = new web3.eth.Contract(revvAbi, revvPoolAddr);
 
-const N_DELEGATORS = 2;
+const N_WORKERS = 2;
 const TRANSFER_BALANCE = new BigNumber(65).multipliedBy(1e18).toString();
 
 const admin = accounts[0];
@@ -59,65 +59,57 @@ describe("TransferTest", function () {
 	// console.log(web3.utils.fromWei(balance, "ether"), "ETH");
 
 	// ################################################################################
-	// deploy contracts
+	// deploy contract
 	// ################################################################################
 	const StrategyManager = await ethers.getContractFactory("StrategyManager");
 	const strategyManager = await StrategyManager.deploy(owner, admin);
 	await strategyManager.deployed();
 	const strategyManagerContract = new web3.eth.Contract(strategyManagerAbi, strategyManager.address);
 
-	const Strategy = await ethers.getContractFactory("Strategy");
-    const strategy = await Strategy.deploy();
-
-	console.log(`owner=${owner}, admin=${admin}, strategyManager=${strategyManager.address}, strategy=${strategy.address}`);
+	console.log(`owner=${owner}, admin=${admin}, strategyManager=${strategyManager.address}`);
 
     // ################################################################################
-    // set strategy and add delegators
+    // add workers
 	// ################################################################################
-	await strategyManagerContract.methods.setStrategy(strategy.address).send({from: owner});
-	expect(await strategyManagerContract.methods.strategy.call({from: admin}) === strategy.address)
+	// await strategyManagerContract.methods.setStrategy(strategy.address).send({from: owner});
+	// expect(await strategyManagerContract.methods.strategy.call({from: admin}) === strategy.address)
 
-	await strategyManagerContract.methods.addDelegators(N_DELEGATORS).send({from: admin});
+	await strategyManagerContract.methods.addWorkers(N_WORKERS).send({from: admin});
 
 	// ################################################################################
-	// get past events of DelegatorsAdded
+	// get past events of WorkersAdded
 	// ################################################################################
 	let blockNum = await web3.eth.getBlockNumber();
-	let events = await strategyManagerContract.getPastEvents('DelegatorsAdded', {fromBlock: blockNum-1, toBlock: blockNum});
-    const delegatorsAddr = events[0]['returnValues']['delegatorsAddr'];
-	console.log(`delegators: ${events[0]['returnValues']['delegatorsAddr']}`);
-	expect(delegatorsAddr.length).to.equal(N_DELEGATORS);
+	let events = await strategyManagerContract.getPastEvents('WorkersAdded', {fromBlock: blockNum-1, toBlock: blockNum});
+    const WorkersAddr = events[0]['returnValues']['workersAddr'];
+	console.log(`delegators: ${events[0]['returnValues']['workersAddr']}`);
+	expect(WorkersAddr.length).to.equal(N_WORKERS);
 
 	// ################################################################################
 	// transfer cakes to manager
 	// ################################################################################
 	// const totalCakesInit = await cake.methods.balanceOf(cakeWhale).call();
-	await cake.methods.transfer(strategyManager.address, new BigNumber(TRANSFER_BALANCE).multipliedBy(N_DELEGATORS).toString()).send({from: cakeWhale});
+	await cake.methods.transfer(strategyManager.address, new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString()).send({from: cakeWhale});
 
 	const mngTotalCakes = await cake.methods.balanceOf(strategyManager.address).call();
 	console.log(`mngTotalCakes=${mngTotalCakes}`);
-	expect(mngTotalCakes).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_DELEGATORS).toString());
-
-	// ################################################################################
-	// TODO tmp dbg only - transfer cakes to strategy
-	// ################################################################################
-	// await cake.methods.transfer(strategy.address, new BigNumber(TRANSFER_BALANCE).multipliedBy(N_DELEGATORS).toString()).send({from: cakeWhale});
+	expect(mngTotalCakes).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
 
 	// ################################################################################
 	// transfer revv to manager
 	// ################################################################################
-	await revv.methods.transfer(strategyManager.address, new BigNumber(TRANSFER_BALANCE).multipliedBy(N_DELEGATORS).toString()).send({from: revvWhale});
+	await revv.methods.transfer(strategyManager.address, new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString()).send({from: revvWhale});
 
 	const mngTotalRevv = await revv.methods.balanceOf(strategyManager.address).call();
 	console.log(`mngTotalRevv=${mngTotalRevv}`);
-	expect(mngTotalRevv).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_DELEGATORS).toString());
+	expect(mngTotalRevv).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
 
 	// ################################################################################
-	// transfer cakes to delegators
+	// transfer cakes to workers
 	// ################################################################################
-  	await strategyManagerContract.methods.transferToDelegators([cakeToken, TRANSFER_BALANCE, 0, N_DELEGATORS]).send({from: admin});
+  	await strategyManagerContract.methods.transferToWorkers([cakeToken, TRANSFER_BALANCE, 0, N_WORKERS]).send({from: admin});
 
-	for (const delegator of delegatorsAddr) {
+	for (const delegator of WorkersAddr) {
 		console.log(`delegator: ${delegator}, cake balance= ${await cake.methods.balanceOf(delegator).call()}`);
 		expect(await cake.methods.balanceOf(delegator).call()).to.equal(TRANSFER_BALANCE);
 	}
@@ -125,38 +117,20 @@ describe("TransferTest", function () {
 	// ################################################################################
 	// transfer revv to delegators
 	// ################################################################################
-  	await strategyManagerContract.methods.transferToDelegators([revvToken, TRANSFER_BALANCE, 0, N_DELEGATORS]).send({from: admin});
+  	await strategyManagerContract.methods.transferToWorkers([revvToken, TRANSFER_BALANCE, 0, N_WORKERS]).send({from: admin});
 
-	for (const delegator of delegatorsAddr) {
+	for (const delegator of WorkersAddr) {
 		expect(await revv.methods.balanceOf(delegator).call()).to.equal(TRANSFER_BALANCE);
-	}
-
-	// ################################################################################
-	// transfer bnb to manager
-	// ################################################################################
-	await web3.eth.sendTransaction({ from: admin,to: strategyManager.address, value: web3.utils.toWei("1000", "ether") });
-
-	// ################################################################################
-	// transfer bnb to delegators
-	// ################################################################################
-  	await strategyManagerContract.methods.transferBnbToDelegators([revvToken, TRANSFER_BALANCE, 0, N_DELEGATORS]).send({from: admin});
-
-	for (const delegator of delegatorsAddr) {
-		balance = await web3.eth.getBalance(delegator);
-		console.log(web3.utils.fromWei(balance, "ether"), "ETH");
-
-		expect(balance).to.equal(TRANSFER_BALANCE);
 	}
 
 	// ################################################################################
 	// delegators doHardWork - deposit
 	// ################################################################################
 	let withdraw=false, swap=false, deposit=true;
-  	await strategyManagerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 0, 0, N_DELEGATORS]).send({from: admin});
-
+  	await strategyManagerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 0, 0, N_WORKERS]).send({from: admin});
 
 	let res;
-	for (const delegator of delegatorsAddr) {
+	for (const delegator of WorkersAddr) {
 		res = await revvContract.methods.userInfo(delegator).call();
 		console.log(await revvContract.methods.userInfo(delegator).call());
 		expect(res['amount']).to.equal(TRANSFER_BALANCE);
@@ -168,7 +142,7 @@ describe("TransferTest", function () {
 	// transfer all funds from delegators back to manager
 	// ################################################################################
   	await strategyManagerContract.methods.transferToManager(cakeToken).send({from: admin});
-	expect(await cake.methods.balanceOf(strategyManager.address).call()).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_DELEGATORS).toString());
+	expect(await cake.methods.balanceOf(strategyManager.address).call()).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
 
 	// ################################################################################
 	// transfer all funds to owner
@@ -176,7 +150,7 @@ describe("TransferTest", function () {
 	expect(await cake.methods.balanceOf(owner).call()).to.equal('0');
 
   	await strategyManagerContract.methods.transferToOwner(cakeToken).send({from: admin});
-	expect(await cake.methods.balanceOf(owner).call()).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_DELEGATORS).toString());
+	expect(await cake.methods.balanceOf(owner).call()).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
 
 
   });
