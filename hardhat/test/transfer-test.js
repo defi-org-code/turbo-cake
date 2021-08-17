@@ -26,14 +26,14 @@ describe("TransferTest", function () {
 	// ################################################################################
 	// impersonate and init balance
 	// ################################################################################
-	await network.provider.request({method: "hardhat_impersonateAccount",params: [cakeWhale]});
+	await hre.network.provider.request({method: "hardhat_impersonateAccount",params: [cakeWhale]});
 	await hre.network.provider.request({method: "hardhat_setBalance", params: [cakeWhale, "0x100000000000000000000"]});
 
-	await network.provider.request({method: "hardhat_impersonateAccount",params: [owner]});
+	await hre.network.provider.request({method: "hardhat_impersonateAccount",params: [owner]});
 	await hre.network.provider.request({method: "hardhat_setBalance", params: [owner, "0x1000000000000000000000"]});
-	await network.provider.request({method: "hardhat_impersonateAccount",params: [admin]});
+	await hre.network.provider.request({method: "hardhat_impersonateAccount",params: [admin]});
 	await hre.network.provider.request({method: "hardhat_setBalance", params: [admin, "0x1000000000000000000000"]});
-	await network.provider.request({method: "hardhat_impersonateAccount",params: [unauthorized]});
+	await hre.network.provider.request({method: "hardhat_impersonateAccount",params: [unauthorized]});
 	await hre.network.provider.request({method: "hardhat_setBalance", params: [unauthorized, "0x1000000000000000000000"]});
 
 	// ################################################################################
@@ -46,15 +46,9 @@ describe("TransferTest", function () {
 
 	console.log(`owner=${owner}, admin=${admin}, strategyManager=${strategyManager.address}`);
 
-	const Strategy = await ethers.getContractFactory("Strategy");
-    const strategy = await Strategy.deploy();
-
     // ################################################################################
-    // set strategy and add delegators
+    // add workers
 	// ################################################################################
-	await strategyManagerContract.methods.setStrategy(strategy.address).send({from: owner});
-	expect(await strategyManagerContract.methods.strategy.call({from: admin}) === strategy.address)
-
 	await strategyManagerContract.methods.addWorkers(N_WORKERS).send({from: admin});
 
 	// ################################################################################
@@ -72,21 +66,21 @@ describe("TransferTest", function () {
 	// ################################################################################
 	let blockNum = await web3.eth.getBlockNumber();
 	let events = await strategyManagerContract.getPastEvents('WorkersAdded', {fromBlock: blockNum-1, toBlock: blockNum + 1});
-    const WorkersAddr = events[0]['returnValues']['WorkersAddr'];
-	console.log(`delegators: ${events[0]['returnValues']['WorkersAddr']}`);
+    const WorkersAddr = events[0]['returnValues']['workersAddr'];
+	console.log(`workers: ${events[0]['returnValues']['workersAddr']}`);
 	expect(WorkersAddr.length).to.equal(N_WORKERS);
 
 	// ################################################################################
-	// transfer cake funds to delegators
+	// transfer cake funds to workers
 	// ################################################################################
   	await strategyManagerContract.methods.transferToWorkers([cakeToken, TRANSFER_BALANCE, 0, N_WORKERS]).send({from: admin});
 
-	for (const delegator of WorkersAddr) {
-		expect(await cake.methods.balanceOf(delegator).call()).to.equal(TRANSFER_BALANCE);
+	for (const worker of WorkersAddr) {
+		expect(await cake.methods.balanceOf(worker).call()).to.equal(TRANSFER_BALANCE);
 	}
 
 	// ################################################################################
-	// transfer all funds from delegators back to manager
+	// transfer all funds from workers back to manager
 	// ################################################################################
   	await strategyManagerContract.methods.transferToManager(cakeToken).send({from: admin});
 	expect(await cake.methods.balanceOf(strategyManager.address).call()).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
