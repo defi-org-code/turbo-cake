@@ -4,7 +4,7 @@ const {accounts, contract} = require("@openzeppelin/test-environment");
 const {constants, expectEvent, expectRevert, BN} = require("@openzeppelin/test-helpers");
 const BigNumber = require('bignumber.js');
 
-const strategyManagerAbi = require('../artifacts/contracts/StrategyManager.sol/StrategyManager.json').abi
+const managerAbi = require('../artifacts/contracts/Manager.sol/Manager.json').abi
 
 const bnb = ""
 
@@ -58,28 +58,28 @@ describe("DepositTest", function () {
 	// ################################################################################
 	// deploy contract
 	// ################################################################################
-	const StrategyManager = await ethers.getContractFactory("StrategyManager");
-	const strategyManager = await StrategyManager.deploy(owner, admin);
-	await strategyManager.deployed();
-	const strategyManagerContract = new web3.eth.Contract(strategyManagerAbi, strategyManager.address);
+	const Manager = await ethers.getContractFactory("Manager");
+	const manager = await Manager.deploy(owner, admin);
+	await manager.deployed();
+	const managerContract = new web3.eth.Contract(managerAbi, manager.address);
 
-	// console.log(`owner=${owner}, admin=${admin}, strategyManager=${strategyManager.address}`);
+	// console.log(`owner=${owner}, admin=${admin}, manager=${manager.address}`);
 
     // ################################################################################
     // add workers
 	// ################################################################################
-	// await strategyManagerContract.methods.setStrategy(strategy.address).send({from: owner});
-	// expect(await strategyManagerContract.methods.strategy.call({from: admin}) === strategy.address)
+	// await managerContract.methods.setStrategy(strategy.address).send({from: owner});
+	// expect(await managerContract.methods.strategy.call({from: admin}) === strategy.address)
 
-	await strategyManagerContract.methods.addWorkers(N_WORKERS).send({from: admin});
+	await managerContract.methods.addWorkers(N_WORKERS).send({from: admin});
 
-	console.log(await strategyManagerContract.methods.workers(1).call());
+	console.log(await managerContract.methods.workers(1).call());
 
 	// ################################################################################
 	// get past events of WorkersAdded
 	// ################################################################################
 	let blockNum = await web3.eth.getBlockNumber();
-	let events = await strategyManagerContract.getPastEvents('WorkersAdded', {fromBlock: blockNum-1, toBlock: blockNum});
+	let events = await managerContract.getPastEvents('WorkersAdded', {fromBlock: blockNum-1, toBlock: blockNum});
     const WorkersAddr = events[0]['returnValues']['workersAddr'];
 	console.log(`workers: ${events[0]['returnValues']['workersAddr']}`);
 	expect(WorkersAddr.length).to.equal(N_WORKERS);
@@ -88,23 +88,23 @@ describe("DepositTest", function () {
 	// transfer cakes to manager
 	// ################################################################################
 	// const totalCakesInit = await cake.methods.balanceOf(cakeWhale).call();
-	await cake.methods.transfer(strategyManager.address, new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString()).send({from: cakeWhale});
+	await cake.methods.transfer(manager.address, new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString()).send({from: cakeWhale});
 
-	const mngTotalCakes = await cake.methods.balanceOf(strategyManager.address).call();
+	const mngTotalCakes = await cake.methods.balanceOf(manager.address).call();
 	expect(mngTotalCakes).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
 
 	// ################################################################################
 	// transfer revv to manager
 	// ################################################################################
-	await revv.methods.transfer(strategyManager.address, new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString()).send({from: revvWhale});
+	await revv.methods.transfer(manager.address, new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString()).send({from: revvWhale});
 
-	const mngTotalRevv = await revv.methods.balanceOf(strategyManager.address).call();
+	const mngTotalRevv = await revv.methods.balanceOf(manager.address).call();
 	expect(mngTotalRevv).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
 
 	// ################################################################################
 	// transfer cakes to workers
 	// ################################################################################
-  	await strategyManagerContract.methods.transferToWorkers([cakeToken, TRANSFER_BALANCE, 0, N_WORKERS]).send({from: admin});
+  	await managerContract.methods.transferToWorkers([cakeToken, TRANSFER_BALANCE, 0, N_WORKERS]).send({from: admin});
 
 	for (const worker of WorkersAddr) {
 		// console.log(`worker: ${worker}, cake balance= ${await cake.methods.balanceOf(worker).call()}`);
@@ -114,7 +114,7 @@ describe("DepositTest", function () {
 	// ################################################################################
 	// transfer revv to workers
 	// ################################################################################
-  	await strategyManagerContract.methods.transferToWorkers([revvToken, TRANSFER_BALANCE, 0, N_WORKERS]).send({from: admin});
+  	await managerContract.methods.transferToWorkers([revvToken, TRANSFER_BALANCE, 0, N_WORKERS]).send({from: admin});
 
 	for (const worker of WorkersAddr) {
 		expect(await revv.methods.balanceOf(worker).call()).to.equal(TRANSFER_BALANCE);
@@ -124,7 +124,7 @@ describe("DepositTest", function () {
 	// workers doHardWork - deposit
 	// ################################################################################
 	let withdraw=false, swap=false, deposit=true;
-  	await strategyManagerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 0, 0, N_WORKERS]).send({from: admin});
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 0, 0, N_WORKERS]).send({from: admin});
 
 	let res;
 	for (const worker of WorkersAddr) {
@@ -136,15 +136,15 @@ describe("DepositTest", function () {
 	// ################################################################################
 	// transfer all revv from workers back to manager
 	// ################################################################################
-	expect(await revv.methods.balanceOf(strategyManager.address).call()).to.equal('0');
-  	await strategyManagerContract.methods.transferToManager([revvToken, 0, N_WORKERS]).send({from: admin});
-	expect(await revv.methods.balanceOf(strategyManager.address).call()).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
+	expect(await revv.methods.balanceOf(manager.address).call()).to.equal('0');
+  	await managerContract.methods.transferToManager([revvToken, 0, N_WORKERS]).send({from: admin});
+	expect(await revv.methods.balanceOf(manager.address).call()).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
 
 	// ################################################################################
 	// transfer all revv to owner
 	// ################################################################################
 	expect(await revv.methods.balanceOf(owner).call()).to.equal('0');
-  	await strategyManagerContract.methods.transferToOwner(revvToken).send({from: admin});
+  	await managerContract.methods.transferToOwner(revvToken).send({from: admin});
 	expect(await revv.methods.balanceOf(owner).call()).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
 
   });

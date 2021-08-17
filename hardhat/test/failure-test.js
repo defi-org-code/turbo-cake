@@ -4,7 +4,7 @@ const {accounts, contract} = require("@openzeppelin/test-environment");
 const {constants, expectEvent, expectRevert, BN} = require("@openzeppelin/test-helpers");
 const BigNumber = require('bignumber.js');
 
-const strategyManagerAbi = require('../artifacts/contracts/StrategyManager.sol/StrategyManager.json').abi
+const managerAbi = require('../artifacts/contracts/Manager.sol/Manager.json').abi
 
 const cakeWhale = "0x73feaa1eE314F8c655E354234017bE2193C9E24E";
 const cakeToken = "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82";
@@ -41,23 +41,23 @@ describe("FailureTest", function () {
 	// ################################################################################
 	// deploy contracts
 	// ################################################################################
-	const StrategyManager = await ethers.getContractFactory("StrategyManager");
-	const strategyManager = await StrategyManager.deploy(owner, admin);
-	await strategyManager.deployed();
-	const strategyManagerContract = new web3.eth.Contract(strategyManagerAbi, strategyManager.address);
+	const Manager = await ethers.getContractFactory("Manager");
+	const manager = await Manager.deploy(owner, admin);
+	await manager.deployed();
+	const managerContract = new web3.eth.Contract(managerAbi, manager.address);
 
-	console.log(`owner=${owner}, admin=${admin}, strategyManager=${strategyManager.address}`);
+	console.log(`owner=${owner}, admin=${admin}, manager=${manager.address}`);
 
     // ################################################################################
     // add workers
 	// ################################################################################
-	await strategyManagerContract.methods.addWorkers(N_WORKERS).send({from: admin});
+	await managerContract.methods.addWorkers(N_WORKERS).send({from: admin});
 
 	// ################################################################################
 	// get past events of WorkersAdded
 	// ################################################################################
 	let blockNum = await web3.eth.getBlockNumber();
-	let events = await strategyManagerContract.getPastEvents('WorkersAdded', {fromBlock: blockNum-1, toBlock: blockNum});
+	let events = await managerContract.getPastEvents('WorkersAdded', {fromBlock: blockNum-1, toBlock: blockNum});
     const WorkersAddr = events[0]['returnValues']['workersAddr'];
 	console.log(`workers: ${events[0]['returnValues']['workersAddr']}`);
 	expect(WorkersAddr.length).to.equal(N_WORKERS);
@@ -65,9 +65,9 @@ describe("FailureTest", function () {
 	// ################################################################################
 	// transfer cakes to manager
 	// ################################################################################
-	await cake.methods.transfer(strategyManager.address, new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString()).send({from: cakeWhale});
+	await cake.methods.transfer(manager.address, new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString()).send({from: cakeWhale});
 
-	const mngTotalCakes = await cake.methods.balanceOf(strategyManager.address).call();
+	const mngTotalCakes = await cake.methods.balanceOf(manager.address).call();
 	console.log(`mngTotalCakes=${mngTotalCakes}`);
 	expect(mngTotalCakes).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
 
@@ -76,7 +76,7 @@ describe("FailureTest", function () {
 	// ################################################################################
 	msg = '';
 	try {
-		msg = await strategyManagerContract.methods.setAdmin(strategyManager.address).send({from: admin});
+		msg = await managerContract.methods.setAdmin(manager.address).send({from: admin});
 
 	} catch (e) {
 		msg = e.message;
@@ -89,7 +89,7 @@ describe("FailureTest", function () {
 	// ################################################################################
 	msg = '';
 	try {
-	  	msg = await strategyManagerContract.methods.transferToWorkers([cakeToken, TRANSFER_BALANCE, 0, N_WORKERS]).send({from: unauthorized});
+	  	msg = await managerContract.methods.transferToWorkers([cakeToken, TRANSFER_BALANCE, 0, N_WORKERS]).send({from: unauthorized});
 
 	} catch (e) {
 		msg = e.message;

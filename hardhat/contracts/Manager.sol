@@ -15,7 +15,7 @@ import "./Worker.sol";
 import "../interfaces/IWorker.sol";
 
 
-contract StrategyManager is ReentrancyGuard, IWorker {
+contract Manager is ReentrancyGuard, IWorker {
 
 	using SafeERC20 for IERC20;
 

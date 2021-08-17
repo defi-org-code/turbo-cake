@@ -8,9 +8,8 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "./_Strategy.sol";
 import "../interfaces/IWorker.sol";
-
+import "../interfaces/ICakePools.sol";
 
 contract Worker is ReentrancyGuard, IWorker {
 
