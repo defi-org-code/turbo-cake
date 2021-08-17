@@ -85,15 +85,10 @@ contract Manager is ReentrancyGuard, IWorker {
 
 		for (uint16 i=params.startIndex; i< params.endIndex; i++) {
 
-//			require (params.amount >= IERC20(params.stakedToken).balanceOf(workers[i])); // TODO: handle "amount < 0"
+			require (params.amount > IERC20(params.stakedToken).balanceOf(workers[i]));
 
 			amount = params.amount - IERC20(params.stakedToken).balanceOf(workers[i]);
 
-			if (amount == 0) {
-				continue;
-			}
-
-//			IERC20(params.stakedToken).safeApprove(workers[i], amount); // TODO: check on test
 			IERC20(params.stakedToken).safeTransfer(workers[i], amount);
 		}
 
@@ -109,11 +104,10 @@ contract Manager is ReentrancyGuard, IWorker {
 		emit TransferToManager(params.startIndex, params.endIndex, params.stakedToken);
 	}
 
-	function transferToOwner(address stakedToken) external restricted { // TODO: change to onlyOwner?
+	function transferToOwner(address stakedToken) external restricted {
 
 		uint256 amount = IERC20(stakedToken).balanceOf(address(this));
 
-//		IERC20(stakedToken).safeApprove(owner, amount);
 		IERC20(stakedToken).safeTransfer(owner, amount);
 
 		emit TransferToOwner(amount);
