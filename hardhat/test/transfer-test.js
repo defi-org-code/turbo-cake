@@ -51,6 +51,14 @@ describe("TransferTest", function () {
 	// ################################################################################
 	await managerContract.methods.addWorkers(N_WORKERS).send({from: admin});
 
+	const _nWorkers = await managerContract.methods.getNWorkers().call({from: admin})
+	expect(_nWorkers).to.equal(N_WORKERS.toString())
+
+	let WorkersAddr = [];
+	for (let i=0; i<_nWorkers; i++) {
+		WorkersAddr.push(await managerContract.methods.workers(i).call({from: admin}));
+	}
+
 	// ################################################################################
 	// transfer cakes to manager
 	// ################################################################################
@@ -66,9 +74,8 @@ describe("TransferTest", function () {
 	// ################################################################################
 	let blockNum = await web3.eth.getBlockNumber();
 	let events = await managerContract.getPastEvents('WorkersAdded', {fromBlock: blockNum-1, toBlock: blockNum + 1});
-    const WorkersAddr = events[0]['returnValues']['workersAddr'];
-	console.log(`workers: ${events[0]['returnValues']['workersAddr']}`);
-	expect(WorkersAddr.length).to.equal(N_WORKERS);
+	const nWorkers = events[0]['returnValues']['nWorkers'];
+	expect(nWorkers).to.equal(N_WORKERS.toString());
 
 	// ################################################################################
 	// transfer cake funds to workers

@@ -53,14 +53,16 @@ describe("FailureTest", function () {
 	// ################################################################################
 	await managerContract.methods.addWorkers(N_WORKERS).send({from: admin});
 
+	const _nWorkers = await managerContract.methods.getNWorkers().call({from: admin})
+	expect(_nWorkers).to.equal(N_WORKERS.toString())
+
 	// ################################################################################
 	// get past events of WorkersAdded
 	// ################################################################################
 	let blockNum = await web3.eth.getBlockNumber();
 	let events = await managerContract.getPastEvents('WorkersAdded', {fromBlock: blockNum-1, toBlock: blockNum});
-    const WorkersAddr = events[0]['returnValues']['workersAddr'];
-	console.log(`workers: ${events[0]['returnValues']['workersAddr']}`);
-	expect(WorkersAddr.length).to.equal(N_WORKERS);
+	const nWorkers = events[0]['returnValues']['nWorkers'];
+	expect(nWorkers).to.equal(N_WORKERS.toString());
 
 	// ################################################################################
 	// transfer cakes to manager

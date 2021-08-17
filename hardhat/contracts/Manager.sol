@@ -25,10 +25,10 @@ contract Manager is ReentrancyGuard, IWorker {
 
 	// TODO: improve events params
 	event SetAdmin(address newAdmin);
-	event WorkersAdded(address [] workersAddr);
-	event DoHardWork(uint16 startIndex, uint16 endIndex, address stakedPoolAddr, address newPoolAddr);
-	event TransferToWorkers(uint16 startIndex, uint16 endIndex, uint256 amount, address stakedToken);
-	event TransferToManager(uint16 startIndex, uint16 endIndex, address stakedToken);
+	event WorkersAdded(uint256 nWorkers);
+	event DoHardWork(uint16 startIndex, uint16 endIndex, address indexed stakedPoolAddr, address indexed newPoolAddr);
+	event TransferToWorkers(uint16 startIndex, uint16 endIndex, uint256 indexed amount, address indexed stakedToken);
+	event TransferToManager(uint16 indexed startIndex, uint16 indexed endIndex, address indexed stakedToken);
 	event TransferToOwner(uint256 amount);
 
 	modifier restricted() {
@@ -50,14 +50,19 @@ contract Manager is ReentrancyGuard, IWorker {
      * restricted
      * --------------------------------------------------------------------------------------------- */
 
-	function addWorkers(uint16 numWorkers) external restricted {
+	function addWorkers(uint16 numWorkersToAdd) external restricted {
 
-		for (uint256 i=workers.length; i < numWorkers; i++) {
+		uint256 n = workers.length + numWorkersToAdd;
+		for (uint256 i=workers.length; i < n; i++) {
 			Worker worker = new Worker();
 			workers.push(address(worker));
 		}
 
-		emit WorkersAdded(workers); // TODO: array events costs
+		emit WorkersAdded(workers.length);
+	}
+
+	function getNWorkers() external restricted view returns (uint256) {
+		return workers.length;
 	}
 
 	function doHardWork(DoHardWorkParams memory params) external restricted {
@@ -80,13 +85,15 @@ contract Manager is ReentrancyGuard, IWorker {
 
 		for (uint16 i=params.startIndex; i< params.endIndex; i++) {
 
+//			require (params.amount >= IERC20(params.stakedToken).balanceOf(workers[i])); // TODO: handle "amount < 0"
+
 			amount = params.amount - IERC20(params.stakedToken).balanceOf(workers[i]);
 
-			if (amount <= 0) {
+			if (amount == 0) {
 				continue;
 			}
 
-			IERC20(params.stakedToken).safeApprove(workers[i], amount);
+//			IERC20(params.stakedToken).safeApprove(workers[i], amount); // TODO: check on test
 			IERC20(params.stakedToken).safeTransfer(workers[i], amount);
 		}
 
@@ -106,7 +113,7 @@ contract Manager is ReentrancyGuard, IWorker {
 
 		uint256 amount = IERC20(stakedToken).balanceOf(address(this));
 
-		IERC20(stakedToken).safeApprove(owner, amount);
+//		IERC20(stakedToken).safeApprove(owner, amount);
 		IERC20(stakedToken).safeTransfer(owner, amount);
 
 		emit TransferToOwner(amount);

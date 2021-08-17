@@ -64,25 +64,25 @@ describe("DepositTest", function () {
 	const managerContract = new web3.eth.Contract(managerAbi, manager.address);
 
 	// console.log(`owner=${owner}, admin=${admin}, manager=${manager.address}`);
-
     // ################################################################################
     // add workers
 	// ################################################################################
-	// await managerContract.methods.setStrategy(strategy.address).send({from: owner});
-	// expect(await managerContract.methods.strategy.call({from: admin}) === strategy.address)
-
 	await managerContract.methods.addWorkers(N_WORKERS).send({from: admin});
+	const _nWorkers = await managerContract.methods.getNWorkers().call({from: admin})
+	expect(_nWorkers).to.equal(N_WORKERS.toString())
 
-	console.log(await managerContract.methods.workers(1).call());
+	let WorkersAddr = [];
+	for (let i=0; i<_nWorkers; i++) {
+		WorkersAddr.push(await managerContract.methods.workers(i).call({from: admin}));
+	}
 
 	// ################################################################################
 	// get past events of WorkersAdded
 	// ################################################################################
 	let blockNum = await web3.eth.getBlockNumber();
 	let events = await managerContract.getPastEvents('WorkersAdded', {fromBlock: blockNum-1, toBlock: blockNum});
-    const WorkersAddr = events[0]['returnValues']['workersAddr'];
-	console.log(`workers: ${events[0]['returnValues']['workersAddr']}`);
-	expect(WorkersAddr.length).to.equal(N_WORKERS);
+    const nWorkers = events[0]['returnValues']['nWorkers'];
+	expect(nWorkers).to.equal(N_WORKERS.toString());
 
 	// ################################################################################
 	// transfer cakes to manager
