@@ -20,7 +20,7 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
  * @type import('hardhat/config').HardhatUserConfig
  */
 module.exports = {
-    solidity: "0.8.4",
+    solidity: "0.8.0",
 	defaultNetwork: "hardhat",
 
 	networks: {
@@ -29,9 +29,9 @@ module.exports = {
 			forking: {
 				url: "https://long-thrumming-dream.bsc.quiknode.pro/4361da560bd47300da588fc1ec5ea1c2ba05891f/",
 				// blockNumber: 9879809,
-				accounts: {
-					accountsBalance: "1000000",
-				},
+				// accounts: {
+				// 	accountsBalance: "1000000",
+				// },
 				// url: "https://cold-silent-rain.bsc.quiknode.pro/f39277cc46387375f0eb657b7aca8ba81431a05e",
 				chainId: 56,
 				// blockGasLimit: 12e6,

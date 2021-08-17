@@ -26,12 +26,11 @@ contract StrategyDelegator is ReentrancyGuard, IStrategy {
 		owner = msg.sender;
 	}
 
-	function doHardWork(address strategyAddr, DoHardWorkParams memory params) external onlyOwner nonReentrant {
-		(bool success, bytes memory data) = strategyAddr.delegatecall(
-			abi.encodeWithSignature("doHardWork((bool,bool,bool,address,address,uint256,uint16,uint16))",params));
+    receive() external payable {
+    }
 
-		console.log(success);
-		require (success == true, 'doHardWork failed');
+	function doHardWork(address strategyAddr, DoHardWorkParams memory params) external onlyOwner nonReentrant {
+		Strategy(strategyAddr).doHardWork(params);
 	}
 
 	function transferToManager(address stakedToken) external onlyOwner nonReentrant {

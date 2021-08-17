@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.4;
+pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 
@@ -12,6 +12,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 
+import "./StrategyDelegator.sol";
 import "./StrategyDelegator.sol";
 import "./Strategy.sol";
 import "../interfaces/IStrategy.sol";
@@ -26,12 +27,14 @@ contract StrategyManager is ReentrancyGuard, IStrategy {
 	address public strategy;
 	StrategyDelegator[] public delegators;
 
+	// TODO: improve events params
 	event SetStrategy(address indexed strategy);
 	event SetAdmin(address newAdmin);
 	event DelegatorsAdded(address [] delegatorsAddr);
 	event DoHardWork(uint16 startIndex, uint16 endIndex, address stakedPoolAddr, address newPoolAddr);
 	event DoHardWorkDirect(address stakedPoolAddr, address newPoolAddr);
 	event TransferToDelegators();
+	event TransferBnbToDelegators();
 	event TransferToManager();
 	event TransferToOwner(uint256 amount);
 
@@ -43,6 +46,9 @@ contract StrategyManager is ReentrancyGuard, IStrategy {
 	modifier onlyOwner() {
         require(msg.sender == owner, "onlyOwner");
         _;
+    }
+
+    receive() external payable {
     }
 
     constructor(address _owner, address _admin) {
@@ -104,6 +110,29 @@ contract StrategyManager is ReentrancyGuard, IStrategy {
 		}
 
 		emit TransferToDelegators();
+	}
+
+	function transferBnbToDelegators(TransferDelegatorsParams calldata params) payable external restricted {
+
+		uint256 amount;
+		uint256 balance = address(this).balance;
+
+		console.log(balance);
+		require(params.amount * (params.endIndex - params.startIndex) <= balance, "Insufficient funds for all delegators");
+
+		for (uint16 i=params.startIndex; i< params.endIndex; i++) {
+
+			amount = params.amount - address(delegators[i]).balance;
+
+			if (amount <= 0) {
+				continue;
+			}
+
+			address payable testPayable = payable(address(delegators[i]));
+			testPayable.send(amount);
+		}
+
+		emit TransferBnbToDelegators();
 	}
 
 	function transferToManager(address stakedToken) external restricted {

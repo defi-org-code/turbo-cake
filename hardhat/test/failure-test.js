@@ -19,6 +19,8 @@ const admin = accounts[0];
 const owner = accounts[1];
 const unauthorized = accounts[2];
 
+let msg;
+
 
 describe("TransferTest", function () {
   it("Transfer Test", async function () {
@@ -58,9 +60,17 @@ describe("TransferTest", function () {
 	await strategyManagerContract.methods.addDelegators(N_DELEGATORS).send({from: admin});
 
 	// ################################################################################
+	// get past events of DelegatorsAdded
+	// ################################################################################
+	let blockNum = await web3.eth.getBlockNumber();
+	let events = await strategyManagerContract.getPastEvents('DelegatorsAdded', {fromBlock: blockNum-1, toBlock: blockNum});
+    const delegatorsAddr = events[0]['returnValues']['delegatorsAddr'];
+	console.log(`delegators: ${events[0]['returnValues']['delegatorsAddr']}`);
+	expect(delegatorsAddr.length).to.equal(N_DELEGATORS);
+
+	// ################################################################################
 	// transfer cakes to manager
 	// ################################################################################
-	// const totalCakesInit = await cake.methods.balanceOf(cakeWhale).call();
 	await cake.methods.transfer(strategyManager.address, new BigNumber(TRANSFER_BALANCE).multipliedBy(N_DELEGATORS).toString()).send({from: cakeWhale});
 
 	const mngTotalCakes = await cake.methods.balanceOf(strategyManager.address).call();
@@ -68,37 +78,43 @@ describe("TransferTest", function () {
 	expect(mngTotalCakes).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_DELEGATORS).toString());
 
 	// ################################################################################
-	// get past events of DelegatorsAdded
+	// set strategy from admin
 	// ################################################################################
-	let blockNum = await web3.eth.getBlockNumber();
-	let events = await strategyManagerContract.getPastEvents('DelegatorsAdded', {fromBlock: blockNum-1, toBlock: blockNum + 1});
-    const delegatorsAddr = events[0]['returnValues']['delegatorsAddr'];
-	console.log(`delegators: ${events[0]['returnValues']['delegatorsAddr']}`);
-	expect(delegatorsAddr.length).to.equal(N_DELEGATORS);
+	msg = '';
+	try {
+		msg = await strategyManagerContract.methods.setStrategy(strategy.address).send({from: admin});
 
-	// ################################################################################
-	// transfer cake funds to delegators
-	// ################################################################################
-  	await strategyManagerContract.methods.transferToDelegators([cakeToken, TRANSFER_BALANCE, 0, N_DELEGATORS]).send({from: admin});
-
-	for (const delegator of delegatorsAddr) {
-		expect(await cake.methods.balanceOf(delegator).call()).to.equal(TRANSFER_BALANCE);
+	} catch (e) {
+		msg = e.message;
 	}
 
-	// ################################################################################
-	// transfer all funds from delegators back to manager
-	// ################################################################################
-  	await strategyManagerContract.methods.transferToManager(cakeToken).send({from: admin});
-	expect(await cake.methods.balanceOf(strategyManager.address).call()).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_DELEGATORS).toString());
+	expect(msg).to.equal("VM Exception while processing transaction: reverted with reason string 'onlyOwner'");
 
 	// ################################################################################
-	// transfer all funds to owner
+	// set admin from admin
 	// ################################################################################
-	expect(await cake.methods.balanceOf(owner).call()).to.equal('0');
+	msg = '';
+	try {
+		msg = await strategyManagerContract.methods.setAdmin(strategyManager.address).send({from: admin});
 
-  	await strategyManagerContract.methods.transferToOwner(cakeToken).send({from: admin});
-	expect(await cake.methods.balanceOf(owner).call()).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_DELEGATORS).toString());
+	} catch (e) {
+		msg = e.message;
+	}
 
+	expect(msg).to.equal("VM Exception while processing transaction: reverted with reason string 'onlyOwner'");
+
+	// ################################################################################
+	// transfer funds to delegators from unauthorized
+	// ################################################################################
+	msg = '';
+	try {
+	  	msg = await strategyManagerContract.methods.transferToDelegators([cakeToken, TRANSFER_BALANCE, 0, N_DELEGATORS]).send({from: unauthorized});
+
+	} catch (e) {
+		msg = e.message;
+	}
+
+	expect(msg).to.equal("VM Exception while processing transaction: reverted with reason string 'restricted'");
 
   });
 });
