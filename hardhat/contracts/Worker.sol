@@ -30,7 +30,6 @@ contract Worker is ReentrancyGuard, IWorker {
 
 	function deposit(address stakedPoolAddr, uint256 amount, uint256 pid) private {
 		require(amount > 0, "zero deposit amount");
-		console.log(amount, pid);
 
 		bool success;
 		bytes memory data;
@@ -39,7 +38,6 @@ contract Worker is ReentrancyGuard, IWorker {
 			ICakePools(stakedPoolAddr).deposit(amount, pid);
 		}
 		else {
-			console.log('msg.sender=', msg.sender);
 			(success, data) = (ICakePools(stakedPoolAddr).stakedToken()).call(abi.encodeWithSignature("approve(address,uint256)",stakedPoolAddr,amount));
 			require (success == true, 'approve');
 
@@ -59,9 +57,6 @@ contract Worker is ReentrancyGuard, IWorker {
 	}
 
 	function doHardWork(DoHardWorkParams memory params) external {
-
-		console.log('Strategy address =', address (this));
-		console.log('DoHArdWork Strategy: msg.sender=', msg.sender, 'tx.origin=', tx.origin);
 
 		// here we have only cakes (rewards + staked)
 		if (params.withdraw) {  // newStakedPoolAddr != stakedPoolAddr

@@ -55,9 +55,6 @@ describe("TransferTest", function () {
 	await hre.network.provider.request({method: "hardhat_impersonateAccount",params: [unauthorized]});
 	await hre.network.provider.request({method: "hardhat_setBalance", params: [unauthorized, "0x1000000000000000000000"]});
 
-	// const balance = await web3.eth.getBalance(owner);
-	// console.log(web3.utils.fromWei(balance, "ether"), "ETH");
-
 	// ################################################################################
 	// deploy contract
 	// ################################################################################
@@ -66,7 +63,7 @@ describe("TransferTest", function () {
 	await strategyManager.deployed();
 	const strategyManagerContract = new web3.eth.Contract(strategyManagerAbi, strategyManager.address);
 
-	console.log(`owner=${owner}, admin=${admin}, strategyManager=${strategyManager.address}`);
+	// console.log(`owner=${owner}, admin=${admin}, strategyManager=${strategyManager.address}`);
 
     // ################################################################################
     // add workers
@@ -82,7 +79,7 @@ describe("TransferTest", function () {
 	let blockNum = await web3.eth.getBlockNumber();
 	let events = await strategyManagerContract.getPastEvents('WorkersAdded', {fromBlock: blockNum-1, toBlock: blockNum});
     const WorkersAddr = events[0]['returnValues']['workersAddr'];
-	console.log(`workers: ${events[0]['returnValues']['workersAddr']}`);
+	// console.log(`workers: ${events[0]['returnValues']['workersAddr']}`);
 	expect(WorkersAddr.length).to.equal(N_WORKERS);
 
 	// ################################################################################
@@ -92,7 +89,6 @@ describe("TransferTest", function () {
 	await cake.methods.transfer(strategyManager.address, new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString()).send({from: cakeWhale});
 
 	const mngTotalCakes = await cake.methods.balanceOf(strategyManager.address).call();
-	console.log(`mngTotalCakes=${mngTotalCakes}`);
 	expect(mngTotalCakes).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
 
 	// ################################################################################
@@ -101,7 +97,6 @@ describe("TransferTest", function () {
 	await revv.methods.transfer(strategyManager.address, new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString()).send({from: revvWhale});
 
 	const mngTotalRevv = await revv.methods.balanceOf(strategyManager.address).call();
-	console.log(`mngTotalRevv=${mngTotalRevv}`);
 	expect(mngTotalRevv).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
 
 	// ################################################################################
@@ -110,7 +105,7 @@ describe("TransferTest", function () {
   	await strategyManagerContract.methods.transferToWorkers([cakeToken, TRANSFER_BALANCE, 0, N_WORKERS]).send({from: admin});
 
 	for (const worker of WorkersAddr) {
-		console.log(`worker: ${worker}, cake balance= ${await cake.methods.balanceOf(worker).call()}`);
+		// console.log(`worker: ${worker}, cake balance= ${await cake.methods.balanceOf(worker).call()}`);
 		expect(await cake.methods.balanceOf(worker).call()).to.equal(TRANSFER_BALANCE);
 	}
 
@@ -139,6 +134,7 @@ describe("TransferTest", function () {
 	// ################################################################################
 	// transfer all revv from workers back to manager
 	// ################################################################################
+	expect(await revv.methods.balanceOf(strategyManager.address).call()).to.equal('0');
   	await strategyManagerContract.methods.transferToManager(revvToken).send({from: admin});
 	expect(await revv.methods.balanceOf(strategyManager.address).call()).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
 
@@ -146,7 +142,6 @@ describe("TransferTest", function () {
 	// transfer all revv to owner
 	// ################################################################################
 	expect(await revv.methods.balanceOf(owner).call()).to.equal('0');
-
   	await strategyManagerContract.methods.transferToOwner(revvToken).send({from: admin});
 	expect(await revv.methods.balanceOf(owner).call()).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
 
