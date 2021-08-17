@@ -22,8 +22,8 @@ const unauthorized = accounts[2];
 let msg;
 
 
-describe("TransferTest", function () {
-  it("Transfer Test", async function () {
+describe("FailureTest", function () {
+  it("Failure Test", async function () {
 
 	// ################################################################################
 	// impersonate and init balance

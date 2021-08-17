@@ -34,8 +34,8 @@ const unauthorized = accounts[2];
 
 let balance;
 
-describe("TransferTest", function () {
-  it("Transfer Test", async function () {
+describe("DepositTest", function () {
+  it("Deposit Test", async function () {
 
 	// ################################################################################
 	// impersonate and init balance
@@ -73,13 +73,15 @@ describe("TransferTest", function () {
 
 	await strategyManagerContract.methods.addWorkers(N_WORKERS).send({from: admin});
 
+	console.log(await strategyManagerContract.methods.workers(1).call());
+
 	// ################################################################################
 	// get past events of WorkersAdded
 	// ################################################################################
 	let blockNum = await web3.eth.getBlockNumber();
 	let events = await strategyManagerContract.getPastEvents('WorkersAdded', {fromBlock: blockNum-1, toBlock: blockNum});
     const WorkersAddr = events[0]['returnValues']['workersAddr'];
-	// console.log(`workers: ${events[0]['returnValues']['workersAddr']}`);
+	console.log(`workers: ${events[0]['returnValues']['workersAddr']}`);
 	expect(WorkersAddr.length).to.equal(N_WORKERS);
 
 	// ################################################################################
@@ -135,7 +137,7 @@ describe("TransferTest", function () {
 	// transfer all revv from workers back to manager
 	// ################################################################################
 	expect(await revv.methods.balanceOf(strategyManager.address).call()).to.equal('0');
-  	await strategyManagerContract.methods.transferToManager(revvToken).send({from: admin});
+  	await strategyManagerContract.methods.transferToManager([revvToken, TRANSFER_BALANCE, 0, N_WORKERS]).send({from: admin});
 	expect(await revv.methods.balanceOf(strategyManager.address).call()).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
 
 	// ################################################################################

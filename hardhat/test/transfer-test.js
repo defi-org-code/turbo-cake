@@ -82,7 +82,7 @@ describe("TransferTest", function () {
 	// ################################################################################
 	// transfer all funds from workers back to manager
 	// ################################################################################
-  	await strategyManagerContract.methods.transferToManager(cakeToken).send({from: admin});
+  	await strategyManagerContract.methods.transferToManager([cakeToken, TRANSFER_BALANCE, 0, N_WORKERS]).send({from: admin});
 	expect(await cake.methods.balanceOf(strategyManager.address).call()).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
 
 	// ################################################################################

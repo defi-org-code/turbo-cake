@@ -21,8 +21,7 @@ contract StrategyManager is ReentrancyGuard, IWorker {
 
     address public immutable owner;
     address public admin;
-	address public strategy;
-	Worker[] public workers;
+	address [] public workers;
 
 	// TODO: improve events params
 	event SetAdmin(address newAdmin);
@@ -54,15 +53,12 @@ contract StrategyManager is ReentrancyGuard, IWorker {
 
 	function addWorkers(uint16 numWorkers) external restricted {
 
-		address [] memory workersAddr = new address[](numWorkers);
-
 		for (uint256 i=workers.length; i < numWorkers; i++) {
 			Worker worker = new Worker();
-			workers.push(worker);
-			workersAddr[i] = address(worker);
+			workers.push(address(worker));
 		}
 
-		emit WorkersAdded(workersAddr);
+		emit WorkersAdded(workers);
 	}
 
 	function doHardWork(DoHardWorkParams memory params) external restricted {
@@ -70,16 +66,10 @@ contract StrategyManager is ReentrancyGuard, IWorker {
 		require ((params.endIndex <= workers.length) && (params.startIndex < params.endIndex), "Invalid start or end index");
 
 		for (uint16 i=params.startIndex; i < params.endIndex; i++) {
-			workers[i].doHardWork(params);
+			Worker(workers[i]).doHardWork(params);
 		}
 
 		emit DoHardWork(params.startIndex, params.endIndex, params.stakedPoolAddr, params.newPoolAddr);
-	}
-
-	function doHardWorkDirect(DoHardWorkParams memory params) external restricted {
-
-		Strategy(strategy).doHardWork(params);
-		emit DoHardWorkDirect(params.stakedPoolAddr, params.newPoolAddr);
 	}
 
 	function transferToWorkers(TransferWorkersParams calldata params) external restricted {
@@ -91,23 +81,23 @@ contract StrategyManager is ReentrancyGuard, IWorker {
 
 		for (uint16 i=params.startIndex; i< params.endIndex; i++) {
 
-			amount = params.amount - IERC20(params.stakedToken).balanceOf(address(workers[i]));
+			amount = params.amount - IERC20(params.stakedToken).balanceOf(workers[i]);
 
 			if (amount <= 0) {
 				continue;
 			}
 
-			IERC20(params.stakedToken).safeApprove(address(workers[i]), amount);
-			IERC20(params.stakedToken).safeTransfer(address(workers[i]), amount);
+			IERC20(params.stakedToken).safeApprove(workers[i], amount);
+			IERC20(params.stakedToken).safeTransfer(workers[i], amount);
 		}
 
 		emit TransferToWorkers();
 	}
 
-	function transferToManager(address stakedToken) external restricted {
+	function transferToManager(TransferWorkersParams calldata params) external restricted {
 
-		for (uint16 i=0; i< workers.length; i++) {
-				workers[i].transferToManager(stakedToken);
+		for (uint16 i=params.startIndex; i< params.endIndex; i++) {
+				Worker(workers[i]).transferToManager(params.stakedToken);
 		}
 
 		emit TransferToManager();
