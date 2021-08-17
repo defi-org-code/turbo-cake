@@ -27,7 +27,6 @@ contract StrategyManager is ReentrancyGuard, IWorker {
 	event SetAdmin(address newAdmin);
 	event WorkersAdded(address [] workersAddr);
 	event DoHardWork(uint16 startIndex, uint16 endIndex, address stakedPoolAddr, address newPoolAddr);
-	event DoHardWorkDirect(address stakedPoolAddr, address newPoolAddr);
 	event TransferToWorkers();
 	event TransferToManager();
 	event TransferToOwner(uint256 amount);
