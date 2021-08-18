@@ -16,6 +16,8 @@ contract Worker is ReentrancyGuard, IWorker {
 	using SafeERC20 for IERC20;
     address public immutable owner;
 
+	address cake = address(0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82);
+
 	event DoHardWork(address stakedPoolAddr);
 
 	modifier onlyOwner() {
@@ -30,24 +32,25 @@ contract Worker is ReentrancyGuard, IWorker {
 	function deposit(address stakedPoolAddr, uint256 amount, uint256 pid) private {
 		require(amount > 0, "zero deposit amount");
 
-		bool success;
-		bytes memory data;
-
-		if (pid != 0) { // TODO: FIXME
-			ICakePools(stakedPoolAddr).deposit(amount, pid);
+		if (pid == 0) { // TODO: FIXME
+			IERC20(cake).approve(stakedPoolAddr,amount);
+			ICakePools(stakedPoolAddr).enterStaking(amount);
 		}
 		else {
-			(success, data) = (ICakePools(stakedPoolAddr).stakedToken()).call(abi.encodeWithSignature("approve(address,uint256)",stakedPoolAddr,amount));
-			require (success == true, 'approve');
-
-			(success, data) = (stakedPoolAddr).call(abi.encodeWithSignature("deposit(uint256)",amount));
-			require (success == true, 'deposit');
+			IERC20(ICakePools(stakedPoolAddr).stakedToken()).approve(stakedPoolAddr,amount);
+			ICakePools(stakedPoolAddr).deposit(amount);
 		}
 	}
 
-	function withdraw(address stakedPoolAddr, uint256 amount) private {
+	function withdraw(address stakedPoolAddr, uint256 amount, uint256 pid) private {
 		require(amount > 0, "zero deposit amount");
-		ICakePools(stakedPoolAddr).withdraw(amount);
+
+		if (pid == 0) {
+			ICakePools(stakedPoolAddr).leaveStaking(amount);
+		}
+		else {
+			ICakePools(stakedPoolAddr).withdraw(amount);
+		}
 	}
 
 	function swap(address stakedPoolAddr, uint256 amount) private {
@@ -60,7 +63,7 @@ contract Worker is ReentrancyGuard, IWorker {
 		// here we have only cakes (rewards + staked)
 		if (params.withdraw) {  // newStakedPoolAddr != stakedPoolAddr
 			// unstake all cakes
-			withdraw(params.stakedPoolAddr, params.amount);
+			withdraw(params.stakedPoolAddr, params.amount, params.pid);
 		}
 
 		// our reward token might be cake, in this case no need to swap

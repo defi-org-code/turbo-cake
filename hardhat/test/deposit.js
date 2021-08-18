@@ -124,7 +124,7 @@ describe("DepositTest", function () {
 	// workers doHardWork - deposit
 	// ################################################################################
 	let withdraw=false, swap=false, deposit=true;
-  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 0, 0, N_WORKERS]).send({from: admin});
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 10, 0, N_WORKERS]).send({from: admin});
 
 	let res;
 	for (const worker of WorkersAddr) {

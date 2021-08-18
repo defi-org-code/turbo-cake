@@ -7,8 +7,9 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 interface ICakePools {
 
 	function deposit(uint256) external;
-	function deposit(uint256, uint256) external;
+	function enterStaking(uint256) external;
 	function withdraw(uint256) external;
+	function leaveStaking(uint256 _amount) external;
     function rewardToken() external returns (address);
     function stakedToken() external returns (address);
 
