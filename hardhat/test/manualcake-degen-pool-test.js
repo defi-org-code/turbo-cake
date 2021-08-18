@@ -1,8 +1,9 @@
-const { init_test, cakeWhale, cakeToken, cake,
+const { init_test, cakeWhale, cakeToken, revvPoolAddr, cake, revvPoolContract,
 		admin, owner, managerAbi, N_WORKERS, TRANSFER_BALANCE, expect, BigNumber} = require("./init-test");
 
-describe("TransferTest", function () {
-  it("Transfer Test", async function () {
+
+describe("ManualCake-To-Degen-Pool", function () {
+  it("Manual Cake To Degen Pool Test", async function () {
 
 	// ################################################################################
 	// init
@@ -10,20 +11,18 @@ describe("TransferTest", function () {
 	await init_test();
 
 	// ################################################################################
-	// deploy contracts
+	// deploy contract
 	// ################################################################################
 	const Manager = await ethers.getContractFactory("Manager");
 	const manager = await Manager.deploy(owner, admin);
 	await manager.deployed();
 	const managerContract = new web3.eth.Contract(managerAbi, manager.address);
 
-	console.log(`owner=${owner}, admin=${admin}, manager=${manager.address}`);
-
+	// console.log(`owner=${owner}, admin=${admin}, manager=${manager.address}`);
     // ################################################################################
     // add workers
 	// ################################################################################
 	await managerContract.methods.addWorkers(N_WORKERS).send({from: admin});
-
 	const _nWorkers = await managerContract.methods.getNWorkers().call({from: admin})
 	expect(_nWorkers).to.equal(N_WORKERS.toString())
 
@@ -33,47 +32,82 @@ describe("TransferTest", function () {
 	}
 
 	// ################################################################################
+	// get past events of WorkersAdded
+	// ################################################################################
+	let blockNum = await web3.eth.getBlockNumber();
+	let events = await managerContract.getPastEvents('WorkersAdded', {fromBlock: blockNum-1, toBlock: blockNum});
+    const nWorkers = events[0]['returnValues']['nWorkers'];
+	expect(nWorkers).to.equal(N_WORKERS.toString());
+
+	// ################################################################################
 	// transfer cakes to manager
 	// ################################################################################
 	// const totalCakesInit = await cake.methods.balanceOf(cakeWhale).call();
 	await cake.methods.transfer(manager.address, new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString()).send({from: cakeWhale});
 
 	const mngTotalCakes = await cake.methods.balanceOf(manager.address).call();
-	console.log(`mngTotalCakes=${mngTotalCakes}`);
 	expect(mngTotalCakes).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
 
 	// ################################################################################
-	// get past events of WorkersAdded
-	// ################################################################################
-	let blockNum = await web3.eth.getBlockNumber();
-	let events = await managerContract.getPastEvents('WorkersAdded', {fromBlock: blockNum-1, toBlock: blockNum + 1});
-	const nWorkers = events[0]['returnValues']['nWorkers'];
-	expect(nWorkers).to.equal(N_WORKERS.toString());
-
-	// ################################################################################
-	// transfer cake funds to workers
+	// transfer cakes to workers
 	// ################################################################################
   	await managerContract.methods.transferToWorkers([cakeToken, TRANSFER_BALANCE, 0, N_WORKERS]).send({from: admin});
 
+	for (const worker of WorkersAddr) {
+		// console.log(`worker: ${worker}, cake balance= ${await cake.methods.balanceOf(worker).call()}`);
+		expect(await cake.methods.balanceOf(worker).call()).to.equal(TRANSFER_BALANCE);
+	}
+
+	// ################################################################################
+	// workers doHardWork - deposit cakes in revv pool
+	// ################################################################################
+	let withdraw=false, swap=false, deposit=true;
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 0, 0, N_WORKERS]).send({from: admin});
+
+	let res;
+	for (const worker of WorkersAddr) {
+		res = await revvPoolContract.methods.userInfo(worker).call();
+		expect(res['amount']).to.equal(TRANSFER_BALANCE);
+	}
+
+	// ################################################################################
+	// workers has no cakes (all staked in revv pool)
+	// ################################################################################
+	for (const worker of WorkersAddr) {
+		expect(await cake.methods.balanceOf(worker).call()).to.equal('0');
+	}
+
+	// ################################################################################
+	// workers doHardWork - withdraw cakes from revv pool
+	// ################################################################################
+	withdraw=true; swap=false; deposit=false;
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 0, 0, N_WORKERS]).send({from: admin});
+
+	for (const worker of WorkersAddr) {
+		res = await revvPoolContract.methods.userInfo(worker).call();
+		expect(res['amount']).to.equal('0');
+	}
+
+	// ################################################################################
+	// cakes sent back to workers (from revv pool)
+	// ################################################################################
 	for (const worker of WorkersAddr) {
 		expect(await cake.methods.balanceOf(worker).call()).to.equal(TRANSFER_BALANCE);
 	}
 
 	// ################################################################################
-	// transfer all funds from workers back to manager
+	// transfer all cakes from workers back to manager
 	// ################################################################################
 	expect(await cake.methods.balanceOf(manager.address).call()).to.equal('0');
   	await managerContract.methods.transferToManager([cakeToken, 0, N_WORKERS]).send({from: admin});
 	expect(await cake.methods.balanceOf(manager.address).call()).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
 
 	// ################################################################################
-	// transfer all funds to owner
+	// transfer all cakes to owner
 	// ################################################################################
 	expect(await cake.methods.balanceOf(owner).call()).to.equal('0');
-
   	await managerContract.methods.transferToOwner(cakeToken).send({from: admin});
 	expect(await cake.methods.balanceOf(owner).call()).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
-
 
   });
 });
