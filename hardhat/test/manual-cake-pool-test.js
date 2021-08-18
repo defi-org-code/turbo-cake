@@ -1,9 +1,11 @@
-const { init_test, cakeWhale, cakeToken, revvPoolAddr, cake, revvPoolContract,
-		admin, owner, managerAbi, N_WORKERS, TRANSFER_BALANCE, expect, BigNumber} = require("./init-test");
+const { init_test, cakeWhale, cakeToken, cake,
+		admin, owner, managerAbi, N_WORKERS, TRANSFER_BALANCE,
+		manualCakePoolAddr, manualCakePoolContract,
+		expect, BigNumber} = require("./init-test");
 
 
-describe("ManualCake-To-Degen-Pool", function () {
-  it("Manual Cake To Degen Pool Test", async function () {
+describe("CakeToDegenTest", function () {
+  it("Cake To Degen Test", async function () {
 
 	// ################################################################################
 	// init
@@ -18,7 +20,6 @@ describe("ManualCake-To-Degen-Pool", function () {
 	await manager.deployed();
 	const managerContract = new web3.eth.Contract(managerAbi, manager.address);
 
-	// console.log(`owner=${owner}, admin=${admin}, manager=${manager.address}`);
     // ################################################################################
     // add workers
 	// ################################################################################
@@ -59,40 +60,37 @@ describe("ManualCake-To-Degen-Pool", function () {
 	}
 
 	// ################################################################################
-	// workers doHardWork - deposit cakes in revv pool
+	// workers doHardWork - deposit in cake pool
 	// ################################################################################
 	let withdraw=false, swap=false, deposit=true;
-  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 10, 0, N_WORKERS]).send({from: admin});
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, manualCakePoolAddr, manualCakePoolAddr, TRANSFER_BALANCE, 0, 0, N_WORKERS]).send({from: admin});
 
 	let res;
 	for (const worker of WorkersAddr) {
-		res = await revvPoolContract.methods.userInfo(worker).call();
+		res = await manualCakePoolContract.methods.userInfo(0, worker).call();
 		expect(res['amount']).to.equal(TRANSFER_BALANCE);
 	}
 
 	// ################################################################################
-	// workers has no cakes (all staked in revv pool)
+	// workers has no cakes (all staked in manual cake pool)
 	// ################################################################################
 	for (const worker of WorkersAddr) {
 		expect(await cake.methods.balanceOf(worker).call()).to.equal('0');
 	}
 
 	// ################################################################################
-	// workers doHardWork - withdraw cakes from revv pool
+	// workers doHardWork - withdraw cakes from manual pool
 	// ################################################################################
 	withdraw=true; swap=false; deposit=false;
-  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 10, 0, N_WORKERS]).send({from: admin});
-
-	for (const worker of WorkersAddr) {
-		res = await revvPoolContract.methods.userInfo(worker).call();
-		expect(res['amount']).to.equal('0');
-	}
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, manualCakePoolAddr, manualCakePoolAddr, TRANSFER_BALANCE, 0, 0, N_WORKERS]).send({from: admin});
 
 	// ################################################################################
-	// cakes sent back to workers (from revv pool)
+	// check cakes sent back to workers (manual cake pool)
 	// ################################################################################
+	let balance;
 	for (const worker of WorkersAddr) {
-		expect(await cake.methods.balanceOf(worker).call()).to.equal(TRANSFER_BALANCE);
+		balance = new BigNumber(await cake.methods.balanceOf(worker).call());
+		expect(balance.gt(TRANSFER_BALANCE)).to.true;
 	}
 
 	// ################################################################################
@@ -100,14 +98,16 @@ describe("ManualCake-To-Degen-Pool", function () {
 	// ################################################################################
 	expect(await cake.methods.balanceOf(manager.address).call()).to.equal('0');
   	await managerContract.methods.transferToManager([cakeToken, 0, N_WORKERS]).send({from: admin});
-	expect(await cake.methods.balanceOf(manager.address).call()).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
+  	balance = new BigNumber(await cake.methods.balanceOf(manager.address).call());
+	expect(balance.gt(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString())).to.true;
 
 	// ################################################################################
 	// transfer all cakes to owner
 	// ################################################################################
 	expect(await cake.methods.balanceOf(owner).call()).to.equal('0');
   	await managerContract.methods.transferToOwner(cakeToken).send({from: admin});
-	expect(await cake.methods.balanceOf(owner).call()).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
+  	balance = new BigNumber(await cake.methods.balanceOf(owner).call());
+	expect(balance.gt(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString())).to.true;
 
   });
 });
