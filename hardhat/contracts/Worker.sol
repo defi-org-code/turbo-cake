@@ -85,7 +85,6 @@ contract Worker is ReentrancyGuard, IWorker {
 			return;
 		}
 
-//		IERC20(stakedToken).safeApprove(owner, amount);
 		IERC20(stakedToken).safeTransfer(owner, amount);
 	}
 

@@ -23,9 +23,10 @@ const cake = new web3.eth.Contract(cakeAbi, cakeToken);
 const revv = new web3.eth.Contract(cakeAbi, revvToken);
 
 const revvAbi = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"tokenRecovered","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"AdminTokenRecovery","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Deposit","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"EmergencyWithdraw","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"poolLimitPerUser","type":"uint256"}],"name":"NewPoolLimit","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"rewardPerBlock","type":"uint256"}],"name":"NewRewardPerBlock","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"startBlock","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"endBlock","type":"uint256"}],"name":"NewStartAndEndBlocks","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"blockNumber","type":"uint256"}],"name":"RewardsStop","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Withdraw","type":"event"},{"inputs":[],"name":"PRECISION_FACTOR","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"SMART_CHEF_FACTORY","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"accTokenPerShare","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"bonusEndBlock","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_amount","type":"uint256"}],"name":"deposit","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"_amount","type":"uint256"}],"name":"emergencyRewardWithdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"emergencyWithdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"hasUserLimit","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"contract IBEP20","name":"_stakedToken","type":"address"},{"internalType":"contract IBEP20","name":"_rewardToken","type":"address"},{"internalType":"uint256","name":"_rewardPerBlock","type":"uint256"},{"internalType":"uint256","name":"_startBlock","type":"uint256"},{"internalType":"uint256","name":"_bonusEndBlock","type":"uint256"},{"internalType":"uint256","name":"_poolLimitPerUser","type":"uint256"},{"internalType":"address","name":"_admin","type":"address"}],"name":"initialize","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"isInitialized","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"lastRewardBlock","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_user","type":"address"}],"name":"pendingReward","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"poolLimitPerUser","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_tokenAddress","type":"address"},{"internalType":"uint256","name":"_tokenAmount","type":"uint256"}],"name":"recoverWrongTokens","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"renounceOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"rewardPerBlock","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"rewardToken","outputs":[{"internalType":"contract IBEP20","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"stakedToken","outputs":[{"internalType":"contract IBEP20","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"startBlock","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"stopReward","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bool","name":"_hasUserLimit","type":"bool"},{"internalType":"uint256","name":"_poolLimitPerUser","type":"uint256"}],"name":"updatePoolLimitPerUser","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"_rewardPerBlock","type":"uint256"}],"name":"updateRewardPerBlock","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"_startBlock","type":"uint256"},{"internalType":"uint256","name":"_bonusEndBlock","type":"uint256"}],"name":"updateStartAndEndBlocks","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"userInfo","outputs":[{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"rewardDebt","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_amount","type":"uint256"}],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"}]
-const revvContract = new web3.eth.Contract(revvAbi, revvPoolAddr);
+const revvPoolContract = new web3.eth.Contract(revvAbi, revvPoolAddr);
 
-const N_WORKERS = 2;
+const MAX_WORKERS = 3
+let N_WORKERS = MAX_WORKERS;
 const TRANSFER_BALANCE = new BigNumber(65).multipliedBy(1e18).toString();
 
 const admin = accounts[0];
@@ -34,8 +35,8 @@ const unauthorized = accounts[2];
 
 let balance;
 
-describe("DepositTest", function () {
-  it("Deposit Test", async function () {
+describe("MultiSingleWorkerTest", function () {
+  it("Multi To Single Worker Test", async function () {
 
 	// ################################################################################
 	// impersonate and init balance
@@ -56,7 +57,7 @@ describe("DepositTest", function () {
 	await hre.network.provider.request({method: "hardhat_setBalance", params: [unauthorized, "0x1000000000000000000000"]});
 
 	// ################################################################################
-	// deploy contract
+	// multi workers - deploy contract
 	// ################################################################################
 	const Manager = await ethers.getContractFactory("Manager");
 	const manager = await Manager.deploy(owner, admin);
@@ -65,27 +66,19 @@ describe("DepositTest", function () {
 
 	// console.log(`owner=${owner}, admin=${admin}, manager=${manager.address}`);
     // ################################################################################
-    // add workers
+    // multi workers - add workers
 	// ################################################################################
 	await managerContract.methods.addWorkers(N_WORKERS).send({from: admin});
-	const _nWorkers = await managerContract.methods.getNWorkers().call({from: admin})
-	expect(_nWorkers).to.equal(N_WORKERS.toString())
+	const nWorkers = await managerContract.methods.getNWorkers().call({from: admin})
+	expect(nWorkers).to.equal(N_WORKERS.toString())
 
 	let WorkersAddr = [];
-	for (let i=0; i<_nWorkers; i++) {
+	for (let i=0; i<nWorkers; i++) {
 		WorkersAddr.push(await managerContract.methods.workers(i).call({from: admin}));
 	}
 
 	// ################################################################################
-	// get past events of WorkersAdded
-	// ################################################################################
-	let blockNum = await web3.eth.getBlockNumber();
-	let events = await managerContract.getPastEvents('WorkersAdded', {fromBlock: blockNum-1, toBlock: blockNum});
-    const nWorkers = events[0]['returnValues']['nWorkers'];
-	expect(nWorkers).to.equal(N_WORKERS.toString());
-
-	// ################################################################################
-	// transfer cakes to manager
+	// multi workers - transfer cakes to manager
 	// ################################################################################
 	// const totalCakesInit = await cake.methods.balanceOf(cakeWhale).call();
 	await cake.methods.transfer(manager.address, new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString()).send({from: cakeWhale});
@@ -94,15 +87,7 @@ describe("DepositTest", function () {
 	expect(mngTotalCakes).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
 
 	// ################################################################################
-	// transfer revv to manager
-	// ################################################################################
-	await revv.methods.transfer(manager.address, new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString()).send({from: revvWhale});
-
-	const mngTotalRevv = await revv.methods.balanceOf(manager.address).call();
-	expect(mngTotalRevv).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
-
-	// ################################################################################
-	// transfer cakes to workers
+	// multi workers - transfer cakes to workers
 	// ################################################################################
   	await managerContract.methods.transferToWorkers([cakeToken, TRANSFER_BALANCE, 0, N_WORKERS]).send({from: admin});
 
@@ -112,40 +97,123 @@ describe("DepositTest", function () {
 	}
 
 	// ################################################################################
-	// transfer revv to workers
-	// ################################################################################
-  	await managerContract.methods.transferToWorkers([revvToken, TRANSFER_BALANCE, 0, N_WORKERS]).send({from: admin});
-
-	for (const worker of WorkersAddr) {
-		expect(await revv.methods.balanceOf(worker).call()).to.equal(TRANSFER_BALANCE);
-	}
-
-	// ################################################################################
-	// workers doHardWork - deposit
+	// multi workers - worker doHardWork - deposit cakes in revv pool
 	// ################################################################################
 	let withdraw=false, swap=false, deposit=true;
   	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 0, 0, N_WORKERS]).send({from: admin});
 
 	let res;
 	for (const worker of WorkersAddr) {
-		res = await revvContract.methods.userInfo(worker).call();
-		// console.log(await revvContract.methods.userInfo(worker).call());
+		res = await revvPoolContract.methods.userInfo(worker).call();
 		expect(res['amount']).to.equal(TRANSFER_BALANCE);
 	}
 
 	// ################################################################################
-	// transfer all revv from workers back to manager
+	// multi workers - workers has no cakes (all staked in revv pool)
 	// ################################################################################
-	expect(await revv.methods.balanceOf(manager.address).call()).to.equal('0');
-  	await managerContract.methods.transferToManager([revvToken, 0, N_WORKERS]).send({from: admin});
-	expect(await revv.methods.balanceOf(manager.address).call()).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
+	for (const worker of WorkersAddr) {
+		expect(await cake.methods.balanceOf(worker).call()).to.equal('0');
+	}
 
 	// ################################################################################
-	// transfer all revv to owner
+	// multi workers - workers doHardWork - withdraw cakes from revv pool
 	// ################################################################################
-	expect(await revv.methods.balanceOf(owner).call()).to.equal('0');
-  	await managerContract.methods.transferToOwner(revvToken).send({from: admin});
-	expect(await revv.methods.balanceOf(owner).call()).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
+	withdraw=true; swap=false; deposit=false;
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 0, 0, N_WORKERS]).send({from: admin});
+
+	for (const worker of WorkersAddr) {
+		res = await revvPoolContract.methods.userInfo(worker).call();
+		expect(res['amount']).to.equal('0');
+	}
+
+	// ################################################################################
+	// multi workers - cakes sent back to workers (from revv pool)
+	// ################################################################################
+	for (const worker of WorkersAddr) {
+		expect(await cake.methods.balanceOf(worker).call()).to.equal(TRANSFER_BALANCE);
+	}
+
+	// ################################################################################
+	// multi workers - transfer all cakes from worker back to manager
+	// ################################################################################
+	expect(await cake.methods.balanceOf(manager.address).call()).to.equal('0');
+  	await managerContract.methods.transferToManager([cakeToken, 0, N_WORKERS]).send({from: admin});
+	expect(await cake.methods.balanceOf(manager.address).call()).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
+
+	// ################################################################################
+	// single worker flow
+	// ################################################################################
+	N_WORKERS = 1
+
+	// ################################################################################
+	// single worker - transfer cakes to workers
+	// ################################################################################
+  	await managerContract.methods.transferToWorkers([cakeToken, TRANSFER_BALANCE, 0, N_WORKERS]).send({from: admin});
+
+	expect(await cake.methods.balanceOf(WorkersAddr[0]).call()).to.equal(TRANSFER_BALANCE);
+
+	for (let i=1; i < MAX_WORKERS; i++) {
+		expect(await cake.methods.balanceOf(WorkersAddr[i]).call()).to.equal('0');
+	}
+
+	// ################################################################################
+	// single worker - worker doHardWork - deposit cakes in revv pool
+	// ################################################################################
+	withdraw=false; swap=false; deposit=true;
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 0, 0, N_WORKERS]).send({from: admin});
+
+	res = await revvPoolContract.methods.userInfo(WorkersAddr[0]).call();
+	expect(res['amount']).to.equal(TRANSFER_BALANCE);
+
+	for (let i=1; i < MAX_WORKERS; i++) {
+		res = await revvPoolContract.methods.userInfo(WorkersAddr[i]).call();
+		expect(res['amount']).to.equal('0');
+	}
+
+	// ################################################################################
+	// workers has no cakes (all staked in revv pool)
+	// ################################################################################
+	for (const worker of WorkersAddr) {
+		expect(await cake.methods.balanceOf(worker).call()).to.equal('0');
+	}
+
+	// ################################################################################
+	// workers doHardWork - withdraw cakes from revv pool
+	// ################################################################################
+	withdraw=true; swap=false; deposit=false;
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 0, 0, N_WORKERS]).send({from: admin});
+
+	res = await revvPoolContract.methods.userInfo(WorkersAddr[0]).call();
+	expect(res['amount']).to.equal('0');
+
+	for (let i=1; i < MAX_WORKERS; i++) {
+		res = await revvPoolContract.methods.userInfo(WorkersAddr[i]).call();
+		expect(res['amount']).to.equal('0');
+	}
+
+	// ################################################################################
+	// cakes sent back to workers (from revv pool)
+	// ################################################################################
+	expect(await cake.methods.balanceOf(WorkersAddr[0]).call()).to.equal(TRANSFER_BALANCE);
+
+	for (let i=1; i < MAX_WORKERS; i++) {
+		res = await revvPoolContract.methods.userInfo(WorkersAddr[i]).call();
+		expect(await cake.methods.balanceOf(WorkersAddr[i]).call()).to.equal('0');
+	}
+
+	// ################################################################################
+	// transfer all cakes from worker back to manager
+	// ################################################################################
+	expect(await cake.methods.balanceOf(manager.address).call()).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(MAX_WORKERS-N_WORKERS).toString());
+  	await managerContract.methods.transferToManager([cakeToken, 0, N_WORKERS]).send({from: admin});
+	expect(await cake.methods.balanceOf(manager.address).call()).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(MAX_WORKERS).toString());
+
+	// ################################################################################
+	// transfer all cakes to owner
+	// ################################################################################
+	expect(await cake.methods.balanceOf(owner).call()).to.equal('0');
+  	await managerContract.methods.transferToOwner(cakeToken).send({from: admin});
+	expect(await cake.methods.balanceOf(owner).call()).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(MAX_WORKERS).toString());
 
   });
 });
