@@ -4,8 +4,8 @@ const { init_test, cakeWhale, cakeToken, cake,
 		expect, BigNumber} = require("./init-test");
 
 
-describe("CakeToDegenTest", function () {
-  it("Cake To Degen Test", async function () {
+describe("ManualCakePoolTest", function () {
+  it("Manual Cake Pool Test", async function () {
 
 	// ################################################################################
 	// init

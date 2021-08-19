@@ -28,11 +28,12 @@ module.exports = {
 		hardhat: {
 			forking: {
 				url: "https://long-thrumming-dream.bsc.quiknode.pro/4361da560bd47300da588fc1ec5ea1c2ba05891f/",
+				// url: "https://cold-silent-rain.bsc.quiknode.pro/f39277cc46387375f0eb657b7aca8ba81431a05e/",
+				// url: "https://bsc-dataseed.binance.org/",
 				// blockNumber: 9879809,
 				// accounts: {
 				// 	accountsBalance: "1000000",
 				// },
-				// url: "https://cold-silent-rain.bsc.quiknode.pro/f39277cc46387375f0eb657b7aca8ba81431a05e",
 				chainId: 56,
 				// blockGasLimit: 12e6,
 				// gasPrice: 20000000000,
@@ -55,5 +56,9 @@ module.exports = {
 		cache: "./cache",
 		artifacts: "./artifacts"
 	},
+
+	mocha: {
+    	timeout: 50000
+  	}
 
 };

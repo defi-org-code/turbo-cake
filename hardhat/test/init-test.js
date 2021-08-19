@@ -34,6 +34,7 @@ let N_WORKERS = 2;
 let MAX_WORKERS = 3;
 const TRANSFER_BALANCE = new BigNumber(65).multipliedBy(1e18).toString();
 
+BigNumber.config({POW_PRECISION: 100, EXPONENTIAL_AT: 1e+9});
 
 async function init_test() {
 
