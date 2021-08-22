@@ -43,7 +43,12 @@ contract Worker is ReentrancyGuard, IWorker {
 	}
 
 	function withdraw(address stakedPoolAddr, uint256 amount, uint256 pid) private {
-		require(amount > 0, "zero deposit amount");
+
+		if (amount == 0) {
+			UserInfo memory userInfo;
+			userInfo = ICakePools(stakedPoolAddr).userInfo(address(this));
+			amount = userInfo.amount;
+		}
 
 		if (pid == 0) {
 			ICakePools(stakedPoolAddr).leaveStaking(amount);
@@ -53,12 +58,16 @@ contract Worker is ReentrancyGuard, IWorker {
 		}
 	}
 
-	function swap(address stakedPoolAddr, uint256 amount) private {
-		CakePairs(stakedPoolAddr).swap(amount); // TODO: FIXME tmp
-		console.log("swap");
+	function swap(address stakedPoolAddr, SwapParams calldata params) private {
+
+		uint256 amountIn = IERC20(ICakePools(stakedPoolAddr).rewardToken()).balanceOf(address(this));
+		uint256 amountOutMin = amountIn * params.multiplier;
+
+		IERC20(ICakePools(stakedPoolAddr).rewardToken()).approve(params.swapRouter,amountIn);
+		ICakePools(params.swapRouter).swapExactTokensForTokens(amountIn, amountOutMin, params.path, address(this), params.deadline);
 	}
 
-	function doHardWork(DoHardWorkParams memory params) external {
+	function doHardWork(DoHardWorkParams calldata params) external {
 
 		// here we have only cakes (rewards + staked)
 		if (params.withdraw) {  // newStakedPoolAddr != stakedPoolAddr
@@ -68,7 +77,7 @@ contract Worker is ReentrancyGuard, IWorker {
 
 		// our reward token might be cake, in this case no need to swap
 		if (params.swap) {
-//			swap(params.stakedPoolAddr, params.amount); // TODO: FIXME tmp
+			swap(params.stakedPoolAddr, params.swapParams);
 		}
 
 		if (params.deposit) {

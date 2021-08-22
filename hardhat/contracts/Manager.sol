@@ -65,6 +65,10 @@ contract Manager is ReentrancyGuard, IWorker {
 		return workers.length;
 	}
 
+	function getWorkers() external restricted view returns (address [] memory) {
+		return workers;
+	}
+
 	function doHardWork(DoHardWorkParams memory params) external restricted {
 
 		require ((params.endIndex <= workers.length) && (params.startIndex < params.endIndex), "Invalid start or end index");

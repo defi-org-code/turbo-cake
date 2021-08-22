@@ -1,5 +1,5 @@
 const { init_test, cakeWhale, cakeToken, revvPoolAddr, cake, revvPoolContract,
-		admin, owner, managerAbi, N_WORKERS, TRANSFER_BALANCE, expect, BigNumber} = require("./init-test");
+		admin, owner, swapRouter, revvSwapPath, deadline, managerAbi, N_WORKERS, TRANSFER_BALANCE, expect, BigNumber} = require("./init-test");
 
 
 describe("DepositWithdrawTest", function () {
@@ -62,7 +62,7 @@ describe("DepositWithdrawTest", function () {
 	// workers doHardWork - deposit cakes in revv pool
 	// ################################################################################
 	let withdraw=false, swap=false, deposit=true;
-  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 10, 0, N_WORKERS]).send({from: admin});
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 10, 0, N_WORKERS, [swapRouter, 0, revvSwapPath, deadline]]).send({from: admin});
 
 	let res;
 	for (const worker of WorkersAddr) {
@@ -81,7 +81,7 @@ describe("DepositWithdrawTest", function () {
 	// workers doHardWork - withdraw cakes from revv pool
 	// ################################################################################
 	withdraw=true; swap=false; deposit=false;
-  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 10, 0, N_WORKERS]).send({from: admin});
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, 0, 10, 0, N_WORKERS, [swapRouter, 0, revvSwapPath, deadline]]).send({from: admin});
 
 	for (const worker of WorkersAddr) {
 		res = await revvPoolContract.methods.userInfo(worker).call();
