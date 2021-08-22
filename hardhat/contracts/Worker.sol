@@ -67,7 +67,7 @@ contract Worker is ReentrancyGuard, IWorker {
 		ICakePools(params.swapRouter).swapExactTokensForTokens(amountIn, amountOutMin, params.path, address(this), params.deadline);
 	}
 
-	function doHardWork(DoHardWorkParams calldata params) external {
+	function doHardWork(DoHardWorkParams calldata params) external onlyOwner {
 
 		// here we have only cakes (rewards + staked)
 		if (params.withdraw) {  // newStakedPoolAddr != stakedPoolAddr

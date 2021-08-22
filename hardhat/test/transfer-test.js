@@ -1,5 +1,6 @@
 const { init_test, cakeWhale, cakeToken, cake,
-		admin, owner, managerAbi, N_WORKERS, TRANSFER_BALANCE, expect, BigNumber} = require("./init-test");
+		admin, owner,
+		managerAbi, N_WORKERS, TRANSFER_BALANCE, expect, BigNumber} = require("./init-test");
 
 describe("TransferTest", function () {
   it("Transfer Test", async function () {
@@ -17,7 +18,7 @@ describe("TransferTest", function () {
 	await manager.deployed();
 	const managerContract = new web3.eth.Contract(managerAbi, manager.address);
 
-	console.log(`owner=${owner}, admin=${admin}, manager=${manager.address}`);
+	// console.log(`owner=${owner}, admin=${admin}, manager=${manager.address}`);
 
     // ################################################################################
     // add workers
@@ -39,7 +40,6 @@ describe("TransferTest", function () {
 	await cake.methods.transfer(manager.address, new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString()).send({from: cakeWhale});
 
 	const mngTotalCakes = await cake.methods.balanceOf(manager.address).call();
-	console.log(`mngTotalCakes=${mngTotalCakes}`);
 	expect(mngTotalCakes).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
 
 	// ################################################################################

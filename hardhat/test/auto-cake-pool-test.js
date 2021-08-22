@@ -1,5 +1,5 @@
 const { init_test, cakeWhale, cakeToken, cake,
-		admin, owner, managerAbi, N_WORKERS, TRANSFER_BALANCE,
+		admin, owner, swapRouter, revvSwapPath, deadline, managerAbi, N_WORKERS, TRANSFER_BALANCE,
 		autoCakePoolAddr, autoCakePoolContract,
 		expect, BigNumber} = require("./init-test");
 
@@ -63,7 +63,7 @@ describe("autoCakePoolTest", function () {
 	// workers doHardWork - deposit in cake pool
 	// ################################################################################
 	let withdraw=false, swap=false, deposit=true;
-  	await managerContract.methods.doHardWork([withdraw, swap, deposit, autoCakePoolAddr, autoCakePoolAddr, TRANSFER_BALANCE, 1, 0, N_WORKERS]).send({from: admin});
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, autoCakePoolAddr, autoCakePoolAddr, TRANSFER_BALANCE, 1, 0, N_WORKERS, [swapRouter, 0, revvSwapPath, deadline]]).send({from: admin});
 
 	let res;
 	for (const worker of WorkersAddr) {
@@ -82,7 +82,7 @@ describe("autoCakePoolTest", function () {
 	// workers doHardWork - withdraw cakes from auto pool
 	// ################################################################################
 	withdraw=true; swap=false; deposit=false;
-  	await managerContract.methods.doHardWork([withdraw, swap, deposit, autoCakePoolAddr, autoCakePoolAddr, TRANSFER_BALANCE, 1, 0, N_WORKERS]).send({from: admin});
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, autoCakePoolAddr, autoCakePoolAddr, TRANSFER_BALANCE, 1, 0, N_WORKERS, [swapRouter, 0, revvSwapPath, deadline]]).send({from: admin});
 
 	// ################################################################################
 	// check cakes sent back to workers (auto cake pool)

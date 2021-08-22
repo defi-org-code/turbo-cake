@@ -2,6 +2,7 @@ let {
 	cakeWhale, cakeToken,
 	revvPoolAddr, cake, revvPoolContract,
 	admin, owner,
+	swapRouter, revvSwapPath, deadline,
 	N_WORKERS, MAX_WORKERS, TRANSFER_BALANCE,
 	managerAbi,
 	init_test,
@@ -62,7 +63,7 @@ describe("MultiSingleWorkerTest", function () {
 	// multi workers - worker doHardWork - deposit cakes in revv pool
 	// ################################################################################
 	let withdraw=false, swap=false, deposit=true;
-  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 10, 0, MAX_WORKERS]).send({from: admin});
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 10, 0, MAX_WORKERS, [swapRouter, 0, revvSwapPath, deadline]]).send({from: admin});
 
 	let res;
 	for (const worker of WorkersAddr) {
@@ -81,7 +82,7 @@ describe("MultiSingleWorkerTest", function () {
 	// multi workers - workers doHardWork - withdraw cakes from revv pool
 	// ################################################################################
 	withdraw=true; swap=false; deposit=false;
-  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 10, 0, MAX_WORKERS]).send({from: admin});
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 10, 0, MAX_WORKERS, [swapRouter, 0, revvSwapPath, deadline]]).send({from: admin});
 
 	for (const worker of WorkersAddr) {
 		res = await revvPoolContract.methods.userInfo(worker).call();
@@ -121,7 +122,7 @@ describe("MultiSingleWorkerTest", function () {
 	// single worker - worker doHardWork - deposit cakes in revv pool
 	// ################################################################################
 	withdraw=false; swap=false; deposit=true;
-  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 10, 0, 1]).send({from: admin});
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 10, 0, 1, [swapRouter, 0, revvSwapPath, deadline]]).send({from: admin});
 
 	res = await revvPoolContract.methods.userInfo(WorkersAddr[0]).call();
 	expect(res['amount']).to.equal(TRANSFER_BALANCE);
@@ -142,7 +143,7 @@ describe("MultiSingleWorkerTest", function () {
 	// workers doHardWork - withdraw cakes from revv pool
 	// ################################################################################
 	withdraw=true; swap=false; deposit=false;
-  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 10, 0, 1]).send({from: admin});
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 10, 0, 1, [swapRouter, 0, revvSwapPath, deadline]]).send({from: admin});
 
 	res = await revvPoolContract.methods.userInfo(WorkersAddr[0]).call();
 	expect(res['amount']).to.equal('0');

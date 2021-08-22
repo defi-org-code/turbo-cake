@@ -1,5 +1,6 @@
 let { init_test, cakeWhale, cakeToken, revvPoolAddr, cake, revvPoolContract,
 		MAX_WORKERS, N_WORKERS,
+		swapRouter, revvSwapPath, deadline,
 		admin, owner, managerAbi, TRANSFER_BALANCE, expect, BigNumber} = require("./init-test");
 
 
@@ -12,8 +13,8 @@ describe("MultiWorkersTest", function () {
 	// ################################################################################
 	await init_test();
 
-	N_WORKERS = 20;
-	const batch_size = 10;
+	N_WORKERS = 10;
+	const batch_size = 2;
 
 	// ################################################################################
 	// deploy contract
@@ -22,6 +23,8 @@ describe("MultiWorkersTest", function () {
 	const manager = await Manager.deploy(owner, admin);
 	await manager.deployed();
 	const managerContract = new web3.eth.Contract(managerAbi, manager.address);
+
+	// console.log(web3.utils.fromWei(await web3.eth.getBalance(admin)));
 
     // ################################################################################
     // add workers
@@ -33,7 +36,6 @@ describe("MultiWorkersTest", function () {
 		await managerContract.methods.addWorkers(batch_size).send({from: admin});
 		totalWorkersAdded += batch_size;
 		expect(await managerContract.methods.getNWorkers().call({from: admin})).to.equal(totalWorkersAdded.toString())
-		console.log(`${totalWorkersAdded} workers added`);
 	}
 
 	let WorkersAddr = [];
@@ -66,7 +68,7 @@ describe("MultiWorkersTest", function () {
 	let withdraw=false, swap=false, deposit=true;
 	for (let i=0; i<N_WORKERS; i+=batch_size) {
 		console.log(`doHardWork: deposit indices: [${i}, ${i+batch_size}]`);
-		await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 10, i, i+batch_size]).send({from: admin});
+		await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 10, i, i+batch_size, [swapRouter, 0, revvSwapPath, deadline]]).send({from: admin});
 	}
 
 	let res;
@@ -88,7 +90,7 @@ describe("MultiWorkersTest", function () {
 	withdraw=true; swap=false; deposit=false;
 	for (let i=0; i<N_WORKERS; i+=batch_size) {
 		console.log(`doHardWork: withdraw indices: [${i}, ${i+batch_size}]`);
-		await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 10, i, i+batch_size]).send({from: admin});
+		await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 10, i, i+batch_size, [swapRouter, 0, revvSwapPath, deadline]]).send({from: admin});
 	}
 
 	for (const worker of WorkersAddr) {
