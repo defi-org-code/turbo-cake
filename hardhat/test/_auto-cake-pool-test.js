@@ -7,6 +7,8 @@ const { init_test, cakeWhale, cakeToken, cake,
 describe("autoCakePoolTest", function () {
   it("auto Cake Pool Test", async function () {
 
+	return;
+
 	// ################################################################################
 	// init
 	// ################################################################################
