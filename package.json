@@ -4,6 +4,7 @@
   "devDependencies": {
     "bignumber.js": "^9.0.1",
     "dotenv": "^10.0.0",
+    "prompts": "^2.4.1",
     "web3": "^1.5.0"
   },
   "dependencies": {
