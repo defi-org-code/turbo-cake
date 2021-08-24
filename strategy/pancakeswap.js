@@ -83,11 +83,11 @@ const {TransactionFailure, FatalError, GasError, NotImplementedError} =  require
 
 class PancakeswapEnvironment {
 
-    constructor(config, redisClient, web3) {
+    constructor(config, redisClient, web3, notif) {
 
         this.trade = new Trade(config);
         this.redisClient = redisClient;
-        this.psListener = new PancakeswapListener(config, redisClient, web3);
+        this.psListener = new PancakeswapListener(config, redisClient, web3, notif);
 
     }
 
@@ -121,12 +121,13 @@ class PancakeswapListener {
 	PAST_EVENTS_N_DAYS = 3 // TODO: change to 60
 	PAST_EVENTS_N_BLOCKS = Math.floor(this.PAST_EVENTS_N_DAYS * this.BLOCKS_PER_DAY)
 
-    constructor(config, redisClient, web3) {
+    constructor(config, redisClient, web3, notif) {
         this.redisClient = redisClient;
         this.pancakeUpdateInterval = config.pancakeUpdateInterval;
         this.intervalId = null;
         this.lastUpdate = null;
         this.web3 = web3
+        this.notif = notif
     }
 
 	async init() {

@@ -37,7 +37,7 @@ class Strategy {
 		this.env = new PancakeswapEnvironment({
 			pancakeUpdateInterval: config.pancakeUpdateInterval,
 			},
-			this.redisClient, web3);
+			this.redisClient, web3, this.notif);
 		this.policy = new GreedyPolicy({
 			minTimeBufferSyrupSwitch: config.minTimeBufferSyrupSwitch,
 			minTimeBufferCompounds: config.minTimeBufferCompounds,
