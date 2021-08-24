@@ -164,17 +164,14 @@ class PancakeswapListener {
 
 
     async update() {
+    
         try {
             if (this.lastUpdate != null && Date.now() - this.lastUpdate.timestamp < this.pancakeUpdateInterval) {
                 return;
             }
 
             await this.fetchNewPools()
-
-
-            // this.redisClient.hmset('pancakeswap.env.poolsInfo', poolsInfo);
-
-            // this.redisClient.hmset('lastUpdate', {'blockNumber': blockNumber, 'timestamp': timestamp});
+			await this.updatePoolsApy()
 
         } catch (e) {
             console.log("Error updating pancakeswap.env.poolsInfo");
@@ -241,7 +238,6 @@ class PancakeswapListener {
 			this.poolsInfo = reply
 
 		})
-
 	}
 
 	async setPoolsInfo(lastBlockUpdate) {
