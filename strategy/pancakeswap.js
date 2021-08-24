@@ -128,6 +128,8 @@ class PancakeswapListener {
         this.lastUpdate = null;
         this.web3 = web3
         this.notif = notif
+
+        this.poolsInfo = {}
     }
 
 	async init() {
@@ -164,7 +166,8 @@ class PancakeswapListener {
             if (this.lastUpdate != null && Date.now() - this.lastUpdate.timestamp < this.pancakeUpdateInterval) {
                 return;
             }
-            const {poolsInfo, blockNumber, timestamp} = await this.fetchPoolsInfo();
+
+            await this.fetchNewPools()
 
 
             // this.redisClient.hmset('pancakeswap.env.poolsInfo', poolsInfo);
@@ -181,6 +184,30 @@ class PancakeswapListener {
 
 	}
 
+	async getPoolsInfo() {
+
+		this.redisClient.hgetall('poolsInfo', async (err, reply) => {
+
+			if (err) throw err
+			this.poolsInfo = reply
+			debug(`poolsInfo=${JSON.stringify(reply)}`)
+
+			if (this.poolsInfo === null || !('lastBlockUpdate' in this.poolsInfo)) {
+				const blockNum = await this.web3.eth.getBlockNumber()
+				return blockNum - this.PAST_EVENTS_N_BLOCKS
+			}
+
+			return this.poolsInfo['lastBlockUpdate'] + 1
+		})
+
+	}
+
+	async setPoolsInfo() {
+
+		this.poolsInfo['lastBlockUpdate'] = await this.web3.eth.getBlockNumber()
+		this.redisClient.hmset('poolsInfo', this.poolsInfo)
+	}
+
     async fetchPools(blockNum=null, fetchNBlocks=this.PAST_EVENTS_N_BLOCKS) {
 
         if (blockNum === null) {
@@ -188,6 +215,12 @@ class PancakeswapListener {
         }
 
         // TODO: fetch from redis last block and fetch only last missing blocks
+		const lastBlockUpdate = await this.getPoolsInfo()
+
+		if (lastBlockUpdate >= blockNum) {
+			console.log(`fetchPools: nothing to fetch, lastBlockUpdate (${lastBlockUpdate}) >= blockNum (${blockNum})`)
+			return
+		}
 
         // TODO: store on redis
         let events = await getPastEventsLoop(this.smartchefFactoryContract, 'NewSmartChefContract', fetchNBlocks, blockNum)
@@ -235,21 +268,9 @@ class PancakeswapListener {
                 'abi': abi,
                 'routeToCake': routeToCake
             };
-            // TODO: store redis
 
-
+			await this.setPoolsInfo()
         }
-    }
-
-
-    async fetchPoolsInfo() {
-
-        const poolsInfo = {};
-        const blockNumber = 0;
-        const timestamp = 0;
-
-        const pools = await this.fetchPools();
-        return { poolsInfo, blockNumber, timestamp };
     }
 }
 
