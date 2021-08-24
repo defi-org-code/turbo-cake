@@ -1,4 +1,4 @@
-
+const {getPastEventsLoop} = require('../bscFetcher')
 
 
 class Tokens {
