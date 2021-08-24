@@ -78,11 +78,11 @@ const {TransactionFailure, FatalError, GasError, NotImplementedError} =  require
 
 class PancakeswapEnvironment {
 
-    constructor(config, redisClient) {
+    constructor(config, redisClient, web3) {
 
         this.trade = new Trade(config);
         this.redisClient = redisClient;
-        this.psListener = new PancakeswapListener(config, redisClient);
+        this.psListener = new PancakeswapListener(config, redisClient, web3);
 
     }
 
@@ -107,11 +107,21 @@ class PancakeswapEnvironment {
 
 class PancakeswapListener {
 
-    constructor(config, redisClient) {
+	SEC_PER_HOUR = 3600
+	AVG_BLOCK_SEC = 3
+	SECONDS_PER_DAY = this.SEC_PER_HOUR * 24
+	BLOCKS_PER_DAY = this.SECONDS_PER_DAY / this.AVG_BLOCK_SEC
+	BLOCKS_PER_YEAR = this.BLOCKS_PER_DAY * 365
+
+	PAST_EVENTS_N_DAYS = 3
+	PAST_EVENTS_N_BLOCKS = Math.floor(this.PAST_EVENTS_N_DAYS * this.BLOCKS_PER_DAY)
+
+    constructor(config, redisClient, web3) {
         this.redisClient = redisClient;
         this.pancakeUpdateInterval = config.pancakeUpdateInterval;
         this.intervalId = null;
         this.lastUpdate = null;
+        this.web3 = web3
     }
 
     async listen() {
@@ -151,7 +161,7 @@ class PancakeswapListener {
     async fetchPools(blockNum=null, fetchNBlocks=this.PAST_EVENTS_N_BLOCKS) {
 
         if (blockNum === null) {
-            blockNum = await web3.eth.getBlockNumber()
+            blockNum = await this.web3.eth.getBlockNumber()
         }
 
         // TODO: fetch from redis last block and fetch only last missing blocks
@@ -215,7 +225,7 @@ class PancakeswapListener {
         const blockNumber = 0;
         const timestamp = 0;
 
-        // const pools = await this.fetchPools();
+        const pools = await this.fetchPools();
         return { poolsInfo, blockNumber, timestamp };
     }
 }
