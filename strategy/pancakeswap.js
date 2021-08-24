@@ -226,10 +226,10 @@ class PancakeswapListener {
 
 	async getPoolsInfo() {
 
-		await this.redisClient.hgetall('poolsInfo', async (err, reply) => {
+		await this.redisClient.get('poolsInfo', async (err, reply) => {
 
 			if (err) throw err
-			debug(`poolsInfo=${JSON.stringify(reply)}`)
+			// debug(`poolsInfo=${JSON.stringify(reply)}`)
 
 			if (reply != null) {
 				reply = JSON.parse(reply)
@@ -249,8 +249,9 @@ class PancakeswapListener {
 	async setPoolsInfo(lastBlockUpdate) {
 
 		this.poolsInfo['lastBlockUpdate'] = lastBlockUpdate
-		await this.redisClient.hset('poolsInfo', JSON.stringify(this.poolsInfo))
+		await this.redisClient.set('poolsInfo', JSON.stringify(this.poolsInfo))
 
+		console.log('pools info updated successfully')
 		// await this.redisClient.hset('poolsInfo', JSON.stringify(this.poolsInfo), async (err, reply) => {
 		//
 		// 	if (err) throw err
@@ -329,9 +330,9 @@ class PancakeswapListener {
                 'abi': abi,
                 'routeToCake': [rewardToken, BNB_ADDRESS, CAKE_ADDRESS]
             };
-
-			await this.setPoolsInfo(blockNum)
         }
+
+		await this.setPoolsInfo(blockNum)
     }
 }
 
