@@ -152,10 +152,6 @@ class Strategy {
 		});
 	}
 
-	getCakeBalance() {
-		return 0;
-	}
-
 	executeActionCallback(self, action, result) {
 		// self.inTransition = false;
 		if (result.status === "success") {
