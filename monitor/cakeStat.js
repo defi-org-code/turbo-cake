@@ -34,7 +34,7 @@ class CakeStat {
 		return amount.mul(accCakePerShare).div(1e12).sub(rewardDebt)
 	}
 
-	async numCakesInSmartchef(poolAddr, userAddr) {
+	async _numCakesInSmartchef(poolAddr, userAddr) {
 
 		const smartchefAbi = await fetchAbi(poolAddr)
 		const smartchefContract = await getContract(smartchefAbi, poolAddr)
@@ -51,13 +51,34 @@ class CakeStat {
 		const stakedTokenContract = await getContract(await fetchAbi(stakedToken), stakedToken)
 		const decimals = new BigNumber(await stakedTokenContract.methods.decimals().call())
 
-		return amount.multipliedBy(accCakePerShare).dividedBy(PRECISION_FACTOR).minus(rewardDebt).dividedBy(decimals).toString()
+		// return amount.multipliedBy(accCakePerShare).dividedBy(PRECISION_FACTOR).minus(rewardDebt).dividedBy(decimals).toString()
+		return amount.multipliedBy(accCakePerShare).dividedBy(PRECISION_FACTOR).minus(rewardDebt).toString()
+	}
+
+	async numCakesInSmartchef(poolAddr, userAddr) {
+
+		const smartchefAbi = await fetchAbi(poolAddr)
+		const smartchefContract = await getContract(smartchefAbi, poolAddr)
+
+		const PRECISION_FACTOR = new BigNumber(await smartchefContract.methods.PRECISION_FACTOR().call())
+
+		const userInfo = await smartchefContract.methods.userInfo(userAddr).call()
+
+		return userInfo['amount']
+		const amount = new BigNumber(userInfo['amount'])
+
+		const stakedToken = await smartchefContract.methods.stakedToken().call()
+		const stakedTokenContract = await getContract(await fetchAbi(stakedToken), stakedToken)
+		const decimals = new BigNumber(await stakedTokenContract.methods.decimals().call())
+
+		// return amount.multipliedBy(accCakePerShare).dividedBy(PRECISION_FACTOR).minus(rewardDebt).dividedBy(decimals).toString()
+		return amount.multipliedBy(accCakePerShare).dividedBy(PRECISION_FACTOR).minus(rewardDebt).toString()
 	}
 
 	async run() {
 
 		const poolAddr = "0xDe4AEf42Bb27a2cb45c746aCDe4e4D8aB711D27C"
-		const userAddr = "0xef35d7c8cae7e65d2a93145f8fd33d394d686706"
+		const userAddr = "0x87756b391517d0de57e0f19ce2cc86de235d4805"
 
 		// const {poolAddr, userAddr} = await prompts([
 		// {
@@ -74,18 +95,21 @@ class CakeStat {
 
 		await this.init()
 
+		let balance;
 		switch (poolAddr.toLowerCase()) {
 
 			case CAKE_VAULT_ADDRESS.toLowerCase():
-				return await this.numCakesInCakeVault(userAddr)
+				balance = await this.numCakesInCakeVault(userAddr)
+				return balance
 
 			case MASTERCHEF_ADDRESS.toLowerCase():
-				return await this.numCakesInMasterchef(userAddr)
+				balance = await this.numCakesInMasterchef(userAddr)
+				return balance
 
 			default:
-				console.log(await this.numCakesInSmartchef(poolAddr, userAddr))
-				return await this.numCakesInSmartchef(poolAddr, userAddr)
-
+				balance = await this.numCakesInSmartchef(poolAddr, userAddr)
+				console.log(balance)
+				return balance
 		}
 	}
 }
