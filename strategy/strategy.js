@@ -1,6 +1,11 @@
 
-const { ethers, web3 } = require("hardhat");
-const asyncRedis = require("async-redis");
+// const { ethers, web3 } = require("hardhat");
+const { ethers} = require("hardhat");
+
+const Web3 = require('web3')
+const web3 = new Web3(process.env.ENDPOINT_HTTPS)
+
+const asyncRedis = require("redis");
 
 const KeyEncryption = require('../keyEncryption');
 const Notifications = require('../notifications');

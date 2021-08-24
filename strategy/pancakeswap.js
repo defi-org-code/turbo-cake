@@ -225,7 +225,7 @@ class PancakeswapListener {
 
 	async getPoolsInfo() {
 
-		this.redisClient.hgetall('poolsInfo', async (err, reply) => {
+		await this.redisClient.hgetall('poolsInfo', async (err, reply) => {
 
 			if (err) throw err
 			debug(`poolsInfo=${JSON.stringify(reply)}`)
@@ -250,6 +250,10 @@ class PancakeswapListener {
     async fetchPools() {
 
 		let blockNum = await this.web3.eth.getBlockNumber()
+
+        if (this.poolsInfo['lastBlockUpdate'] == null) {
+			throw Error('lastBlockUpdate should be set')
+		}
 
         if (this.poolsInfo['lastBlockUpdate'] === blockNum) {
 
