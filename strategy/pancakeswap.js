@@ -4,6 +4,7 @@ const {SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS, BNB_ADDRESS,
 	PANCAKESWAP_FACTORY_V2_ADDRESS, VERSION,
 	MAX_TX_FAILURES, DEADLINE_SEC, MIN_SEC_BETWEEN_REBALANCE
 } = require('./params')
+const nodeFetch = require("node-fetch")
 
 const BigNumber = require('bignumber.js')
 BigNumber.config({POW_PRECISION: 100, EXPONENTIAL_AT: 1e+9})
@@ -245,6 +246,13 @@ class PancakeswapListener {
 
 		this.poolsInfo['lastBlockUpdate'] = lastBlockUpdate
 		this.redisClient.hmset('poolsInfo', this.poolsInfo)
+	}
+
+	async fetchAbi(addr) {
+
+		const bscscanAbiUrl =  `https://api.bscscan.com/api?module=contract&action=getabi&address=${addr}&apiKey=${process.env.BSCSCAN_API_KEY}`
+		const data = await nodeFetch(bscscanAbiUrl).then(response => response.json())
+		return JSON.parse(data.result)
 	}
 
     async fetchPools() {
