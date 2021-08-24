@@ -29,6 +29,7 @@ class GreedyPolicy extends Policy {
         super();
         this.minTimeBufferSyrupSwitch = config.minTimeBufferSyrupSwitch;
         this.minTimeBufferCompounds = config.minTimeBufferCompounds;
+        this.apySwitchTh = config.apySwitchTh;
 
     }
 
@@ -44,20 +45,13 @@ class GreedyPolicy extends Policy {
     }
 
 
-    shouldSwitchPools(from, to) {
+    shouldSwitchPools(poolsInfo, curSyrupPoolAddr, topYielderAddr) {
 
-        // if (topYielderAddr != args.curSyrupPoolAddr) {
-        //
-        // }
-        // const curSyrupPoolInfo = args.poolsInfo[args.curSyrupPoolAddr];
-        // const cur
-        //
-        // if (args.poolsInfo[topYielderAddr]['apr'] > curSyrupPoolInfo['apr'] * (1 + this.minSwitchRiskBuffer) ) {
-        //     return {addr: topYielderAddr};
-        // }
+		if (curSyrupPoolAddr >= topYielderAddr) {
+			return false
+		}
 
-   // }
-        return false;
+		return poolsInfo[topYielderAddr]['apy'] - poolsInfo[curSyrupPoolAddr]['apy'] >= this.apySwitchTh;
     }
 
     async getAction(args) {
@@ -73,20 +67,22 @@ class GreedyPolicy extends Policy {
         };
 
         if (args.curSyrupPoolAddr == null) { // enter "top" syrup pool apy estimate
-            const topYielderAddr = this.getTopYielderAddr(args.poolsInfo);
             action = {
                 name: Action.ENTER,
                 args: {
-                    to:  topYielderAddr,
+                    to:  this.getTopYielderAddr(args.poolsInfo),
                 }
             }
         }
 
         else if (Date.now() - args.lastActionTimestamp > this.minTimeBufferSyrupSwitch) { // check should switch syrup pool
+
             const topYielderAddr = this.getTopYielderAddr(args.poolsInfo);
             const topYielderPoolInfo = this.poolsInfo[topYielderAddr];
-            const curSyrupPoolInfo = args.poolsInfo[args.curSyrupPoolAddr];
-            if (this.shouldSwitchPools(curSyrupPoolInfo, topYielderPoolInfo)) {
+            const curSyrupPoolInfo = args.curSyrupPoolAddr;
+
+            if (this.shouldSwitchPools(args.poolsInfo, args.curSyrupPoolAddr, topYielderAddr)) {
+
                 action = {
                     name: Action.SWITCH,
                     args: {
@@ -98,6 +94,7 @@ class GreedyPolicy extends Policy {
         }
 
         else if (Date.now() - args.lastActionTimestamp > this.minTimeBufferCompounds) {
+
             action = {
                 name: Action.COMPOUND,
                 args: {
