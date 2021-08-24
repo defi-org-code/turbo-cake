@@ -120,7 +120,7 @@ class PancakeswapListener {
 	BLOCKS_PER_DAY = this.SECONDS_PER_DAY / this.AVG_BLOCK_SEC
 	BLOCKS_PER_YEAR = this.BLOCKS_PER_DAY * 365
 
-	PAST_EVENTS_N_DAYS = 3 // TODO: change to 60
+	PAST_EVENTS_N_DAYS = 1 // TODO: change to 60
 	PAST_EVENTS_N_BLOCKS = Math.floor(this.PAST_EVENTS_N_DAYS * this.BLOCKS_PER_DAY)
 
     constructor(config, redisClient, web3, notif) {
@@ -231,6 +231,10 @@ class PancakeswapListener {
 			if (err) throw err
 			debug(`poolsInfo=${JSON.stringify(reply)}`)
 
+			if (reply != null) {
+				reply = JSON.parse(reply)
+			}
+
 			if (reply == null || !('lastBlockUpdate' in reply)) {
 				let blockNum = await this.web3.eth.getBlockNumber()
 				this.poolsInfo['lastBlockUpdate'] = blockNum - this.PAST_EVENTS_N_BLOCKS
@@ -245,7 +249,14 @@ class PancakeswapListener {
 	async setPoolsInfo(lastBlockUpdate) {
 
 		this.poolsInfo['lastBlockUpdate'] = lastBlockUpdate
-		this.redisClient.hmset('poolsInfo', this.poolsInfo)
+		await this.redisClient.hset('poolsInfo', JSON.stringify(this.poolsInfo))
+
+		// await this.redisClient.hset('poolsInfo', JSON.stringify(this.poolsInfo), async (err, reply) => {
+		//
+		// 	if (err) throw err
+		// 	debug(`poolsInfo=${JSON.stringify(reply)}`)
+		// })
+
 	}
 
 	async fetchAbi(addr) {
