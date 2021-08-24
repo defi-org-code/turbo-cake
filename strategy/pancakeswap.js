@@ -1,6 +1,6 @@
 const {getPastEventsLoop} = require('../bscFetcher')
 const {SMARTCHEF_FACTORY_ABI, CAKE_ABI, PANCAKESWAP_FACTORY_V2_ABI, BEP_20_ABI} = require('../abis')
-const {SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS,
+const {SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS, BNB_ADDRESS,
 	PANCAKESWAP_FACTORY_V2_ADDRESS, VERSION,
 	MAX_TX_FAILURES, DEADLINE_SEC, MIN_SEC_BETWEEN_REBALANCE
 } = require('./params')
@@ -266,7 +266,7 @@ class PancakeswapListener {
                 'hasUserLimit': hasUserLimit,
                 'rewardPerBlock': rewardPerBlock,
                 'abi': abi,
-                'routeToCake': routeToCake
+                'routeToCake': [rewardToken, BNB_ADDRESS, CAKE_ADDRESS]
             };
 
 			await this.setPoolsInfo()
