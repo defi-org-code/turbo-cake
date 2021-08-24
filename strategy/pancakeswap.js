@@ -5,6 +5,8 @@ const {SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS, BNB_ADDRESS,
 	MAX_TX_FAILURES, DEADLINE_SEC, MIN_SEC_BETWEEN_REBALANCE
 } = require('./params')
 
+const BigNumber = require('bignumber.js')
+BigNumber.config({POW_PRECISION: 100, EXPONENTIAL_AT: 1e+9})
 
 class Tokens {
     // BASES_TO_CHECK_TRADES_AGAINST = {}
@@ -77,7 +79,6 @@ class Syrup {
 
 
 
-const redis = require("redis");
 const debug = (...messages) => console.log(...messages);
 const {TransactionFailure, FatalError, GasError, NotImplementedError} =  require('../errors');
 
@@ -137,6 +138,7 @@ class PancakeswapListener {
 		this.cakeContract = await this.getContract(CAKE_ABI, CAKE_ADDRESS)
 		this.swapFactoryContract = await this.getContract(PANCAKESWAP_FACTORY_V2_ABI, PANCAKESWAP_FACTORY_V2_ADDRESS)
 
+		await this.getPoolsInfo()
 		await this.fetchPools();
 	}
 
@@ -180,6 +182,37 @@ class PancakeswapListener {
         }
     }
 
+	changePct(start, end) {
+		return new BigNumber(100).multipliedBy(new BigNumber(end).div(new BigNumber(start)) - new BigNumber(1))
+	}
+
+	async getPoolTvl(addr) {
+		return await this.cakeContract.methods.balanceOf(addr)
+	}
+
+	aprToApy(apr, n=365, t=1.0) {
+		return 100 * ((1 + apr / 100 / n) ** (n*t) - 1)
+	}
+
+	async calcApy(rewardsPerBlock, tokenCakeRate, tvl) {
+
+		const rewardForPeriod = this.BLOCKS_PER_YEAR * rewardsPerBlock
+		const cakeForPeriod = rewardForPeriod * tokenCakeRate //* (1 - this.FEE)
+		const apr = this.changePct(tvl, tvl + cakeForPeriod)
+
+		return this.aprToApy(apr)
+	}
+
+	async getTokenCakeRate(tokenAddr) {
+		// TODO: swap path
+		throw NotImplementedError
+	}
+
+	async poolApy(poolAddr) {
+		const poolTvl = this.getPoolTvl(poolAddr)
+		const tokenCakeRate = await this.getTokenCakeRate(poolAddr['rewardToken'])
+		return this.calcApy(this.poolsInfo[poolAddr]['rewardPerBlock'], tokenCakeRate, poolTvl)
+	}
 	async fetchNewPools() {
 
 	}
@@ -189,41 +222,37 @@ class PancakeswapListener {
 		this.redisClient.hgetall('poolsInfo', async (err, reply) => {
 
 			if (err) throw err
-			this.poolsInfo = reply
 			debug(`poolsInfo=${JSON.stringify(reply)}`)
 
-			if (this.poolsInfo === null || !('lastBlockUpdate' in this.poolsInfo)) {
-				const blockNum = await this.web3.eth.getBlockNumber()
-				return blockNum - this.PAST_EVENTS_N_BLOCKS
+			if (reply == null || !('lastBlockUpdate' in reply)) {
+				let blockNum = await this.web3.eth.getBlockNumber()
+				this.poolsInfo['lastBlockUpdate'] = blockNum - this.PAST_EVENTS_N_BLOCKS
+				return
 			}
 
-			return this.poolsInfo['lastBlockUpdate'] + 1
+			this.poolsInfo = reply
+
 		})
 
 	}
 
-	async setPoolsInfo() {
+	async setPoolsInfo(lastBlockUpdate) {
 
-		this.poolsInfo['lastBlockUpdate'] = await this.web3.eth.getBlockNumber()
+		this.poolsInfo['lastBlockUpdate'] = lastBlockUpdate
 		this.redisClient.hmset('poolsInfo', this.poolsInfo)
 	}
 
-    async fetchPools(blockNum=null, fetchNBlocks=this.PAST_EVENTS_N_BLOCKS) {
+    async fetchPools(fetchNBlocks=this.PAST_EVENTS_N_BLOCKS) {
 
-        if (blockNum === null) {
-            blockNum = await this.web3.eth.getBlockNumber()
-        }
+		let blockNum = await this.web3.eth.getBlockNumber()
 
-        // TODO: fetch from redis last block and fetch only last missing blocks
-		const lastBlockUpdate = await this.getPoolsInfo()
+        if (this.poolsInfo['lastBlockUpdate'] >= blockNum) {
 
-		if (lastBlockUpdate >= blockNum) {
-			console.log(`fetchPools: nothing to fetch, lastBlockUpdate (${lastBlockUpdate}) >= blockNum (${blockNum})`)
+			console.log(`fetchPools: nothing to fetch, lastBlockUpdate (${this.poolsInfo['lastBlockUpdate']}) >= blockNum (${blockNum})`)
 			return
 		}
 
-        // TODO: store on redis
-        let events = await getPastEventsLoop(this.smartchefFactoryContract, 'NewSmartChefContract', fetchNBlocks, blockNum)
+        let events = await getPastEventsLoop(this.smartchefFactoryContract, 'NewSmartChefContract', fetchNBlocks, this.poolsInfo['lastBlockUpdate']+1)
         // let events = await getPastEventsLoop(this.smartchefFactoryContract, 'NewSmartChefContract', 1, 9676518) // 9676510, TODO : remove me dbg only
 
         let symbol
