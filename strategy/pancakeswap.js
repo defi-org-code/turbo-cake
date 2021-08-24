@@ -118,7 +118,7 @@ class PancakeswapListener {
 	BLOCKS_PER_DAY = this.SECONDS_PER_DAY / this.AVG_BLOCK_SEC
 	BLOCKS_PER_YEAR = this.BLOCKS_PER_DAY * 365
 
-	PAST_EVENTS_N_DAYS = 3
+	PAST_EVENTS_N_DAYS = 3 // TODO: change to 60
 	PAST_EVENTS_N_BLOCKS = Math.floor(this.PAST_EVENTS_N_DAYS * this.BLOCKS_PER_DAY)
 
     constructor(config, redisClient, web3) {
@@ -133,6 +133,8 @@ class PancakeswapListener {
 		this.smartchefFactoryContract = await this.getContract(SMARTCHEF_FACTORY_ABI, SMARTCHEF_FACTORY_ADDRESS)
 		this.cakeContract = await this.getContract(CAKE_ABI, CAKE_ADDRESS)
 		this.swapFactoryContract = await this.getContract(PANCAKESWAP_FACTORY_V2_ABI, PANCAKESWAP_FACTORY_V2_ADDRESS)
+
+		await this.fetchPools();
 	}
 
 	getContract(contractAbi, contractAddress) {
@@ -148,8 +150,9 @@ class PancakeswapListener {
             // this.lastUpdate = await this.redisClient.hgetall('pancakeswap.env.lastUpdate');
         }
 
-        this.interval = setInterval(async () => {
-            await this.update();}, this.pancakeUpdateInterval);
+		// TODO: ami disabled
+        // this.interval = setInterval(async () => {
+        //     await this.update();}, this.pancakeUpdateInterval);
 
         await this.update();
     }
@@ -172,6 +175,10 @@ class PancakeswapListener {
             console.error(e);
         }
     }
+
+	async fetchNewPools() {
+
+	}
 
     async fetchPools(blockNum=null, fetchNBlocks=this.PAST_EVENTS_N_BLOCKS) {
 
