@@ -110,6 +110,7 @@ class Strategy {
 
 			await this.update();
 			await this.setAction();
+
 			if (this.runIndex == 3) {
 				console.log( "FAKE action");
 				this.nextAction =
@@ -143,20 +144,10 @@ class Strategy {
 	}
 
 	async setAction() {
-		const policyInputArgs = this.getPolicyInputArgs();
-		this.nextAction = await this.policy.getAction(policyInputArgs);
-	}
-
-	getPolicyInputArgs() {
-		const args = {
-			poolsInfo: this.getPoolsInfo(),
-			cakeBalance: this.getCakeBalance(),
-		};
-		return args;
-	}
-
-	getPoolsInfo() {
-		return null;
+		this.nextAction = await this.policy.getAction({
+			'poolsInfo': this.env.psListener.poolsInfo,
+			'curSyrupPoolAddr': 0, // TODO
+		});
 	}
 
 	getCakeBalance() {

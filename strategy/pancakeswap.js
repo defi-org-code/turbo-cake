@@ -164,13 +164,13 @@ class PancakeswapListener {
 
 
     async update() {
-    
+
         try {
             if (this.lastUpdate != null && Date.now() - this.lastUpdate.timestamp < this.pancakeUpdateInterval) {
                 return;
             }
 
-            await this.fetchNewPools()
+			await this.fetchPools();
 			await this.updatePoolsApy()
 
         } catch (e) {
@@ -211,15 +211,16 @@ class PancakeswapListener {
 		return this.calcApy(this.poolsInfo[poolAddr]['rewardPerBlock'], tokenCakeRate, poolTvl)
 	}
 
+	// TODO: remove old pools from poolsInfo
+	async removeOldPools() {
+		throw NotImplementedError
+	}
+
 	async updatePoolsApy() {
 
 		for (const poolAddr of Object.keys(this.poolsInfo)) {
 			this.poolsInfo[poolAddr]['apy'] = await this.poolApy(poolAddr)
 		}
-	}
-
-	async fetchNewPools() {
-
 	}
 
 	async getPoolsInfo() {

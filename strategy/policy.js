@@ -10,8 +10,6 @@ const Action = {
 
 class Policy {
 
-    action
-
     constructor() {
         this.action = {
             name: null,
@@ -34,12 +32,15 @@ class GreedyPolicy extends Policy {
 
     }
 
-    getTopYielderAddr(poolsInfo, cakeAmount) {
-        // assume poolsInfo is up to date and contains
-        // bestRoute - with cost per swap,
-        // syrup token volatility estimate
+    getTopYielderAddr(poolsInfo) {
 
-        return null;
+    	let apyDict = {}
+
+		for (const poolAddr of Object.keys(poolsInfo)) {
+			apyDict[poolsInfo[poolAddr]['apy']] = poolAddr
+		}
+
+		return apyDict[Object.keys(poolsInfo).reduce((a, b) => poolsInfo[a] > poolsInfo[b] ? a : b)]
     }
 
 
@@ -61,24 +62,28 @@ class GreedyPolicy extends Policy {
 
     async getAction(args) {
 
+		/*
+		* get best pool apy
+		* check move criteria
+		* return action
+		* */
+
         let action = {
             name: Action.NO_OP,
         };
 
         if (args.curSyrupPoolAddr == null) { // enter "top" syrup pool apy estimate
-            const topYielderAddr = this.getTopYielderAddr(args.poolsInfo, args.cakeBalance);
-            // const topYielderPoolInfo = this.poolsInfo[topYielderAddr];
+            const topYielderAddr = this.getTopYielderAddr(args.poolsInfo);
             action = {
                 name: Action.ENTER,
                 args: {
                     to:  topYielderAddr,
-                    // amount: args.cakeBalance,
                 }
             }
         }
 
         else if (Date.now() - args.lastActionTimestamp > this.minTimeBufferSyrupSwitch) { // check should switch syrup pool
-            const topYielderAddr = this.getTopYielderAddr(args.poolsInfo, args.cakeBalance);
+            const topYielderAddr = this.getTopYielderAddr(args.poolsInfo);
             const topYielderPoolInfo = this.poolsInfo[topYielderAddr];
             const curSyrupPoolInfo = args.poolsInfo[args.curSyrupPoolAddr];
             if (this.shouldSwitchPools(curSyrupPoolInfo, topYielderPoolInfo)) {
