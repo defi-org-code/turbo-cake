@@ -1,4 +1,9 @@
 const {getPastEventsLoop} = require('../bscFetcher')
+const {SMARTCHEF_FACTORY_ABI, CAKE_ABI, PANCAKESWAP_FACTORY_V2_ABI, BEP_20_ABI} = require('../abis')
+const {SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS,
+	PANCAKESWAP_FACTORY_V2_ADDRESS, VERSION,
+	MAX_TX_FAILURES, DEADLINE_SEC, MIN_SEC_BETWEEN_REBALANCE
+} = require('./params')
 
 
 class Tokens {
@@ -88,8 +93,8 @@ class PancakeswapEnvironment {
 
     async init() {
         this.psListener.redisClient = this.redisClient;
+        await this.psListener.init()
         await this.psListener.listen();
-
     }
 
 
@@ -123,6 +128,16 @@ class PancakeswapListener {
         this.lastUpdate = null;
         this.web3 = web3
     }
+
+	async init() {
+		this.smartchefFactoryContract = await this.getContract(SMARTCHEF_FACTORY_ABI, SMARTCHEF_FACTORY_ADDRESS)
+		this.cakeContract = await this.getContract(CAKE_ABI, CAKE_ADDRESS)
+		this.swapFactoryContract = await this.getContract(PANCAKESWAP_FACTORY_V2_ABI, PANCAKESWAP_FACTORY_V2_ADDRESS)
+	}
+
+	getContract(contractAbi, contractAddress) {
+		return new this.web3.eth.Contract(contractAbi, contractAddress)
+	}
 
     async listen() {
         if (this.intervalId != null) {
