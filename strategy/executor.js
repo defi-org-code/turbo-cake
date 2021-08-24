@@ -11,18 +11,21 @@ const {SMARTCHEF_FACTORY_ABI, CAKE_ABI, PANCAKESWAP_FACTORY_V2_ABI, BEP_20_ABI} 
 
 class Executor extends TxManager {
 
-    constructor(web3, signer, notification) {
-        super(web3, notification);
+    constructor(ethers, notification) {
+        super(ethers, notification);
         this.name = "pancakeswap-executor";
-        this.web3 = web3;
-        this.signer = signer;
+        this.ethers = ethers;
+        this.signer = null;
         this.executionState = null;
 
 
 
     }
 
-    async init() {
+    async init(signer) {
+        this.signer = signer;
+        console.log(await signer.getAddress());
+
         this.cakeContract = new ethers.Contract(
             CAKE_ADDRESS,
             CAKE_ABI,
@@ -226,8 +229,8 @@ class Executor extends TxManager {
         const result = {
             cakeBalance,
             syrup: {
-                token: null,
-                amount: null,
+                token: "tester",
+                amount: 123,
             }
         };
 

@@ -24,7 +24,8 @@
     "node-binance-api": "^0.12.5",
     "node-fetch": "^2.6.1",
     "prompts": "^2.4.1",
-    "redis": "^3.1.2"
+    "redis": "^3.1.2",
+    "yargs": "^17.1.1"
   },
   "scripts": {
     "prettier": "prettier --write '{test,src,contracts,scripts}/**/*.{ts,js,json,sol}'",
