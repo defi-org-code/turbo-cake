@@ -138,9 +138,9 @@ class PancakeswapListener {
             const {poolsInfo, blockNumber, timestamp} = await this.fetchPoolsInfo();
 
 
-            this.redisClient.hmset('pancakeswap.env.poolsInfo', poolsInfo);
+            // this.redisClient.hmset('pancakeswap.env.poolsInfo', poolsInfo);
 
-            this.redisClient.hmset('lastUpdate', {'blockNumber': blockNumber, 'timestamp': timestamp});
+            // this.redisClient.hmset('lastUpdate', {'blockNumber': blockNumber, 'timestamp': timestamp});
 
         } catch (e) {
             console.log("Error updating pancakeswap.env.poolsInfo");

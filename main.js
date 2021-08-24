@@ -1,16 +1,18 @@
 const hre = require("hardhat");
 const envConfig = require('dotenv').config();
-const {Strategy} = require('./strategy/strategy');
+const {Strategy, RunningMode} = require('./strategy/strategy');
 
-// const args = process.argv.slice(2);
+const yargs = require('yargs/yargs');
+const { hideBin } = require('yargs/helpers');
+const argv = yargs(hideBin(process.argv)).argv;
 
 async function main() {
 
 	console.debug(`[PID pid ${process.pid}] Starting Bot-${process.env.BOT_ID}`);
 
     await hre.run('compile');
-
-    const strategy = new Strategy(envConfig);
+    const runningMode = (argv.dev? RunningMode.DEV: RunningMode.PRODUCTION);
+    const strategy = new Strategy(envConfig, runningMode);
     await strategy.start();
 }
 

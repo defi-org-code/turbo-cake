@@ -4,13 +4,9 @@ const debug = (...messages) => console.log(...messages);
 
 
 class TxManager {
+	constructor(ethers, notification) {
 
-	TX_STATE = {'IDLE': 0, 'PENDING': 1, 'EXECUTED': 2, 'FAILED': 3, 'HIGH_GAS': 4};
-	account = null
-
-	constructor(web3, notification) {
-
-		this.web3 = web3;
+		this.ethers = ethers;
 		this.notif = notification;
 	}
 

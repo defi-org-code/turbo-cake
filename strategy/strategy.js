@@ -14,13 +14,19 @@ const {TransactionFailure, FatalError, GasError, NotImplementedError} =  require
 
 function loadConfig(baseConfig) {
 	let config = baseConfig;
-
 	return config;
 }
 
+
+const RunningMode = {
+	DEV: "development",
+	PRODUCTION: "production",
+}
+
+
 class Strategy {
 
-	constructor(envConfig) {
+	constructor(envConfig, runningMode) {
 		this.state = {
 			position: null,
 			terminating: false,
@@ -37,12 +43,16 @@ class Strategy {
 			minTimeBufferCompounds: config.minTimeBufferCompounds,
 
 		});
-		this.executor = new Executor(web3, this.notif);
+		this.executor = new Executor(ethers, this.notif);
 		this.runIndex = 0;
 		this.config = config;
 		this.inTransition = false;
 		this.tickInterval = 2000; //config.tickInterval;
+
+		this.wallet = null;
 		this.signer = null;
+
+		this.runningMode = runningMode;
 
 	}
 
@@ -61,14 +71,15 @@ class Strategy {
 	}
 
 	async init() {
-		this.wallet = new ethers.Wallet(await new KeyEncryption().loadKey());
-		this.signer = this.wallet.connect(ethers.provider);
-		const signer = await ethers.getSigner("0x73feaa1eE314F8c655E354234017bE2193C9E24E");
-		console.log(await signer.getAddress());
+		if (this.runningMode === RunningMode.PRODUCTION) {
+			this.wallet = new ethers.Wallet(await new KeyEncryption().loadKey());
+			this.signer = this.wallet.connect(ethers.provider);
+		} else if (this.runningMode === RunningMode.DEV) {
+			this.signer = await ethers.getSigner("0x73feaa1eE314F8c655E354234017bE2193C9E24E");
+		}
 
 		await this.env.init();
-		// await this.executor.init(this.signer);
-		await this.executor.init(signer);
+		await this.executor.init(this.signer);
 		await this.setupState();
 	}
 
@@ -77,10 +88,6 @@ class Strategy {
 	}
 
 	redisInit() {
-		// this.redisClient = {
-		// 	hmset: (f) => {return;}//console.log(f);}
-		// };
-		// return;
 		this.redisClient = asyncRedis.createClient();
 		this.redisClient.on("error", function(error) {
 			console.error(error)
@@ -220,4 +227,5 @@ class Strategy {
 
 module.exports = {
 	Strategy,
+	RunningMode,
 };
