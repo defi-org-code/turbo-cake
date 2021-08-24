@@ -125,7 +125,7 @@ class Strategy extends TxManager {
 		await this.fetchListedPairs()
 		await this.fetchPools()
 
-		this.storeData()
+		// this.storeData()
 	}
 
 	async getPoolTvl(addr) {
