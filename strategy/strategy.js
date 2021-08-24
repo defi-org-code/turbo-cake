@@ -52,6 +52,8 @@ class Strategy extends TxManager {
 	PAST_EVENTS_N_DAYS = 3
 	PAST_EVENTS_N_BLOCKS = Math.floor(this.PAST_EVENTS_N_DAYS * this.BLOCKS_PER_DAY)
 
+	STATE = {'IDLE': 0, 'TX_PENDING': 1, 'HARVEST': 2, 'CHANGE_POOL': 3, 'STAKE': 4}
+
 	constructor() {
 		super(web3)
 
@@ -79,7 +81,8 @@ class Strategy extends TxManager {
 		HARVEST: swap token->cake + stake
 		CHANGE_POOL
 		*/
-		this.STATE = {'IDLE': 0, 'TX_PENDING': 1, 'HARVEST': 2, 'CHANGE_POOL': 3, 'STAKE': 4}
+		// this.STATE = {'IDLE': 0, 'TX_PENDING': 1, 'HARVEST': 2, 'CHANGE_POOL': 3, 'STAKE': 4}
+		this.state = this.STATE.IDLE
 
 	}
 
@@ -365,7 +368,7 @@ class Strategy extends TxManager {
 		this.txCnt -= 1
 
 		if (this.txCnt === 0) {
-			this.STATE = this.STATE.IDLE
+			this.state = this.STATE.IDLE
 			return
 		}
 
@@ -382,7 +385,7 @@ class Strategy extends TxManager {
 		this.txCnt -= 1
 
 		if (this.txCnt === 0) {
-			this.STATE = this.STATE.IDLE
+			this.state = this.STATE.IDLE
 		}
 	}
 
@@ -432,17 +435,24 @@ class Strategy extends TxManager {
 		}
 	}
 
-	policy() {
-		throw NotImplementedError
+	policy(a) {
+
+		// TODO: implement
+		if (a === 1) {
+			this.state = this.STATE.HARVEST
+		}
+		else {
+			this.state = this.STATE.CHANGE_POOL
+		}
 	}
 
 	async run() {
 
 		try {
 
-			console.log(`STATE=${this.STATE}`)
+			console.log(`state=${this.state}`)
 
-			switch (this.STATE) {
+			switch (this.state) {
 
 				case this.STATE.TX_PENDING:
 					return
