@@ -213,6 +213,14 @@ class PancakeswapListener {
 		const tokenCakeRate = await this.getTokenCakeRate(poolAddr['rewardToken'])
 		return this.calcApy(this.poolsInfo[poolAddr]['rewardPerBlock'], tokenCakeRate, poolTvl)
 	}
+
+	async updatePoolsApy() {
+
+		for (const poolAddr of Object.keys(this.poolsInfo)) {
+			this.poolsInfo[poolAddr]['apy'] = await this.poolApy(poolAddr)
+		}
+	}
+
 	async fetchNewPools() {
 
 	}
