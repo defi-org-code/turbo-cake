@@ -250,17 +250,24 @@ class PancakeswapListener {
 		this.redisClient.hmset('poolsInfo', this.poolsInfo)
 	}
 
-    async fetchPools(fetchNBlocks=this.PAST_EVENTS_N_BLOCKS) {
+    async fetchPools() {
 
 		let blockNum = await this.web3.eth.getBlockNumber()
 
-        if (this.poolsInfo['lastBlockUpdate'] >= blockNum) {
+        if (this.poolsInfo['lastBlockUpdate'] === blockNum) {
 
 			console.log(`fetchPools: nothing to fetch, lastBlockUpdate (${this.poolsInfo['lastBlockUpdate']}) >= blockNum (${blockNum})`)
 			return
+
+		} else if (this.poolsInfo['lastBlockUpdate'] > blockNum) {
+
+			this.notif(`[WARNING] lastBlockUpdate (${this.poolsInfo['lastBlockUpdate']}) > blockNum (${blockNum})`)
+			return
 		}
 
-        let events = await getPastEventsLoop(this.smartchefFactoryContract, 'NewSmartChefContract', fetchNBlocks, this.poolsInfo['lastBlockUpdate']+1)
+		const fetchNBlocks = blockNum - this.poolsInfo['lastBlockUpdate']
+
+        let events = await getPastEventsLoop(this.smartchefFactoryContract, 'NewSmartChefContract', fetchNBlocks, blockNum)
         // let events = await getPastEventsLoop(this.smartchefFactoryContract, 'NewSmartChefContract', 1, 9676518) // 9676510, TODO : remove me dbg only
 
         let symbol
@@ -294,9 +301,6 @@ class PancakeswapListener {
 
             debug(symbol, rewardToken, stakedToken)
 
-            // TODO: getRoute reward->cake sub-opt
-            const routeToCake = this.getRoute(rewardToken, CAKE_ADDRESS);
-
             this.poolsInfo[poolAddr] = {
                 'rewardToken': rewardToken,
                 'rewardSymbol': symbol,
@@ -306,7 +310,7 @@ class PancakeswapListener {
                 'routeToCake': [rewardToken, BNB_ADDRESS, CAKE_ADDRESS]
             };
 
-			await this.setPoolsInfo()
+			await this.setPoolsInfo(blockNum)
         }
     }
 }
