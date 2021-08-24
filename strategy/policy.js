@@ -78,8 +78,6 @@ class GreedyPolicy extends Policy {
         else if (Date.now() - args.lastActionTimestamp > this.minTimeBufferSyrupSwitch) { // check should switch syrup pool
 
             const topYielderAddr = this.getTopYielderAddr(args.poolsInfo);
-            const topYielderPoolInfo = this.poolsInfo[topYielderAddr];
-            const curSyrupPoolInfo = args.curSyrupPoolAddr;
 
             if (this.shouldSwitchPools(args.poolsInfo, args.curSyrupPoolAddr, topYielderAddr)) {
 
