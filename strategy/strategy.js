@@ -53,7 +53,7 @@ class Strategy {
 		this.signer = null;
 
 		this.runningMode = runningMode;
-
+		this.lastActionTimestamp = Date.now() - config.minTimeBufferSyrupSwitch - 1
 	}
 
 
@@ -147,6 +147,7 @@ class Strategy {
 		this.nextAction = await this.policy.getAction({
 			'poolsInfo': this.env.psListener.poolsInfo,
 			'curSyrupPoolAddr': 0, // TODO
+			'lastActionTimestamp': this.lastActionTimestamp
 		});
 	}
 
