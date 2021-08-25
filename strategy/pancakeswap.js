@@ -1,7 +1,7 @@
 const {getPastEventsLoop} = require('../bscFetcher')
-const {SMARTCHEF_FACTORY_ABI, CAKE_ABI, PANCAKESWAP_FACTORY_V2_ABI, BEP_20_ABI} = require('../abis')
+const {SMARTCHEF_FACTORY_ABI, CAKE_ABI, PANCAKESWAP_FACTORY_V2_ABI, BEP_20_ABI, ROUTER_V2_ABI} = require('../abis')
 const {SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS, BNB_ADDRESS,
-	PANCAKESWAP_FACTORY_V2_ADDRESS, VERSION,
+	PANCAKESWAP_FACTORY_V2_ADDRESS, ROUTER_V2_ADDRESS, VERSION,
 	MAX_TX_FAILURES, DEADLINE_SEC, MIN_SEC_BETWEEN_REBALANCE
 } = require('./params')
 const nodeFetch = require("node-fetch")
@@ -138,6 +138,7 @@ class PancakeswapListener {
 		this.smartchefFactoryContract = await this.getContract(SMARTCHEF_FACTORY_ABI, SMARTCHEF_FACTORY_ADDRESS)
 		this.cakeContract = await this.getContract(CAKE_ABI, CAKE_ADDRESS)
 		this.swapFactoryContract = await this.getContract(PANCAKESWAP_FACTORY_V2_ABI, PANCAKESWAP_FACTORY_V2_ADDRESS)
+		this.routerV2Contract = await this.getContract(ROUTER_V2_ABI, ROUTER_V2_ADDRESS)
 
 		await this.getPoolsInfo()
 		await this.fetchPools();
@@ -202,8 +203,7 @@ class PancakeswapListener {
 	}
 
 	async getTokenCakeRate(tokenAddr) {
-		// TODO: swap path
-		throw NotImplementedError
+		this.routerV2Contract.methods.swapExactTokensForTokens([]).call()
 	}
 
 	async poolApy(poolAddr) {
