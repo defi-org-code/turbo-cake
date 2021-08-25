@@ -25,7 +25,7 @@ class Pancakeswap {
 
     constructor(redisClient, web3, notif) {
         this.redisClient = redisClient;
-        this.pancakeUpdateInterval = process.env.pancakeUpdateInterval;
+        this.pancakeUpdateInterval = process.env.PANCAKE_UPDATE_INTERVAL;
         this.lastUpdate = null;
         this.web3 = web3
         this.notif = notif
@@ -51,12 +51,14 @@ class Pancakeswap {
     async update() {
 
         try {
-            if (this.lastUpdate != null && Date.now() - this.lastUpdate.timestamp < this.pancakeUpdateInterval) {
+
+            if (this.lastUpdate != null && Date.now() - this.lastUpdate < this.pancakeUpdateInterval) {
                 return;
             }
 
-			await this.fetchPools();
+			this.lastUpdate = Date.now()
 
+			await this.fetchPools();
 			await this.updatePoolsApy()
 
         } catch (e) {
