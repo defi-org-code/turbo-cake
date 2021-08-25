@@ -95,8 +95,6 @@ class PancakeswapListener {
                 return;
             }
 
-			debug('poolsInfo:', this.poolsInfo)
-			// process.exit()
 			await this.fetchPools();
 
 			await this.updatePoolsApy()
@@ -146,19 +144,7 @@ class PancakeswapListener {
 			amountIn = new BigNumber(res[0])
 		}
 
-		const amountOutMin = 0
-
-		debug('amountIn: ', amountIn)
-		const path = this.poolsInfo[poolAddr]['routeToCake']
-		const deadline = Date.now() + 3600
-		debug(amountIn, amountOutMin, path, process.env.BOT_ADDRESS, deadline)
-		// res = await this.routerV2Contract.methods.swapExactTokensForTokens(amountIn, amountOutMin, path, process.env.BOT_ADDRESS, deadline).call({from: process.env.BOT_ADDRESS})
-		// const factory = '0xca143ce32fe78f1f7019d7d551a6402fc5350c73'
-		res = await this.routerV2Contract.methods.getAmountsOut(amountIn, path).call()
-
-		debug(res)
-		debug((new BigNumber(res[res.length-1]).dividedBy(res[0])).toString())
-		process.exit()
+		res = await this.routerV2Contract.methods.getAmountsOut(amountIn, this.poolsInfo[poolAddr]['routeToCake']).call()
 		return (new BigNumber(res[res.length-1]).dividedBy(res[0])).toString()
 	}
 
