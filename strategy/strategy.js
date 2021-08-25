@@ -151,6 +151,7 @@ class Strategy {
 	}
 
 	executeActionCallback(self, action, result) {
+
 		// self.inTransition = false;
 		if (result.status === "success") {
 			switch (action.name) {

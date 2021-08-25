@@ -20,7 +20,7 @@ class Pancakeswap {
 	BLOCKS_PER_DAY = this.SECONDS_PER_DAY / this.AVG_BLOCK_SEC
 	BLOCKS_PER_YEAR = this.BLOCKS_PER_DAY * 365
 
-	PAST_EVENTS_N_DAYS = 2 // TODO: change to 60
+	PAST_EVENTS_N_DAYS = 90 // TODO: change
 	PAST_EVENTS_N_BLOCKS = Math.floor(this.PAST_EVENTS_N_DAYS * this.BLOCKS_PER_DAY)
 
     constructor(redisClient, web3, notif) {
@@ -59,6 +59,7 @@ class Pancakeswap {
 			this.lastUpdate = Date.now()
 
 			await this.fetchPools();
+			await this.removeOldPools()
 			await this.updatePoolsApy()
 
         } catch (e) {
@@ -117,9 +118,21 @@ class Pancakeswap {
 		return this.calcApy(this.poolsInfo[poolAddr]['rewardPerBlock'], tokenCakeRate, poolTvl)
 	}
 
-	// TODO: remove old pools from poolsInfo
 	async removeOldPools() {
-		throw NotImplementedError
+
+		const blockNum = await this.web3.eth.getBlockNumber()
+		let bonusEndBlock
+
+		for (const poolAddr of Object.keys(this.poolsInfo)) {
+
+			bonusEndBlock = this.poolsInfo[poolAddr]['bonusEndBlock']
+			debug(`bonusEndBlock=${bonusEndBlock}, blockNum=${blockNum}`)
+			if (bonusEndBlock <= blockNum) {
+				delete this.poolsInfo[poolAddr]
+				await this.savePoolsInfo(blockNum)
+			}
+		}
+
 	}
 
 	async updatePoolsApy() {
@@ -220,8 +233,9 @@ class Pancakeswap {
             let stakedToken = await contract.methods.stakedToken().call()
             let hasUserLimit = await contract.methods.hasUserLimit().call()
             let rewardPerBlock = await contract.methods.rewardPerBlock().call()
+            let bonusEndBlock = await contract.methods.bonusEndBlock().call()
 
-            debug(`poolAddr=${poolAddr}, rewardToken=${rewardToken}, stakedToken=${stakedToken}, hasUserLimit=${hasUserLimit}, ${hasUserLimit === true}`)
+            debug(`poolAddr=${poolAddr}, bonusEndBlock=${bonusEndBlock}, rewardToken=${rewardToken}, stakedToken=${stakedToken}, hasUserLimit=${hasUserLimit}, ${hasUserLimit === true}`)
 
             if (stakedToken !== CAKE_ADDRESS) {
                 continue
@@ -246,6 +260,7 @@ class Pancakeswap {
                 'rewardSymbol': symbol,
                 'hasUserLimit': hasUserLimit,
                 'rewardPerBlock': rewardPerBlock,
+                'bonusEndBlock': bonusEndBlock,
                 'abi': abi,
                 'routeToCake': [rewardToken, BNB_ADDRESS, CAKE_ADDRESS]
             }
