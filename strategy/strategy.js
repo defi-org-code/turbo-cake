@@ -11,7 +11,7 @@ const KeyEncryption = require('../keyEncryption');
 const Notifications = require('../notifications');
 const { GreedyPolicy, Action } = require("./policy");
 const { Executor } = require("./executor");
-const { PancakeswapEnvironment } = require("./pancakeswap");
+const {Pancakeswap} = require("./pancakeswap");
 
 const debug = (...messages) => console.log(...messages)
 const {TransactionFailure, FatalError, GasError, NotImplementedError} =  require('../errors');
@@ -39,10 +39,7 @@ class Strategy {
 		const config = loadConfig(envConfig);
 		this.notif = new Notifications();
 		this.redisInit();
-		this.env = new PancakeswapEnvironment({
-			pancakeUpdateInterval: config.pancakeUpdateInterval,
-			},
-			this.redisClient, web3, this.notif);
+		this.ps = new Pancakeswap(this.redisClient, web3, this.notif);
 		this.policy = new GreedyPolicy({
 			minTimeBufferSyrupSwitch: config.minTimeBufferSyrupSwitch,
 			minTimeBufferCompounds: config.minTimeBufferCompounds,
@@ -84,7 +81,7 @@ class Strategy {
 			this.signer = await ethers.getSigner("0x73feaa1eE314F8c655E354234017bE2193C9E24E");
 		}
 
-		await this.env.init();
+		await this.ps.init();
 		await this.executor.init(this.signer);
 		await this.setupState();
 	}
@@ -114,7 +111,7 @@ class Strategy {
 				return;
 			}
 
-			await this.update();
+			await this.ps.update();
 			await this.setAction();
 
 			if (this.runIndex == 3) {
@@ -145,13 +142,9 @@ class Strategy {
 		}
 	}
 
-	async update() {
-		await this.env.update();
-	}
-
 	async setAction() {
 		this.nextAction = await this.policy.getAction({
-			'poolsInfo': this.env.psListener.poolsInfo,
+			'poolsInfo': this.ps.poolsInfo,
 			'curSyrupPoolAddr': this.curSyrupPoolAddr,
 			'lastActionTimestamp': this.lastActionTimestamp
 		});

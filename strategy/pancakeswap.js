@@ -11,30 +11,8 @@ BigNumber.config({POW_PRECISION: 100, EXPONENTIAL_AT: 1e+9})
 const debug = (...messages) => console.log(...messages);
 const {NotImplementedError} =  require('../errors');
 
-class PancakeswapEnvironment {
 
-    constructor(config, redisClient, web3, notif) {
-
-        this.redisClient = redisClient;
-        this.psListener = new PancakeswapListener(config, redisClient, web3, notif);
-
-    }
-
-    async init() {
-        this.psListener.redisClient = this.redisClient;
-        await this.psListener.init()
-        await this.psListener.listen();
-    }
-
-
-    async update() {
-        await this.psListener.update();
-    }
-
-}
-
-
-class PancakeswapListener {
+class Pancakeswap {
 
 	SEC_PER_HOUR = 3600
 	AVG_BLOCK_SEC = 3
@@ -45,10 +23,9 @@ class PancakeswapListener {
 	PAST_EVENTS_N_DAYS = 2 // TODO: change to 60
 	PAST_EVENTS_N_BLOCKS = Math.floor(this.PAST_EVENTS_N_DAYS * this.BLOCKS_PER_DAY)
 
-    constructor(config, redisClient, web3, notif) {
+    constructor(redisClient, web3, notif) {
         this.redisClient = redisClient;
-        this.pancakeUpdateInterval = config.pancakeUpdateInterval;
-        this.intervalId = null;
+        this.pancakeUpdateInterval = process.env.pancakeUpdateInterval;
         this.lastUpdate = null;
         this.web3 = web3
         this.notif = notif
@@ -70,23 +47,6 @@ class PancakeswapListener {
 	getContract(contractAbi, contractAddress) {
 		return new this.web3.eth.Contract(contractAbi, contractAddress)
 	}
-
-    async listen() {
-        if (this.intervalId != null) {
-            clearInterval(this.intervalId);
-        }
-
-        if (this.lastUpdate == null) {
-            // this.lastUpdate = await this.redisClient.hgetall('pancakeswap.env.lastUpdate');
-        }
-
-		// TODO: ami disabled
-        // this.interval = setInterval(async () => {
-        //     await this.update();}, this.pancakeUpdateInterval);
-
-        await this.update();
-    }
-
 
     async update() {
 
@@ -144,6 +104,7 @@ class PancakeswapListener {
 			amountIn = new BigNumber(res[0])
 		}
 
+		// TODO: check and verify calculations
 		res = await this.routerV2Contract.methods.getAmountsOut(amountIn, this.poolsInfo[poolAddr]['routeToCake']).call()
 		return (new BigNumber(res[res.length-1]).dividedBy(res[0])).toString()
 	}
@@ -294,5 +255,5 @@ class PancakeswapListener {
 
 
 module.exports = {
-    PancakeswapEnvironment,
+    Pancakeswap,
 };
