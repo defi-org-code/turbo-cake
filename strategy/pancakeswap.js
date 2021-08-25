@@ -1,93 +1,20 @@
 const {getPastEventsLoop} = require('../bscFetcher')
-const {SMARTCHEF_FACTORY_ABI, CAKE_ABI, PANCAKESWAP_FACTORY_V2_ABI, BEP_20_ABI, ROUTER_V2_ABI} = require('../abis')
-const {SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS, BNB_ADDRESS,
-	PANCAKESWAP_FACTORY_V2_ADDRESS, ROUTER_V2_ADDRESS, VERSION,
-	MAX_TX_FAILURES, DEADLINE_SEC, MIN_SEC_BETWEEN_REBALANCE
-} = require('./params')
+const {SMARTCHEF_FACTORY_ABI, CAKE_ABI, BEP_20_ABI, ROUTER_V2_ABI} = require('../abis')
+const {SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS, BNB_ADDRESS, ROUTER_V2_ADDRESS} = require('./params')
 const nodeFetch = require("node-fetch")
+
+require('dotenv').config();
 
 const BigNumber = require('bignumber.js')
 BigNumber.config({POW_PRECISION: 100, EXPONENTIAL_AT: 1e+9})
 
-class Tokens {
-    // BASES_TO_CHECK_TRADES_AGAINST = {}
-
-    BasesForTradeRoutes = {
-
-    }
-
-   Tokens = {
-
-   }
-
-
-}
-
-
-
-class Trade {
-
-    constructor(config) {
-
-
-    }
-
-    static async getSwapRoute(from, to) {
-
-        return {route}
-    }
-
-    static async estimateBestSwap(from, to, amountIn) {
-
-
-        return {route, amountOut}
-    }
-
-    static async getPrice(tokenA, tokenB) {
-
-    }
-
-
-
-
-
-}
-
-
-class Syrup {
-
-
-    async init(){
-
-    }
-
-
-    async update() {
-
-    }
-
-    getPoolsInfo(){
-
-    }
-
-    getPoolInfo(poolAddress) {
-
-    }
-
-
-
-}
-
-
-
 const debug = (...messages) => console.log(...messages);
-const {TransactionFailure, FatalError, GasError, NotImplementedError} =  require('../errors');
+const {NotImplementedError} =  require('../errors');
 
 class PancakeswapEnvironment {
 
     constructor(config, redisClient, web3, notif) {
 
-        this.trade = new Trade(config);
         this.redisClient = redisClient;
         this.psListener = new PancakeswapListener(config, redisClient, web3, notif);
 
@@ -102,12 +29,7 @@ class PancakeswapEnvironment {
 
     async update() {
         await this.psListener.update();
-        // const this.psListener.getPoolsInfo();
-
     }
-
-
-
 
 }
 
@@ -120,7 +42,7 @@ class PancakeswapListener {
 	BLOCKS_PER_DAY = this.SECONDS_PER_DAY / this.AVG_BLOCK_SEC
 	BLOCKS_PER_YEAR = this.BLOCKS_PER_DAY * 365
 
-	PAST_EVENTS_N_DAYS = 1 // TODO: change to 60
+	PAST_EVENTS_N_DAYS = 2 // TODO: change to 60
 	PAST_EVENTS_N_BLOCKS = Math.floor(this.PAST_EVENTS_N_DAYS * this.BLOCKS_PER_DAY)
 
     constructor(config, redisClient, web3, notif) {
@@ -132,16 +54,17 @@ class PancakeswapListener {
         this.notif = notif
 
         this.poolsInfo = {}
+        this.lastBlockUpdate = null
     }
 
 	async init() {
 		this.smartchefFactoryContract = await this.getContract(SMARTCHEF_FACTORY_ABI, SMARTCHEF_FACTORY_ADDRESS)
 		this.cakeContract = await this.getContract(CAKE_ABI, CAKE_ADDRESS)
-		this.swapFactoryContract = await this.getContract(PANCAKESWAP_FACTORY_V2_ABI, PANCAKESWAP_FACTORY_V2_ADDRESS)
 		this.routerV2Contract = await this.getContract(ROUTER_V2_ABI, ROUTER_V2_ADDRESS)
 
+		await this.getLastBlockUpdate()
 		await this.getPoolsInfo()
-		await this.fetchPools();
+		await this.fetchPools()
 	}
 
 	getContract(contractAbi, contractAddress) {
@@ -172,7 +95,10 @@ class PancakeswapListener {
                 return;
             }
 
+			debug('poolsInfo:', this.poolsInfo)
+			// process.exit()
 			await this.fetchPools();
+
 			await this.updatePoolsApy()
 
         } catch (e) {
@@ -202,13 +128,43 @@ class PancakeswapListener {
 		return this.aprToApy(apr)
 	}
 
-	async getTokenCakeRate(tokenAddr) {
-		this.routerV2Contract.methods.swapExactTokensForTokens([]).call()
+	async getTokenCakeRate(poolAddr, defaultAmountIn='1000000000') {
+
+		if (this.poolsInfo[poolAddr]['rewardToken'] === CAKE_ADDRESS) {
+			return 1
+		}
+
+		const contract = this.getContract(this.poolsInfo[poolAddr]['abi'], poolAddr)
+
+		let res = await contract.methods.userInfo(process.env.BOT_ADDRESS).call()
+		let amountIn
+
+		if (res[0] === '0') {
+			amountIn = new BigNumber(defaultAmountIn)
+		}
+		else {
+			amountIn = new BigNumber(res[0])
+		}
+
+		const amountOutMin = 0
+
+		debug('amountIn: ', amountIn)
+		const path = this.poolsInfo[poolAddr]['routeToCake']
+		const deadline = Date.now() + 3600
+		debug(amountIn, amountOutMin, path, process.env.BOT_ADDRESS, deadline)
+		// res = await this.routerV2Contract.methods.swapExactTokensForTokens(amountIn, amountOutMin, path, process.env.BOT_ADDRESS, deadline).call({from: process.env.BOT_ADDRESS})
+		// const factory = '0xca143ce32fe78f1f7019d7d551a6402fc5350c73'
+		res = await this.routerV2Contract.methods.getAmountsOut(amountIn, path).call()
+
+		debug(res)
+		debug((new BigNumber(res[res.length-1]).dividedBy(res[0])).toString())
+		process.exit()
+		return (new BigNumber(res[res.length-1]).dividedBy(res[0])).toString()
 	}
 
 	async poolApy(poolAddr) {
 		const poolTvl = this.getPoolTvl(poolAddr)
-		const tokenCakeRate = await this.getTokenCakeRate(poolAddr['rewardToken'])
+		const tokenCakeRate = await this.getTokenCakeRate(poolAddr)
 		return this.calcApy(this.poolsInfo[poolAddr]['rewardPerBlock'], tokenCakeRate, poolTvl)
 	}
 
@@ -220,8 +176,27 @@ class PancakeswapListener {
 	async updatePoolsApy() {
 
 		for (const poolAddr of Object.keys(this.poolsInfo)) {
+			debug('poolAddr=', poolAddr)
 			this.poolsInfo[poolAddr]['apy'] = await this.poolApy(poolAddr)
 		}
+	}
+
+	async getLastBlockUpdate() {
+
+		const blockNum = await this.web3.eth.getBlockNumber()
+		await this.redisClient.get('lastBlockUpdate', (err, reply) => {
+
+			if (err) throw err
+
+			if (reply == null) {
+				reply = blockNum - this.PAST_EVENTS_N_BLOCKS
+				debug(`reply was set to ${reply}`)
+			}
+
+			this.lastBlockUpdate = reply
+			debug(`lastBlockUpdate was set to ${this.lastBlockUpdate}`)
+
+		})
 	}
 
 	async getPoolsInfo() {
@@ -229,35 +204,28 @@ class PancakeswapListener {
 		await this.redisClient.get('poolsInfo', async (err, reply) => {
 
 			if (err) throw err
-			// debug(`poolsInfo=${JSON.stringify(reply)}`)
 
-			if (reply != null) {
-				reply = JSON.parse(reply)
+			if (this.lastBlockUpdate == null) {
+				throw Error(`lastBlockUpdate should be != null`)
 			}
 
-			if (reply == null || !('lastBlockUpdate' in reply)) {
-				let blockNum = await this.web3.eth.getBlockNumber()
-				this.poolsInfo['lastBlockUpdate'] = blockNum - this.PAST_EVENTS_N_BLOCKS
+			if (reply == null) {
+				debug('setting poolInfo to null...')
+				this.poolsInfo = {}
 				return
 			}
 
-			this.poolsInfo = reply
-
+			this.poolsInfo = JSON.parse(reply)
 		})
 	}
 
-	async setPoolsInfo(lastBlockUpdate) {
+	async savePoolsInfo(lastBlockUpdate) {
 
-		this.poolsInfo['lastBlockUpdate'] = lastBlockUpdate
+		this.lastBlockUpdate = lastBlockUpdate
+		await this.redisClient.set('lastBlockUpdate', this.lastBlockUpdate)
 		await this.redisClient.set('poolsInfo', JSON.stringify(this.poolsInfo))
 
 		console.log('pools info updated successfully')
-		// await this.redisClient.hset('poolsInfo', JSON.stringify(this.poolsInfo), async (err, reply) => {
-		//
-		// 	if (err) throw err
-		// 	debug(`poolsInfo=${JSON.stringify(reply)}`)
-		// })
-
 	}
 
 	async fetchAbi(addr) {
@@ -269,24 +237,26 @@ class PancakeswapListener {
 
     async fetchPools() {
 
+		debug('fetchPools ... ')
+
 		let blockNum = await this.web3.eth.getBlockNumber()
 
-        if (this.poolsInfo['lastBlockUpdate'] == null) {
+        if (this.lastBlockUpdate == null) {
 			throw Error('lastBlockUpdate should be set')
 		}
 
-        if (this.poolsInfo['lastBlockUpdate'] === blockNum) {
+        if (this.lastBlockUpdate === blockNum) {
 
-			console.log(`fetchPools: nothing to fetch, lastBlockUpdate (${this.poolsInfo['lastBlockUpdate']}) >= blockNum (${blockNum})`)
+			console.log(`fetchPools: nothing to fetch, lastBlockUpdate (${this.lastBlockUpdate}) >= blockNum (${blockNum})`)
 			return
 
-		} else if (this.poolsInfo['lastBlockUpdate'] > blockNum) {
+		} else if (this.lastBlockUpdate > blockNum) {
 
-			this.notif(`[WARNING] lastBlockUpdate (${this.poolsInfo['lastBlockUpdate']}) > blockNum (${blockNum})`)
+			this.notif(`[WARNING] lastBlockUpdate (${this.lastBlockUpdate}) > blockNum (${blockNum})`)
 			return
 		}
 
-		const fetchNBlocks = blockNum - this.poolsInfo['lastBlockUpdate']
+		const fetchNBlocks = blockNum - this.lastBlockUpdate
 
         let events = await getPastEventsLoop(this.smartchefFactoryContract, 'NewSmartChefContract', fetchNBlocks, blockNum)
         // let events = await getPastEventsLoop(this.smartchefFactoryContract, 'NewSmartChefContract', 1, 9676518) // 9676510, TODO : remove me dbg only
@@ -302,7 +272,7 @@ class PancakeswapListener {
             let hasUserLimit = await contract.methods.hasUserLimit().call()
             let rewardPerBlock = await contract.methods.rewardPerBlock().call()
 
-            debug(`rewardToken=${rewardToken}, stakedToken=${stakedToken}, hasUserLimit=${hasUserLimit}, ${hasUserLimit === true}`)
+            debug(`poolAddr=${poolAddr}, rewardToken=${rewardToken}, stakedToken=${stakedToken}, hasUserLimit=${hasUserLimit}, ${hasUserLimit === true}`)
 
             if (stakedToken !== CAKE_ADDRESS) {
                 continue
@@ -320,7 +290,7 @@ class PancakeswapListener {
                 this.notif.sendDiscord(`succeeded fetching (${rewardToken}) info`)
             }
 
-            debug(symbol, rewardToken, stakedToken)
+            debug(poolAddr, symbol, rewardToken, stakedToken)
 
             this.poolsInfo[poolAddr] = {
                 'rewardToken': rewardToken,
@@ -329,10 +299,10 @@ class PancakeswapListener {
                 'rewardPerBlock': rewardPerBlock,
                 'abi': abi,
                 'routeToCake': [rewardToken, BNB_ADDRESS, CAKE_ADDRESS]
-            };
+            }
         }
 
-		await this.setPoolsInfo(blockNum)
+		await this.savePoolsInfo(blockNum)
     }
 }
 
