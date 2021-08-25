@@ -163,6 +163,8 @@ class Strategy {
 						poolAddr: action.args.to,
 						cakeAmount: action.args.cakeAmount,
 					}
+					this.lastActionTimestamp = Date.now()
+					this.curSyrupPoolAddr = action.args.to
 					break;
 
 				case Action.COMPOUND:
@@ -171,6 +173,7 @@ class Strategy {
 						poolAddr: action.args.to,
 						cakeAmount: action.args.cakeAmount,
 					}
+					this.lastActionTimestamp = Date.now()
 					break;
 
 				case Action.SWITCH:
@@ -179,11 +182,16 @@ class Strategy {
 						poolAddr: action.args.to,
 						cakeAmount: action.args.cakeAmount,
 					};
+
+					this.lastActionTimestamp = Date.now()
+					this.curSyrupPoolAddr = action.args.to
 					break;
 
 				case Action.EXIT:
 					console.log(" bot exited all positions ");
 					self.state.position = null;
+					this.lastActionTimestamp = Date.now()
+					this.curSyrupPoolAddr = null
 					break;
 
 				default:

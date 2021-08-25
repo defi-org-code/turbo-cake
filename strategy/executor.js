@@ -68,9 +68,6 @@ class Executor extends TxManager {
 
         let result = {};
 
-		// TODO: GAD update lastActionTimestamp
-		// TODO: GAD update curSyrupPoolAddr
-
         switch (action.name) {
             case Action.NO_OP:
                 break;
