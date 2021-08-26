@@ -147,7 +147,7 @@ class Executor extends TxManager {
         } catch (error) {
             this.notif.sendDiscord(`failed to send transaction: ${error}`);
             console.log(error);
-            return null;
+            throw error;
         }
     }
 
@@ -173,26 +173,29 @@ class Executor extends TxManager {
         await this.withdraw(syrupAddr, 0)
             .then(async (res) => {
                 if (res.syrupType === SyrupPoolType.SMARTCHEF) {
-                    const rewardToken = new ethers.Contract(
-                        res.rewardTokenAddr,
+                    const tokenAddr = res.rewardTokenAddr;
+                    const token = new ethers.Contract(
+                        tokenAddr,
                         ['function balanceOf(address account) external view returns (uint256)'],
                         this.signer
                     );
-                    const swapAmount = await rewardToken.balanceOf(this.signer.address);
-                    await this.swapToCake(res.rewardTokenAddr, swapAmount);
+                    const swapAmount = await token.balanceOf(this.signer.address);
+                    await this.approve(tokenAddr, this.router.address, swapAmount);
+                    return { tokenAddr: tokenAddr, amount: swapAmount };
                 }
             })
+            .then(async (res) => await this.swapToCake(res.tokenAddr, res.amount))
             .then(async () => {
                 const amount = await this.cakeContract.balanceOf(this.signer.address);
                 await this.depositCake(syrupAddr, amount);
 
             })
-            .then( () => {
+            .then(() => {
                 this.status = "success";
                 console.log("executor.execute: harvest completed exec successfully");
             })
             .catch((err) => this.handleError(err))
-            .finally( async () => {
+            .finally(async () => {
                 await this.handleExecutionResult()
             });
 
@@ -220,7 +223,7 @@ class Executor extends TxManager {
 
         result.syrupType = await this.getSyrupType(syrupAddr);
 
-        if ( amount > 0 ) {
+        if (amount > 0) {
 
             // { // assert user.cakeBalance >= amount
             //     const userBalance = await this.cakeContract.balanceOf(this.signer.address);
@@ -297,7 +300,6 @@ class Executor extends TxManager {
 
                 const tx = await smartChef.populateTransaction.withdraw(amount);
                 result.receipt = await this.sendTransactionWait(tx);
-
                 break;
             }
 
@@ -324,6 +326,28 @@ class Executor extends TxManager {
         return result;
     }
 
+    async approve(tokenAddr, spender, amount) {
+        console.log(`executor.approve: token ${tokenAddr} spender ${spender}  amount ${amount}`);
+        const result = {
+            step: "approve",
+            tokenAddr: tokenAddr,
+            spender: spender,
+            amount: amount,
+            receipt: null,
+        };
+
+        const token = new ethers.Contract(
+            tokenAddr,
+            ['function approve(address spender, uint256 amount) external returns (bool)'],
+            this.signer
+        );
+
+        const tx = await token.populateTransaction.approve(spender, amount);
+        result.receipt = await this.sendTransactionWait(tx);
+
+        this.trace.push(result);
+        return result;
+    }
 
     async swapToCake(tokenIn, amountIn) {
 
@@ -335,7 +359,7 @@ class Executor extends TxManager {
             receipt: null,
         };
 
-        if ( amountIn > 0 ) {
+        if (amountIn > 0) {
             const viaBnb = [tokenIn, WBNB_ADDRESS, CAKE_ADDRESS];
             const amounts = await this.router.getAmountsOut(amountIn, viaBnb);
             const amountOutMin = amounts[1].sub(amounts[1].div(this.swapSlippage));
