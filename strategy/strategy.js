@@ -14,7 +14,6 @@ const { Executor } = require("./executor");
 const {Pancakeswap} = require("./pancakeswap");
 
 const {SMARTCHEF_INITIALIZABLE_ABI} = require("../abis");
-const {GreedyPolicy, Action} = require("./policy");
 const {
     RunningMode, DEV_ACCOUNT, DEV_SMARTCHEF_ADDRESS,
     MIN_SEC_BETWEEN_SYRUP_SWITCH, MIN_SEC_BETWEEN_HARVESTS,
@@ -268,5 +267,6 @@ class Strategy {
 }
 
 module.exports = {
-    Strategy,
-    RunningMode,
+	Strategy,
+	RunningMode
+}
