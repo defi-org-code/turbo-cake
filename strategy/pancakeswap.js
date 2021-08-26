@@ -3,6 +3,8 @@ const {SMARTCHEF_FACTORY_ABI, CAKE_ABI, BEP_20_ABI, ROUTER_V2_ABI} = require('..
 const {SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS, BNB_ADDRESS, ROUTER_V2_ADDRESS} = require('./params')
 const nodeFetch = require("node-fetch")
 
+const {ethers} = require("hardhat")
+
 require('dotenv').config();
 
 const BigNumber = require('bignumber.js')
@@ -25,15 +27,16 @@ class Pancakeswap {
 
 	EXCLUDED_POOLS = ["0xa80240Eb5d7E05d3F250cF000eEc0891d00b51CC"]
 
-    constructor(redisClient, web3, notif) {
+    constructor(redisClient, web3, notif, pancakeUpdateInterval) {
         this.redisClient = redisClient;
-        this.pancakeUpdateInterval = process.env.PANCAKE_UPDATE_INTERVAL;
+        this.pancakeUpdateInterval = pancakeUpdateInterval;
         this.lastUpdate = null;
         this.web3 = web3
         this.notif = notif
 
         this.poolsInfo = {}
         this.lastBlockUpdate = null
+		this.paused = false;
     }
 
 	async init() {
@@ -50,9 +53,21 @@ class Pancakeswap {
 		return new this.web3.eth.Contract(contractAbi, contractAddress)
 	}
 
+
+	pause() {
+		this.paused = true;
+	}
+
+	resume() {
+		this.paused = false;
+	}
+
     async update() {
 
         try {
+			if (this.paused) {
+				return;
+			}
 
             if (this.lastUpdate != null && Date.now() - this.lastUpdate < this.pancakeUpdateInterval) {
                 return;
@@ -197,9 +212,17 @@ class Pancakeswap {
 
 		debug('fetchPools ... ')
 
+		if (this.paused) {
+			return;
+		}
+		let blockNum2 = await ethers.provider.getBlockNumber();
+		console.log(blockNum2)
 		let blockNum = await this.web3.eth.getBlockNumber()
 
-        if (this.lastBlockUpdate == null) {
+		console.log(blockNum)
+
+
+		if (this.lastBlockUpdate == null) {
 			throw Error('lastBlockUpdate should be set')
 		}
 

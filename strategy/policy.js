@@ -2,7 +2,7 @@
 const Action = {
     NO_OP: "no-op",
     ENTER: "enter-syrup-pool",
-    COMPOUND: "compound",
+    HARVEST: "harvest",
     SWITCH: "switch-syrup-pool",
     EXIT: "exit-syrup-pool",
 }
@@ -27,10 +27,10 @@ class GreedyPolicy extends Policy {
 
     constructor(config) {
         super();
-        this.minTimeBufferSyrupSwitch = config.minTimeBufferSyrupSwitch;
-        this.minTimeBufferCompounds = config.minTimeBufferCompounds;
+        this.minSecBetweenSyrupSwitch = config.minSecBetweenSyrupSwitch;
+        this.minSecBetweenHarvests = config.minSecBetweenHarvests;
         this.apySwitchTh = config.apySwitchTh;
-
+        this.paused = false;
     }
 
     getTopYielderAddr(poolsInfo) {
@@ -53,6 +53,12 @@ class GreedyPolicy extends Policy {
 
 		return poolsInfo[topYielderAddr]['apy'] - poolsInfo[curSyrupPoolAddr]['apy'] >= this.apySwitchTh;
     }
+    pause() {
+        this.paused = true;
+    }
+    resume() {
+        this.paused = false;
+    }
 
     async getAction(args) {
 
@@ -66,6 +72,10 @@ class GreedyPolicy extends Policy {
             name: Action.NO_OP,
         };
 
+        if (this.paused) {
+            return args.lastAction;
+        }
+
         if (args.curSyrupPoolAddr == null) { // enter "top" syrup pool apy estimate
             action = {
                 name: Action.ENTER,
@@ -75,7 +85,7 @@ class GreedyPolicy extends Policy {
             }
         }
 
-        else if (Date.now() - args.lastActionTimestamp > this.minTimeBufferSyrupSwitch) { // check should switch syrup pool
+        else if (Date.now() - args.lastActionTimestamp > this.minSecBetweenSyrupSwitch) { // check should switch syrup pool
 
             const topYielderAddr = this.getTopYielderAddr(args.poolsInfo);
 
@@ -91,7 +101,7 @@ class GreedyPolicy extends Policy {
             }
         }
 
-        else if (Date.now() - args.lastActionTimestamp > this.minTimeBufferCompounds) {
+        else if (Date.now() - args.lastActionTimestamp > this.minSecBetweenHarvests) {
 
             action = {
                 name: Action.COMPOUND,
