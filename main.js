@@ -39,7 +39,7 @@ async function main() {
 
     }
 
-    const strategy = new Strategy(env.parsed, runningMode, signer);
+    const strategy = new Strategy(env, runningMode, signer);
     await strategy.start();
 }
 

@@ -57,12 +57,11 @@ class Strategy {
             minSecBetweenHarvests: config.minSecBetweenHarvests,
 
         });
-        this.executor = new Executor({'notifClient': this.notif, 'signer': this.signer, 'action': Action, 'swapSlippage': env.swapSlippage, 'swapTimeLimit': env.swapTimeLimit});
+        this.executor = new Executor({'notifClient': this.notif, 'signer': signer, 'action': Action, 'swapSlippage': env.swapSlippage, 'swapTimeLimit': env.swapTimeLimit});
         this.tickIndex = 0;
         this.config = config;
         this.tickInterval = config.tickInterval;
 
-        this.runningMode = runningMode;
         this.name = "pancakeswap-strategy";
 		this.lastActionTimestamp = Date.now() - config.minTimeBufferSyrupSwitch - 1;
 		this.curSyrupPoolAddr = null;
