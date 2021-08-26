@@ -1,21 +1,15 @@
 
-// const { ethers, web3 } = require("hardhat");
-const { ethers} = require("hardhat");
-
 const Web3 = require('web3')
 const web3 = new Web3(process.env.ENDPOINT_HTTPS)
 
 const asyncRedis = require("redis");
-
-const KeyEncryption = require('../keyEncryption');
 const Notifications = require('../notifications');
 const { GreedyPolicy, Action } = require("./policy");
 const { Executor } = require("./executor");
 const {Pancakeswap} = require("./pancakeswap");
 
-const {SMARTCHEF_INITIALIZABLE_ABI} = require("../abis");
 const {
-    RunningMode, DEV_ACCOUNT, DEV_SMARTCHEF_ADDRESS,
+    RunningMode, DEV_ACCOUNT, DEV_SMARTCHEF_ADDRESS_LIST,
     MIN_SEC_BETWEEN_SYRUP_SWITCH, MIN_SEC_BETWEEN_HARVESTS,
     PANCAKE_UPDATE_INTERVAL, TICK_INTERVAL, SWAP_SLIPPAGE, SWAP_TIME_LIMIT,
 } = require("../config");
@@ -32,7 +26,7 @@ function loadConfig(baseConfig) {
     config.tickInterval = TICK_INTERVAL;
     config.swapSlippage = SWAP_SLIPPAGE;
     config.swapTimeLimit = SWAP_TIME_LIMIT;
-    config.devSmartchefAddress = DEV_SMARTCHEF_ADDRESS;
+    config.devSmartchefAddressList = DEV_SMARTCHEF_ADDRESS_LIST;
     config.devAccount = DEV_ACCOUNT;
     return config;
 }
@@ -57,11 +51,12 @@ class Strategy {
             minSecBetweenHarvests: config.minSecBetweenHarvests,
 
         });
-        this.executor = new Executor({'notifClient': this.notif, 'signer': signer, 'action': Action, 'swapSlippage': env.swapSlippage, 'swapTimeLimit': env.swapTimeLimit});
+        this.executor = null;
         this.tickIndex = 0;
         this.config = config;
         this.tickInterval = config.tickInterval;
 
+        this.runningMode = runningMode;
         this.name = "pancakeswap-strategy";
 		this.lastActionTimestamp = Date.now() - config.minTimeBufferSyrupSwitch - 1;
 		this.curSyrupPoolAddr = null;
@@ -69,47 +64,46 @@ class Strategy {
     }
 
 
-	async start() {
-		try {
-			await this.init();
+    async start() {
+        try {
+            await this.init();
 
-		} catch (e) {
-			this.notif.sendDiscord(`[ERROR] unhandled error: ${e}`);
-			this.beforeExit(e);
-		}
+        } catch (e) {
+            this.notif.sendDiscord(`[ERROR] unhandled error: ${e}`);
+            this.beforeExit(e);
+        }
 
-		this.intervalId = setInterval(() => this.run(), this.tickInterval);
-		await this.run();
-	}
+        this.intervalId = setInterval(() => this.run(), this.tickInterval);
+        await this.run();
+    }
 
-	async init() {
 
-		await this.ps.init();
-		await this.executor.init();
-		await this.setupState();
-	}
+    async init() {
+        await this.ps.init();
+        await this.setupState();
+    }
 
-	async setupState() {
-		// TODO: infer from bsc
-	}
+    async setupState() {
+        // TODO: infer from bsc
+    }
 
-	redisInit() {
-		this.redisClient = asyncRedis.createClient();
-		this.redisClient.on("error", function(error) {
-			console.error(error)
-			throw new FatalError(`fatal redis error: ${error}`)
-		});
+    redisInit() {
+        this.redisClient = asyncRedis.createClient();
+        this.redisClient.on("error", function (error) {
+            console.error(error)
+            throw new FatalError(`fatal redis error: ${error}`)
+        });
 
-		this.redisClient.on("ready", function() {
-			debug('redis ready')
-		});
-	}
+        this.redisClient.on("ready", function () {
+            debug('redis ready')
+        });
+    }
 
     inTransition() {
         return this.executor != null;
     }
 
-	async run() {
+    async run() {
 
         try {
             if (this.inTransition()) {
@@ -120,20 +114,53 @@ class Strategy {
 
 			await this.ps.update();
             await this.setAction();
-            if (this.tickIndex === 3) {
+
+            if (false){//(this.tickIndex === 1) {
+                console.log("FAKE action");
+                this.nextAction =
+                    {
+                        name: Action.EXIT,
+                        args: {
+                            poolAddress: this.config.devSmartchefAddressList[0],
+                        }
+                    }
+
+            }
+
+            if (false){//(this.tickIndex === 5) {
+                console.log("FAKE action");
+                this.nextAction =
+                    {
+                        name: Action.ENTER,
+                        args: {
+                            poolAddress: this.config.devSmartchefAddressList[0],
+                        }
+                    }
+
+            }
+            if (false){//this.tickIndex === 10) {
                 console.log("FAKE action");
                 this.nextAction =
                     {
                         name: Action.HARVEST,
                         args: {
-                            to: this.config.devSmartchefAddress,
-                            // "0x0446b8f8474c590d2249a4acdd6eedbc2e004bca",
-                            // to: "TARGET_ADDRESS",
+                            poolAddress: this.config.devSmartchefAddressList[0],
                         }
                     }
             }
 
-            if (this.tickIndex === 5) {
+            if (this.tickIndex === 15) {
+                console.log("FAKE action");
+                this.nextAction =
+                    {
+                        name: Action.SWITCH,
+                        args: {
+                            from:  this.config.devSmartchefAddressList[0],
+                            to: this.config.devSmartchefAddressList[1],
+                        }
+                    }
+            }
+            if (this.tickIndex === 20) {
                 clearInterval(this.intervalId);
                 process.exit()
             }
@@ -158,64 +185,12 @@ class Strategy {
 		});
 	}
 
-    executeActionCallback(self, action, result) {
-        // self.inTransition = false;
-        if (result.status === "success") {
-            switch (action.name) {
-                case Action.NO_OP:
-                    break;
-
-                case Action.ENTER:
-                    console.log(" entered syrup pool");
-                    self.state.position = {
-                        poolAddr: action.args.to,
-                        cakeAmount: action.args.cakeAmount,
-                    }
-                    break;
-
-                case Action.HARVEST:
-                    console.log(" harvest cb");
-                    self.state.position = {
-                        poolAddr: action.args.to,
-                        cakeAmount: action.args.cakeAmount,
-                    }
-                    break;
-
-                case Action.SWITCH:
-                    console.log(" switched syrup pool");
-                    self.state.position = {
-                        poolAddr: action.args.to,
-                        cakeAmount: action.args.cakeAmount,
-                    };
-                    break;
-
-                case Action.EXIT:
-                    console.log(" bot exited all positions ");
-                    self.state.position = null;
-                    break;
-
-                default:
-                    console.log(" invalid action");
-
-            }
-        } else {
-
-
-        }
-
-    }
-
     async executeAction() {
 
         const action = this.nextAction; // closure
         const startTime = Date.now();
 
         if (action.name === Action.NO_OP) {
-            this.executor = null;
-            return;
-        }
-
-        if (action.name === Action.ENTER) {
             this.executor = null;
             return;
         }
@@ -260,6 +235,5 @@ class Strategy {
 }
 
 module.exports = {
-	Strategy,
-	RunningMode
-}
+    Strategy,
+};
