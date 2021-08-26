@@ -84,12 +84,6 @@ class Strategy {
 	}
 
 	async init() {
-		if (this.runningMode === RunningMode.PRODUCTION) {
-			this.wallet = new ethers.Wallet(await new KeyEncryption().loadKey());
-			this.signer = this.wallet.connect(ethers.provider);
-		} else if (this.runningMode === RunningMode.DEV) {
-			this.signer = await ethers.getSigner("0x73feaa1eE314F8c655E354234017bE2193C9E24E");
-		}
 
 		await this.ps.init();
 		await this.executor.init(this.signer);
