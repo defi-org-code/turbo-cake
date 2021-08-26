@@ -148,39 +148,33 @@ class Pancakeswap {
 	async getLastBlockUpdate() {
 
 		const blockNum = await this.web3.eth.getBlockNumber()
-		await this.redisClient.get('lastBlockUpdate', (err, reply) => {
+		let reply = await this.redisClient.get('lastBlockUpdate')
 
-			if (err) throw err
+		if (reply == null) {
+			reply = blockNum - this.PAST_EVENTS_N_BLOCKS
+			debug(`reply was set to ${reply}`)
+		}
 
-			if (reply == null) {
-				reply = blockNum - this.PAST_EVENTS_N_BLOCKS
-				debug(`reply was set to ${reply}`)
-			}
+		this.lastBlockUpdate = reply
+		debug(`lastBlockUpdate was set to ${this.lastBlockUpdate}`)
 
-			this.lastBlockUpdate = reply
-			debug(`lastBlockUpdate was set to ${this.lastBlockUpdate}`)
-
-		})
 	}
 
 	async getPoolsInfo() {
 
-		await this.redisClient.get('poolsInfo', async (err, reply) => {
+		let reply = await this.redisClient.get('poolsInfo')
 
-			if (err) throw err
+		if (this.lastBlockUpdate == null) {
+			throw Error(`lastBlockUpdate should be != null`)
+		}
 
-			if (this.lastBlockUpdate == null) {
-				throw Error(`lastBlockUpdate should be != null`)
-			}
+		if (reply == null) {
+			debug('setting poolInfo to null...')
+			this.poolsInfo = {}
+			return
+		}
 
-			if (reply == null) {
-				debug('setting poolInfo to null...')
-				this.poolsInfo = {}
-				return
-			}
-
-			this.poolsInfo = JSON.parse(reply)
-		})
+		this.poolsInfo = JSON.parse(reply)
 	}
 
 	async savePoolsInfo(lastBlockUpdate) {
