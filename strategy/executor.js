@@ -1,30 +1,46 @@
-const { ethers, web3 } = require("hardhat");
+const {ethers} = require("hardhat");
+
 
 const {Action} = require("./policy");
-const { TxManager } = require("./txManager");
-const {SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS,
-    PANCAKESWAP_FACTORY_V2_ADDRESS, VERSION,
-    MAX_TX_FAILURES, DEADLINE_SEC, MIN_SEC_BETWEEN_REBALANCE
+const {TxManager} = require("./txManager");
+const {
+    SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS, MASTER_CHEF_ADDRESS, WBNB_ADDRESS, ROUTER_ADDRESS,
 } = require('./params')
-const {SMARTCHEF_FACTORY_ABI, CAKE_ABI, PANCAKESWAP_FACTORY_V2_ABI, BEP_20_ABI} = require('../abis')
+const {
+    MASTERCHEF_ABI,
+    SMARTCHEF_FACTORY_ABI,
+    SMARTCHEF_INITIALIZABLE_ABI,
+    CAKE_ABI,
+    PANCAKESWAP_FACTORY_V2_ABI,
+    BEP_20_ABI
+} = require('../abis')
+const {TransactionFailure, FatalError, GasError, NotImplementedError} = require('../errors');
+
+
+const SyrupPoolType = {
+    MANUAL_CAKE: "masterchef",
+    SMARTCHEF: "smartchef",
+    OTHER: "unsupported",
+}
 
 
 class Executor extends TxManager {
 
-    constructor(ethers, notification) {
-        super(ethers, notification);
+
+    constructor(args) {
+        super(args.notifClient);
         this.name = "pancakeswap-executor";
-        this.ethers = ethers;
-        this.signer = null;
-        this.executionState = null;
-
-
-
-    }
-
-    async init(signer) {
-        this.signer = signer;
-        console.log(await signer.getAddress());
+        this.notif = args.notifClient;
+        this.signer = args.signer;
+        this.action = args.action;
+        this.swapSlippage = args.swapSlippage;
+        this.swapTimeLimit = args.swapTimeLimit;
+        this.status = "start";
+        this.execStack = null;
+        this.trace = [];
+        this.result = null;
+        this.onSuccessCallback = null;
+        this.onFailureCallback = null;
 
         this.cakeContract = new ethers.Contract(
             CAKE_ADDRESS,
@@ -32,174 +48,154 @@ class Executor extends TxManager {
             this.signer
         );
 
+        this.masterchefContract = new ethers.Contract(
+            MASTER_CHEF_ADDRESS,
+            MASTERCHEF_ABI,
+            this.signer
+        );
 
+        this.router = new ethers.Contract(
+            ROUTER_ADDRESS,
+            [
+                'function getAmountsOut(uint amountIn, address[] memory path) public view returns (uint[] memory amounts)',
+                'function swapExactTokensForTokens(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline) external returns (uint[] memory amounts)',
+            ],
+            this.signer
+        );
+    }
+
+
+    async run() {
+
+        this.status = "running";
+
+        switch (this.action.name) {
+
+            case Action.NO_OP:
+                this.status = null;
+                this.execStack = null;
+                break;
+
+            case Action.ENTER:
+                await this.enterPosition(this.action.args.to);
+                break;
+
+            case Action.HARVEST:
+                await this.harvest(this.action.args.to);
+                break;
+
+            case Action.SWITCH:
+                await this.switchPools(this.action.args.from, this.action.args.to);
+                break;
+
+            case Action.EXIT:
+                await this.exitPosition();
+                break;
+
+            default:
+                return this.invalidAction();
+        }
+    }
+
+    async handleExecutionResult() {
+        if (this.status === "success") {
+            await this.onSuccess(this.trace);
+        }
+        if (this.status === "failure") {
+            await this.onFailure(this.trace);
+        }
+    }
+
+    async onSuccess(trace) {
+        if (this.onSuccessCallback != null) {
+            await this.onSuccessCallback(trace);
+        }
+    }
+
+    async onFailure(trace) {
+        if (this.onFailureCallback != null) {
+            await this.onFailureCallback(trace);
+        }
+    }
+
+
+    on(event, cb) {
+        if (event === "success") {
+            this.onSuccessCallback = cb;
+        }
+        if (event === "failure") {
+            this.onFailureCallback = cb;
+        }
     }
 
 
     async sendTransactionWait(tx) {
+        if (!tx) {
+            return null;
+        }
         try {
 
-            const txResponse = this.signer.sendTransaction(tx);
+            const txResponse = await this.signer.sendTransaction(tx);
             console.log('## txResponse ##');
             console.dir(txResponse);
 
             const receipt = await txResponse.wait();
             console.log('## txReceipt ##');
-            console.dir(receipt);
+            console.log(receipt);
             return receipt;
 
         } catch (error) {
             this.notif.sendDiscord(`failed to send transaction: ${error}`);
+            console.log(error);
             return null;
         }
     }
 
 
-
-
-    async execute(action, cb, target) {
-        this.executionState = {
-            action,
-            cb,
-            target,
-            trace: [],
-            result: {},
-        };
-
-        let result = {};
-
-        switch (action.name) {
-            case Action.NO_OP:
-                break;
-
-            case Action.ENTER:
-                // console.log("executor.execute: Action.ENTER entering syrup pool");
-                // result = await
-                    return this.enterPosition();
-                // break;
-
-            case Action.COMPOUND:
-                // return this.compound();
-                result = await this.compound();
-                return result;
-                // break;
-
-            case Action.SWITCH:
-                // console.log("executor.execute: Action.SWITCH, switching syrup pools for better yield");
-                result = await this.switchPools();
-                return result;
-
-            case Action.EXIT:
-                // console.log("executor.execute: Action.EXIT, withdraw all funds back home ");
-                // result = await
-                    return this.exitPosition();
-                // break;
-
-            default:
-                return this.invalidAction();
-                // console.log(" invalid action");
-                // result.status = "invalid-action";
-        }
-
-        // await this.callBack(this.target, this.action, result);
-
-    }
-
-    async enterPosition() {
+    async enterPosition(syrupAddr) {
         console.log("executor.execute: Action.ENTER entering syrup pool");
     }
 
-    async enterPosition2() {
-        const receipts = [];
-        // check approve
-        {
-            // approve syrup pool
-            const approveTx = {
-                from: this.account.address,
-                to: to_address,
-                value: ethers.utils.parseEther(send_token_amount),
-                nonce: window.ethersProvider.getTransactionCount(
-                    send_account,
-                    "latest"
-                ),
-                gasLimit: ethers.utils.hexlify(gas_limit), // 100000
-                gasPrice: gas_price,
-            }
-            console.dir(approveTx);
-            let receipt = await this.sendTransactionWait(approveTx);
-            receipts.push(receipt);
-
-            if (receipt == null) {
-                return {
-                    status: "failure",
-                    description: "on approve ..",
-                    receipts: receipts,
-                };
-            }
-        }
-
-        // stake in syrup pool
-        {
-            const depositTx = {
-                from: this.account.address,
-                to: to_address,
-                value: ethers.utils.parseEther(send_token_amount),
-                nonce: window.ethersProvider.getTransactionCount(
-                    send_account,
-                    "latest"
-                ),
-                gasLimit: ethers.utils.hexlify(gas_limit), // 100000
-                gasPrice: gas_price,
-            }
-            console.dir(depositTx);
-            let receipt = await this.sendTransactionWait(depositTx);
-            receipts.push(receipt);
-
-            if (receipt == null) {
-                return {
-                    status: "failure",
-                    description: "on deposit ..",
-                    receipts: receipts,
-                };
-            }
-        }
-
-
-        return {
-            status: "success",
-            description: "entered syrup pool",
-            receipts: receipts,
-        };
-    }
 
     async exitPosition() {
 
     }
 
-    async depositCake(target) {
-
-    }
-
     handleError(err) {
         console.log(err);
+        this.status = "failure";
     }
 
-    async resolve1() {
-        const action = this.executionState.action;
-        const callback = this.executionState.cb;
-        const target = this.executionState.target;
-        const result = this.executionState.result;
-        return callback(target, action, result)
-    }
 
-    async compound() {
-        console.log("executor.execute: compounding");
-        await this.withdraw()
-            .then( async (res) => await this.swap(res))
-            .then(async () => await this.getCakeBalance())
-            .then(this.depositCake)
-            .catch(() => this.handleError())
-            .finally(async () => await this.resolve1());
+    async harvest(syrupAddr) {
+        console.log("executor.execute: harvest start");
+
+        await this.withdraw(syrupAddr, 0)
+            .then(async (res) => {
+                if (res.syrupType === SyrupPoolType.SMARTCHEF) {
+                    const rewardToken = new ethers.Contract(
+                        res.rewardTokenAddr,
+                        ['function balanceOf(address account) external view returns (uint256)'],
+                        this.signer
+                    );
+                    const swapAmount = await rewardToken.balanceOf(this.signer.address);
+                    await this.swapToCake(res.rewardTokenAddr, swapAmount);
+                }
+            })
+            .then(async () => {
+                const amount = await this.cakeContract.balanceOf(this.signer.address);
+                await this.depositCake(syrupAddr, amount);
+
+            })
+            .then( () => {
+                this.status = "success";
+                console.log("executor.execute: harvest completed exec successfully");
+            })
+            .catch((err) => this.handleError(err))
+            .finally( async () => {
+                await this.handleExecutionResult()
+            });
+
     }
 
     async switchPools() {
@@ -207,53 +203,192 @@ class Executor extends TxManager {
     }
 
 
-
-// ############ helpers ###########
-    async approve() {
+    async approveMax() {
 
     }
 
-    async getCakeBalance() {
-        console.log("getCakeBalance ###############");
-        console.log(this.name);
-        const balance = await this.cakeContract.balanceOf(await this.signer.getAddress());
-        console.log(balance);
-        return balance;
 
+    async depositCake(syrupAddr, amount) {
 
-    }
-
-    async withdraw() {
-        console.log("executor.execute: withdraw");
-        const cakeBalance = await this.getCakeBalance();
+        console.log(`executor.depositCake: syrup ${syrupAddr}  amount ${amount}`);
         const result = {
-            cakeBalance,
-            syrup: {
-                token: "tester",
-                amount: 123,
-            }
+            step: "depositCake",
+            to: syrupAddr,
+            amount: amount,
+            receipt: null,
         };
 
-        this.executionState.trace.push(result);
+        result.syrupType = await this.getSyrupType(syrupAddr);
 
-        return result;
-    }
+        if ( amount > 0 ) {
 
-    async swap(input) {
-        console.log("executor.execute: swap");
+            // { // assert user.cakeBalance >= amount
+            //     const userBalance = await this.cakeContract.balanceOf(this.signer.address);
+            //     console.log(userBalance);
+            //     if (userBalance.amount.lt(ethers.BigNumber.from(amount))) {
+            //         throw new FatalError("deposit cake amount is gt user cake balance ");
+            //     }
+            // }
 
-        console.log(input.syrup);
-        const result = {
-            cakeOut: 1111,
+            switch (result.syrupType) {
+                case SyrupPoolType.SMARTCHEF: {
+                    console.log(`executor.depositCake: deposit (${amount}) cake to smartchef - address ${syrupAddr}`);
+                    const smartChef = new ethers.Contract(
+                        syrupAddr,
+                        SMARTCHEF_INITIALIZABLE_ABI,
+                        this.signer
+                    );
+
+                    const tx = await smartChef.populateTransaction.deposit(amount);
+                    result.receipt = await this.sendTransactionWait(tx);
+                    break;
+                }
+
+                case SyrupPoolType.MANUAL_CAKE:
+                    console.log(`executor.depositCake: deposit (${amount}) cake to ManualCake - address ${syrupAddr}`);
+
+                    const tx = await this.masterchefContract.populateTransaction.enterStaking(amount);
+                    result.receipt = await this.sendTransactionWait(tx);
+                    break;
+
+                default:
+                    throw new FatalError("executor.depositCake: unsupported pool type");
+            }
         }
-        this.executionState.trace.push(result);
+        this.trace.push(result);
+        return result;
 
+
+    }
+
+
+    async withdraw(syrupAddr, amount) {
+        console.log("executor.withdraw");
+
+        const result = {
+            step: "withdraw",
+            from: syrupAddr,
+            amount: amount,
+            syrupType: null,
+            rewardTokenAddr: null,
+            receipt: null,
+        };
+
+        result.syrupType = await this.getSyrupType(syrupAddr);
+
+        switch (result.syrupType) {
+            case SyrupPoolType.SMARTCHEF: {
+                console.log(`executor.withdraw: withdraw from smartchef - address ${syrupAddr}`);
+
+                const smartChef = new ethers.Contract(
+                    syrupAddr,
+                    SMARTCHEF_INITIALIZABLE_ABI,
+                    this.signer
+                );
+                result.rewardTokenAddr = await smartChef.rewardToken();
+
+                // { // assert user.stake >= amount
+                //     let userInfo = await smartChef.userInfo(this.signer.address);
+                //     console.log(userInfo);
+                //     if (userInfo.amount.lt(ethers.BigNumber.from(amount))) {
+                //         throw new FatalError("withdraw amount is too large");
+                //     }
+                // }
+
+                const tx = await smartChef.populateTransaction.withdraw(amount);
+                result.receipt = await this.sendTransactionWait(tx);
+
+                break;
+            }
+
+            case SyrupPoolType.MANUAL_CAKE:
+                console.log(`executor.withdraw: withdraw from ManualCake - address ${syrupAddr}`);
+
+                // { // assert user.stake >= amount
+                //     let userInfo = await this.masterchefContract.userInfo(0, this.signer.address);
+                //     console.log(userInfo);
+                //
+                //     if (userInfo.amount.lt(ethers.BigNumber.from(amount))) {
+                //         throw new FatalError("withdraw amount is too large");
+                //     }
+                // }
+                const tx = await this.masterchefContract.populateTransaction.leaveStaking(amount);
+                result.receipt = await this.sendTransactionWait(tx);
+                break;
+
+            default:
+                throw new FatalError("executor.withdraw: unsupported pool type");
+        }
+
+        this.trace.push(result);
         return result;
     }
 
 
+    async swapToCake(tokenIn, amountIn) {
 
+        console.log(`executor.swapToCake: token ${tokenIn}  amount ${amountIn}`);
+        const result = {
+            step: "swapToCake",
+            from: tokenIn,
+            amount: amountIn,
+            receipt: null,
+        };
+
+        if ( amountIn > 0 ) {
+            const viaBnb = [tokenIn, WBNB_ADDRESS, CAKE_ADDRESS];
+            const amounts = await this.router.getAmountsOut(amountIn, viaBnb);
+            const amountOutMin = amounts[1].sub(amounts[1].div(this.swapSlippage));
+            const recipient = this.signer.address;
+            const deadline = Date.now() + this.swapTimeLimit;
+
+            const tx = await this.router.populateTransaction.swapExactTokensForTokens(
+                amountIn,
+                amountOutMin,
+                viaBnb,
+                recipient,
+                deadline
+            );
+            result.receipt = await this.sendTransactionWait(tx);
+        }
+        this.trace.push(result);
+        return result;
+
+    }
+
+    async getSyrupType(syrupAddr) {
+
+        let type = SyrupPoolType.OTHER;
+
+        if (syrupAddr === MASTER_CHEF_ADDRESS) {
+            type = SyrupPoolType.MANUAL_CAKE;
+        }
+        try {
+
+            const syrupPool = new ethers.Contract(
+                syrupAddr,
+                SMARTCHEF_INITIALIZABLE_ABI,
+                this.signer);
+
+            const factoryAddr = await syrupPool.SMART_CHEF_FACTORY();
+            if (ethers.utils.isAddress(factoryAddr) && (factoryAddr === SMARTCHEF_FACTORY_ADDRESS)) {
+                type = SyrupPoolType.SMARTCHEF;
+            }
+        } catch (e) {
+            console.log(e);
+        }
+        console.log(`executor.getSyrupType:: address = ${syrupAddr} mapped to type = ${type}`);
+        return type;
+    }
+
+
+    invalidAction() {
+        return Promise.resolve(undefined);
+    }
 }
+
+// ############ helpers ###########
+
 
 module.exports = {
     Executor,

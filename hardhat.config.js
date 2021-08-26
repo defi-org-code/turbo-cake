@@ -1,6 +1,14 @@
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-web3");
 
+
+// task action function receives the Hardhat Runtime Environment as second argument
+task("accounts", "Prints accounts", async (_, { web3 }) => {
+    console.log(await web3.eth.getAccounts());
+});
+
+// module.exports = {};
+
 // const { mnemonic } = require('./secrets.json');
 
 // This is a sample Hardhat task. To learn how to create your own go to
@@ -37,7 +45,7 @@ module.exports = {
                 chainId: 56,
                 // blockGasLimit: 12e6,
                 // gasPrice: 20000000000,
-                unlocked_accounts: ["0x73feaa1eE314F8c655E354234017bE2193C9E24E"],
+                unlocked_accounts: ["0x73feaa1eE314F8c655E354234017bE2193C9E24E", "0xeb79a35801281f34db87848682db56d005806cec"],
                 // accounts: { mnemonic: },
             }
         },

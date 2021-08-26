@@ -4,9 +4,7 @@ const debug = (...messages) => console.log(...messages);
 
 
 class TxManager {
-	constructor(ethers, notification) {
-
-		this.ethers = ethers;
+	constructor(notification) {
 		this.notif = notification;
 	}
 

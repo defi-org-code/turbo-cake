@@ -2,7 +2,7 @@
 const Action = {
     NO_OP: "no-op",
     ENTER: "enter-syrup-pool",
-    COMPOUND: "compound",
+    HARVEST: "harvest",
     SWITCH: "switch-syrup-pool",
     EXIT: "exit-syrup-pool",
 }
@@ -29,8 +29,8 @@ class GreedyPolicy extends Policy {
 
     constructor(config) {
         super();
-        this.minTimeBufferSyrupSwitch = config.minTimeBufferSyrupSwitch;
-        this.minTimeBufferCompounds = config.minTimeBufferCompounds;
+        this.minSecBetweenSyrupSwitch = config.minSecBetweenSyrupSwitch;
+        this.minSecBetweenHarvests = config.minSecBetweenHarvests;
 
     }
 
@@ -77,7 +77,7 @@ class GreedyPolicy extends Policy {
             }
         }
 
-        else if (Date.now() - args.lastActionTimestamp > this.minTimeBufferSyrupSwitch) { // check should switch syrup pool
+        else if (Date.now() - args.lastActionTimestamp > this.minSecBetweenSyrupSwitch) { // check should switch syrup pool
             const topYielderAddr = this.getTopYielderAddr(args.poolsInfo, args.cakeBalance);
             const topYielderPoolInfo = this.poolsInfo[topYielderAddr];
             const curSyrupPoolInfo = args.poolsInfo[args.curSyrupPoolAddr];
@@ -92,9 +92,9 @@ class GreedyPolicy extends Policy {
             }
         }
 
-        else if (Date.now() - args.lastActionTimestamp > this.minTimeBufferCompounds) {
+        else if (Date.now() - args.lastActionTimestamp > this.minSecBetweenHarvests) {
             action = {
-                name: Action.COMPOUND,
+                name: Action.HARVEST,
                 args: {
                     to: args.curSyrupPoolAddr,
                 }
