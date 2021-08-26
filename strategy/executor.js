@@ -23,22 +23,22 @@ const SyrupPoolType = {
     OTHER: "unsupported",
 }
 
-
 class Executor extends TxManager {
 
+	STATUS = {IDLE: 0, RUNNING: 1, SUCCESS: 2, FAILURE: 3}
 
     constructor(args) {
 		super(args.notifClient);
 		this.name = "pancakeswap-executor";
 		this.notif = args.notifClient;
 		this.signer = args.signer;
-		this.action = args.action;
 		this.swapSlippage = args.swapSlippage;
 		this.swapTimeLimit = args.swapTimeLimit;
-		this.status = "start";
+		this.status = this.STATUS.IDLE;
 		this.execStack = null;
 		this.trace = [];
 		this.result = null;
+		this.strategy = args.strategy
 		this.onSuccessCallback = null;
 		this.onFailureCallback = null;
 	}
@@ -68,30 +68,35 @@ class Executor extends TxManager {
     }
 
 
-    async run() {
+    async run(action) {
 
-        this.status = "running";
+		if (this.status !== this.STATUS.IDLE) {
+			return
+		}
 
-        switch (this.action.name) {
+        switch (action.name) {
 
             case Action.NO_OP:
-                this.status = null;
                 this.execStack = null;
                 break;
 
             case Action.ENTER:
-                await this.enterPosition(this.action.args.to);
+		        this.status = this.STATUS.RUNNING;
+                await this.enterPosition(action.args.to);
                 break;
 
             case Action.HARVEST:
-                await this.harvest(this.action.args.to);
+		        this.status = this.STATUS.RUNNING;
+                await this.harvest(action.args.to);
                 break;
 
             case Action.SWITCH:
-                await this.switchPools(this.action.args.from, this.action.args.to);
+		        this.status = this.STATUS.RUNNING;
+                await this.switchPools(action.args.from, action.args.to);
                 break;
 
             case Action.EXIT:
+		        this.status = this.STATUS.RUNNING;
                 await this.exitPosition();
                 break;
 
@@ -101,36 +106,17 @@ class Executor extends TxManager {
     }
 
     async handleExecutionResult() {
-        if (this.status === "success") {
-            await this.onSuccess(this.trace);
+
+        if (this.status === this.STATUS.SUCCESS) {
+            await this.strategy.handleExecutionSuccess(this.trace);
         }
-        if (this.status === "failure") {
-            await this.onFailure(this.trace);
-        }
+
+		else {
+			await this.strategy.handleExecutionError(this.trace);
+		}
+
+		this.status = this.STATUS.IDLE;
     }
-
-    async onSuccess(trace) {
-        if (this.onSuccessCallback != null) {
-            await this.onSuccessCallback(trace);
-        }
-    }
-
-    async onFailure(trace) {
-        if (this.onFailureCallback != null) {
-            await this.onFailureCallback(trace);
-        }
-    }
-
-
-    on(event, cb) {
-        if (event === "success") {
-            this.onSuccessCallback = cb;
-        }
-        if (event === "failure") {
-            this.onFailureCallback = cb;
-        }
-    }
-
 
     async sendTransactionWait(tx) {
         if (!tx) {
@@ -157,16 +143,27 @@ class Executor extends TxManager {
 
     async enterPosition(syrupAddr) {
         console.log("executor.execute: Action.ENTER entering syrup pool");
+
+		const amount = await this.cakeContract.balanceOf(this.signer.address);
+		await this.depositCake(syrupAddr, amount)
+			.then(() => {
+				this.status = this.STATUS.SUCCESS;
+                console.log("executor.execute: harvest completed exec successfully");
+            })
+            .catch((err) => this.handleError(err))
+            .finally(async () => {
+                await this.handleExecutionResult()
+            });
     }
 
 
     async exitPosition() {
-
+		throw NotImplementedError
     }
 
     handleError(err) {
         console.log(err);
-        this.status = "failure";
+		this.status = this.STATUS.FAILURE;
     }
 
 
@@ -194,7 +191,7 @@ class Executor extends TxManager {
 
             })
             .then(() => {
-                this.status = "success";
+				this.status = this.STATUS.SUCCESS;
                 console.log("executor.execute: harvest completed exec successfully");
             })
             .catch((err) => this.handleError(err))
@@ -410,7 +407,7 @@ class Executor extends TxManager {
 
 
     invalidAction() {
-        return Promise.resolve(undefined);
+        throw Error('executor invalid action')
     }
 }
 

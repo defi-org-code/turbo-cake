@@ -4,7 +4,7 @@ const Action = {
     ENTER: "enter-syrup-pool",
     COMPOUND: "compound",
     SWITCH: "switch-syrup-pool",
-    EXIT: "exit-syrup-pool",
+    EXIT: "exit-syrup-pool"
 }
 
 

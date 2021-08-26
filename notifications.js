@@ -3,11 +3,13 @@ const { RunningMode } = require("./config");
 require('dotenv').config();
 
 class Notifications {
+
 	constructor(runningMode) {
 		this.runningMode = runningMode;
 	}
 
 	sendDiscord(msg) {
+
 		if (this.runningMode === RunningMode.DEV) {
 			console.log(msg);
 			return

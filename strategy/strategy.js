@@ -5,7 +5,8 @@ const { ethers} = require("hardhat");
 const Web3 = require('web3')
 const web3 = new Web3(process.env.ENDPOINT_HTTPS)
 
-const asyncRedis = require("redis");
+const redis = require("redis");
+const asyncRedis = require("async-redis");
 
 const KeyEncryption = require('../keyEncryption');
 const Notifications = require('../notifications');
@@ -38,7 +39,7 @@ function loadConfig(baseConfig) {
 }
 
 
-class Strategy {
+class Strategy{
 
     constructor(env, runningMode, signer) {
         this.state = {
@@ -57,7 +58,7 @@ class Strategy {
             minSecBetweenHarvests: config.minSecBetweenHarvests,
 
         });
-        this.executor = new Executor({'notifClient': this.notif, 'signer': signer, 'action': Action, 'swapSlippage': env.swapSlippage, 'swapTimeLimit': env.swapTimeLimit});
+        this.executor = new Executor({'strategy': this, 'notifClient': this.notif, 'signer': signer, 'action': Action, 'swapSlippage': env.swapSlippage, 'swapTimeLimit': env.swapTimeLimit});
         this.tickIndex = 0;
         this.config = config;
         this.tickInterval = config.tickInterval;
@@ -94,7 +95,7 @@ class Strategy {
 	}
 
 	redisInit() {
-		this.redisClient = asyncRedis.createClient();
+		this.redisClient = asyncRedis.createClient()
 		this.redisClient.on("error", function(error) {
 			console.error(error)
 			throw new FatalError(`fatal redis error: ${error}`)
@@ -105,39 +106,15 @@ class Strategy {
 		});
 	}
 
-    inTransition() {
-        return this.executor != null;
-    }
-
 	async run() {
 
         try {
-            if (this.inTransition()) {
-                return;
-            }
-            this.tickIndex++;
-            console.log(" tick number: ", this.tickIndex);
 
 			await this.ps.update();
             await this.setAction();
-            if (this.tickIndex === 3) {
-                console.log("FAKE action");
-                this.nextAction =
-                    {
-                        name: Action.HARVEST,
-                        args: {
-                            to: this.config.devSmartchefAddress,
-                            // "0x0446b8f8474c590d2249a4acdd6eedbc2e004bca",
-                            // to: "TARGET_ADDRESS",
-                        }
-                    }
-            }
+            await this.executor.run(this.nextAction);
+            process.exit()
 
-            if (this.tickIndex === 5) {
-                clearInterval(this.intervalId);
-                process.exit()
-            }
-            await this.executeAction();
         } catch (e) {
             // TODO: web provider rate limit support
             debug(e)
@@ -158,95 +135,20 @@ class Strategy {
 		});
 	}
 
-    executeActionCallback(self, action, result) {
-        // self.inTransition = false;
-        if (result.status === "success") {
-            switch (action.name) {
-                case Action.NO_OP:
-                    break;
+    async handleExecutionSuccess(trace) {
+        // console.log(`strategy.handleExecutionSuccess::
+		// 			action = ${JSON.stringify(action)}
+		//             exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
 
-                case Action.ENTER:
-                    console.log(" entered syrup pool");
-                    self.state.position = {
-                        poolAddr: action.args.to,
-                        cakeAmount: action.args.cakeAmount,
-                    }
-                    break;
-
-                case Action.HARVEST:
-                    console.log(" harvest cb");
-                    self.state.position = {
-                        poolAddr: action.args.to,
-                        cakeAmount: action.args.cakeAmount,
-                    }
-                    break;
-
-                case Action.SWITCH:
-                    console.log(" switched syrup pool");
-                    self.state.position = {
-                        poolAddr: action.args.to,
-                        cakeAmount: action.args.cakeAmount,
-                    };
-                    break;
-
-                case Action.EXIT:
-                    console.log(" bot exited all positions ");
-                    self.state.position = null;
-                    break;
-
-                default:
-                    console.log(" invalid action");
-
-            }
-        } else {
-
-
-        }
-
+		console.log(trace)
     }
 
-    async executeAction() {
+    async handleExecutionError(trace) {
+		console.log(trace)
 
-        const action = this.nextAction; // closure
-        const startTime = Date.now();
-
-        if (action.name === Action.NO_OP) {
-            this.executor = null;
-            return;
-        }
-
-        if (action.name === Action.ENTER) {
-            this.executor = null;
-            return;
-        }
-
-        this.executor = new Executor({
-            action: action,
-            signer: this.signer,
-            notifClient: this.notif,
-            swapSlippage: this.config.swapSlippage,
-            swapTimeLimit: this.config.swapTimeLimit,
-        });
-
-        this.executor.on("failure", async (trace) => await this.handleExecutionError(trace, action, startTime));
-        this.executor.on("success", async (trace) => await this.handleExecutionSuccess(trace, action, startTime));
-
-        await this.executor.run();
-    }
-
-    async handleExecutionSuccess(trace, action, startTime) {
-        console.log(`strategy.handleExecutionSuccess::
-					action = ${JSON.stringify(action)}
-		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
-        this.executor = null;
-    }
-
-    async handleExecutionError(err, action, startTime) {
-        console.log(`strategy.handleExecutionError::
-					action = ${JSON.stringify(action)}
-		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
-
-        this.executor = null;
+        // console.log(`strategy.handleExecutionError::
+		// 			action = ${JSON.stringify(action)}
+		//             exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
     }
 
 
