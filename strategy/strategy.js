@@ -44,7 +44,8 @@ class Strategy {
         this.signer = signer;
         this.notif = new Notifications(runningMode);
         this.redisInit();
-        this.ps = new Pancakeswap(this.redisClient, web3, this.notif);
+        this.ps = new Pancakeswap(this.redisClient, web3, this.notif,
+            config.pancakeUpdateInterval);
         this.policy = new GreedyPolicy({
             minSecBetweenSyrupSwitch: config.minSecBetweenSyrupSwitch,
             minSecBetweenHarvests: config.minSecBetweenHarvests,
@@ -123,6 +124,8 @@ class Strategy {
                     },
                     description: "FAKE action",
                 }
+            console.log(" override action: ",  this.nextAction);
+
 
         }
 
@@ -192,6 +195,8 @@ class Strategy {
     }
 
     async setAction() {
+        console.log(" policy set action before: ", this.tickIndex, this.nextAction);
+
         const lastAction = this.nextAction;
         this.nextAction = await this.policy.getAction({
             'poolsInfo': this.ps.poolsInfo,
@@ -199,6 +204,9 @@ class Strategy {
             'lastActionTimestamp': this.lastActionTimestamp,
             'lastAction': lastAction,
         });
+
+        console.log(" policy set action After: ", this.tickIndex, this.nextAction);
+
     }
 
     async executeAction() {
