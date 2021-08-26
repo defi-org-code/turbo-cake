@@ -41,7 +41,7 @@ class Executor extends TxManager {
         this.result = null;
         this.onSuccessCallback = null;
         this.onFailureCallback = null;
-
+        
         this.cakeContract = new ethers.Contract(
             CAKE_ADDRESS,
             CAKE_ABI,
