@@ -23,6 +23,8 @@ class Pancakeswap {
 	PAST_EVENTS_N_DAYS = 90 // TODO: change
 	PAST_EVENTS_N_BLOCKS = Math.floor(this.PAST_EVENTS_N_DAYS * this.BLOCKS_PER_DAY)
 
+	EXCLUDED_POOLS = ["0xa80240Eb5d7E05d3F250cF000eEc0891d00b51CC"]
+
     constructor(redisClient, web3, notif) {
         this.redisClient = redisClient;
         this.pancakeUpdateInterval = process.env.PANCAKE_UPDATE_INTERVAL;
@@ -127,7 +129,7 @@ class Pancakeswap {
 
 			bonusEndBlock = this.poolsInfo[poolAddr]['bonusEndBlock']
 			debug(`bonusEndBlock=${bonusEndBlock}, blockNum=${blockNum}`)
-			if (bonusEndBlock <= blockNum) {
+			if ((bonusEndBlock <= blockNum) || (poolAddr in this.EXCLUDED_POOLS)) {
 				delete this.poolsInfo[poolAddr]
 				await this.savePoolsInfo(blockNum)
 			}
