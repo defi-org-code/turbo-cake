@@ -1,11 +1,10 @@
-
 const Web3 = require('web3')
 const web3 = new Web3(process.env.ENDPOINT_HTTPS)
 
 const asyncRedis = require("redis");
 const Notifications = require('../notifications');
-const { GreedyPolicy, Action } = require("./policy");
-const { Executor } = require("./executor");
+const {GreedyPolicy, Action} = require("./policy");
+const {Executor} = require("./executor");
 const {Pancakeswap} = require("./pancakeswap");
 
 const {
@@ -17,7 +16,7 @@ const debug = (...messages) => console.log(...messages)
 const {TransactionFailure, FatalError, GasError, NotImplementedError} = require('../errors');
 
 
-function loadConfig(baseConfig) {
+function loadConfig(env) {
     let config = {};
 
     config.pancakeUpdateInterval = PANCAKE_UPDATE_INTERVAL;
@@ -45,27 +44,37 @@ class Strategy {
         this.signer = signer;
         this.notif = new Notifications(runningMode);
         this.redisInit();
-		this.ps = new Pancakeswap(this.redisClient, web3, this.notif);
+        this.ps = new Pancakeswap(this.redisClient, web3, this.notif);
         this.policy = new GreedyPolicy({
             minSecBetweenSyrupSwitch: config.minSecBetweenSyrupSwitch,
             minSecBetweenHarvests: config.minSecBetweenHarvests,
 
         });
         this.executor = null;
+        this.nextAction =
+            {
+                name: Action.NO_OP,
+            };
         this.tickIndex = 0;
         this.config = config;
         this.tickInterval = config.tickInterval;
 
         this.runningMode = runningMode;
         this.name = "pancakeswap-strategy";
-		this.lastActionTimestamp = Date.now() - config.minTimeBufferSyrupSwitch - 1;
-		this.curSyrupPoolAddr = null;
+        this.lastActionTimestamp = Date.now() - config.minSecBetweenSyrupSwitch - 1;
+        this.curSyrupPoolAddr = null;
 
     }
 
 
     async start() {
         try {
+            if (this.runningMode === RunningMode.DEV) {
+                //DEBUG
+                this.policy.pause();
+                this.ps.pause();
+                // RMOVE
+            }
             await this.init();
 
         } catch (e) {
@@ -76,7 +85,6 @@ class Strategy {
         this.intervalId = setInterval(() => this.run(), this.tickInterval);
         await this.run();
     }
-
 
     async init() {
         await this.ps.init();
@@ -103,67 +111,75 @@ class Strategy {
         return this.executor != null;
     }
 
+    runDevOverride() {
+
+        this.tickIndex++;
+        console.log(" tick number: ", this.tickIndex);
+
+
+        if (false) {//(this.tickIndex === 1) {
+            console.log("FAKE action");
+            this.nextAction =
+                {
+                    name: Action.EXIT,
+                    args: {
+                        poolAddress: this.config.devSmartchefAddressList[0],
+                    }
+                }
+
+        }
+
+        if (false) {//(this.tickIndex === 5) {
+            console.log("FAKE action");
+            this.nextAction =
+                {
+                    name: Action.ENTER,
+                    args: {
+                        poolAddress: this.config.devSmartchefAddressList[0],
+                    }
+                }
+
+        }
+        if (false) {//this.tickIndex === 10) {
+            console.log("FAKE action");
+            this.nextAction =
+                {
+                    name: Action.HARVEST,
+                    args: {
+                        poolAddress: this.config.devSmartchefAddressList[0],
+                    }
+                }
+        }
+
+        if (this.tickIndex === 15) {
+            console.log("FAKE action");
+            this.nextAction =
+                {
+                    name: Action.SWITCH,
+                    args: {
+                        from: this.config.devSmartchefAddressList[0],
+                        to: this.config.devSmartchefAddressList[1],
+                    }
+                }
+            console.dir(this.nextAction);
+        }
+        if (this.tickIndex === 20) {
+            clearInterval(this.intervalId);
+            process.exit()
+        }
+
+    }
+
     async run() {
 
         try {
             if (this.inTransition()) {
                 return;
             }
-            this.tickIndex++;
-            console.log(" tick number: ", this.tickIndex);
 
-			await this.ps.update();
+            this.runDevOverride();
+            await this.ps.update();
             await this.setAction();
-
-            if (false){//(this.tickIndex === 1) {
-                console.log("FAKE action");
-                this.nextAction =
-                    {
-                        name: Action.EXIT,
-                        args: {
-                            poolAddress: this.config.devSmartchefAddressList[0],
-                        }
-                    }
-
-            }
-
-            if (false){//(this.tickIndex === 5) {
-                console.log("FAKE action");
-                this.nextAction =
-                    {
-                        name: Action.ENTER,
-                        args: {
-                            poolAddress: this.config.devSmartchefAddressList[0],
-                        }
-                    }
-
-            }
-            if (false){//this.tickIndex === 10) {
-                console.log("FAKE action");
-                this.nextAction =
-                    {
-                        name: Action.HARVEST,
-                        args: {
-                            poolAddress: this.config.devSmartchefAddressList[0],
-                        }
-                    }
-            }
-
-            if (this.tickIndex === 15) {
-                console.log("FAKE action");
-                this.nextAction =
-                    {
-                        name: Action.SWITCH,
-                        args: {
-                            from:  this.config.devSmartchefAddressList[0],
-                            to: this.config.devSmartchefAddressList[1],
-                        }
-                    }
-            }
-            if (this.tickIndex === 20) {
-                clearInterval(this.intervalId);
-                process.exit()
-            }
             await this.executeAction();
         } catch (e) {
             // TODO: web provider rate limit support
@@ -177,13 +193,15 @@ class Strategy {
         }
     }
 
-	async setAction() {
-		this.nextAction = await this.policy.getAction({
-			'poolsInfo': this.ps.poolsInfo,
-			'curSyrupPoolAddr': this.curSyrupPoolAddr,
-			'lastActionTimestamp': this.lastActionTimestamp
-		});
-	}
+    async setAction() {
+        const lastAction = this.nextAction;
+        this.nextAction = await this.policy.getAction({
+            'poolsInfo': this.ps.poolsInfo,
+            'curSyrupPoolAddr': this.curSyrupPoolAddr,
+            'lastActionTimestamp': this.lastActionTimestamp,
+            'lastAction': lastAction,
+        });
+    }
 
     async executeAction() {
 
@@ -210,14 +228,15 @@ class Strategy {
     }
 
     async handleExecutionSuccess(trace, action, startTime) {
-        console.log(`strategy.handleExecutionSuccess::
+        console.log(`strategy.handleExecutionSuccess:: 
 					action = ${JSON.stringify(action)}
 		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
+        this.nextAction = null;
         this.executor = null;
     }
 
     async handleExecutionError(err, action, startTime) {
-        console.log(`strategy.handleExecutionError::
+        console.log(`strategy.handleExecutionError:: 
 					action = ${JSON.stringify(action)}
 		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
 
@@ -236,4 +255,4 @@ class Strategy {
 
 module.exports = {
     Strategy,
-};
+}
