@@ -1,9 +1,20 @@
-const asyncRedis = require("async-redis");
+
+// const { ethers, web3 } = require("hardhat");
+const { ethers} = require("hardhat");
+
+const Web3 = require('web3')
+const web3 = new Web3(process.env.ENDPOINT_HTTPS)
+
+const asyncRedis = require("redis");
+
+const KeyEncryption = require('../keyEncryption');
 const Notifications = require('../notifications');
+const { GreedyPolicy, Action } = require("./policy");
+const { Executor } = require("./executor");
+const {Pancakeswap} = require("./pancakeswap");
+
 const {SMARTCHEF_INITIALIZABLE_ABI} = require("../abis");
 const {GreedyPolicy, Action} = require("./policy");
-const {Executor} = require("./executor");
-const {PancakeswapEnvironment} = require("./pancakeswap");
 const {
     RunningMode, DEV_ACCOUNT, DEV_SMARTCHEF_ADDRESS,
     MIN_SEC_BETWEEN_SYRUP_SWITCH, MIN_SEC_BETWEEN_HARVESTS,
@@ -41,10 +52,7 @@ class Strategy {
         this.signer = signer;
         this.notif = new Notifications(runningMode);
         this.redisInit();
-        this.env = new PancakeswapEnvironment({
-                pancakeUpdateInterval: config.pancakeUpdateInterval,
-            },
-            this.redisClient);
+		this.ps = new Pancakeswap(this.redisClient, web3, this.notif);
         this.policy = new GreedyPolicy({
             minSecBetweenSyrupSwitch: config.minSecBetweenSyrupSwitch,
             minSecBetweenHarvests: config.minSecBetweenHarvests,
@@ -57,50 +65,59 @@ class Strategy {
 
         this.runningMode = runningMode;
         this.name = "pancakeswap-strategy";
+		this.lastActionTimestamp = Date.now() - config.minTimeBufferSyrupSwitch - 1;
+		this.curSyrupPoolAddr = null;
 
     }
 
 
-    async start() {
-        try {
-            await this.init();
+	async start() {
+		try {
+			await this.init();
 
-        } catch (e) {
-            this.notif.sendDiscord(`[ERROR] unhandled error: ${e}`);
-            this.beforeExit(e);
-        }
+		} catch (e) {
+			this.notif.sendDiscord(`[ERROR] unhandled error: ${e}`);
+			this.beforeExit(e);
+		}
 
-        this.intervalId = setInterval(() => this.run(), this.tickInterval);
-        await this.run();
-    }
+		this.intervalId = setInterval(() => this.run(), this.tickInterval);
+		await this.run();
+	}
 
+	async init() {
+		if (this.runningMode === RunningMode.PRODUCTION) {
+			this.wallet = new ethers.Wallet(await new KeyEncryption().loadKey());
+			this.signer = this.wallet.connect(ethers.provider);
+		} else if (this.runningMode === RunningMode.DEV) {
+			this.signer = await ethers.getSigner("0x73feaa1eE314F8c655E354234017bE2193C9E24E");
+		}
 
-    async init() {
-        await this.env.init();
-        await this.setupState();
-    }
+		await this.ps.init();
+		await this.executor.init(this.signer);
+		await this.setupState();
+	}
 
-    async setupState() {
-        // TODO: infer from bsc
-    }
+	async setupState() {
+		// TODO: infer from bsc
+	}
 
-    redisInit() {
-        this.redisClient = asyncRedis.createClient();
-        this.redisClient.on("error", function (error) {
-            console.error(error)
-            throw new FatalError(`fatal redis error: ${error}`)
-        });
+	redisInit() {
+		this.redisClient = asyncRedis.createClient();
+		this.redisClient.on("error", function(error) {
+			console.error(error)
+			throw new FatalError(`fatal redis error: ${error}`)
+		});
 
-        this.redisClient.on("ready", function () {
-            debug('redis ready')
-        });
-    }
+		this.redisClient.on("ready", function() {
+			debug('redis ready')
+		});
+	}
 
     inTransition() {
         return this.executor != null;
     }
 
-    async run() {
+	async run() {
 
         try {
             if (this.inTransition()) {
@@ -109,7 +126,7 @@ class Strategy {
             this.tickIndex++;
             console.log(" tick number: ", this.tickIndex);
 
-            await this.update();
+			await this.ps.update();
             await this.setAction();
             if (this.tickIndex === 3) {
                 console.log("FAKE action");
@@ -141,30 +158,13 @@ class Strategy {
         }
     }
 
-    async update() {
-        await this.env.update();
-    }
-
-    async setAction() {
-        const policyInputArgs = this.getPolicyInputArgs();
-        this.nextAction = await this.policy.getAction(policyInputArgs);
-    }
-
-    getPolicyInputArgs() {
-        const args = {
-            poolsInfo: this.getPoolsInfo(),
-            cakeBalance: this.getCakeBalance(),
-        };
-        return args;
-    }
-
-    getPoolsInfo() {
-        return null;
-    }
-
-    getCakeBalance() {
-        return 0;
-    }
+	async setAction() {
+		this.nextAction = await this.policy.getAction({
+			'poolsInfo': this.ps.poolsInfo,
+			'curSyrupPoolAddr': this.curSyrupPoolAddr,
+			'lastActionTimestamp': this.lastActionTimestamp
+		});
+	}
 
     executeActionCallback(self, action, result) {
         // self.inTransition = false;
@@ -243,14 +243,14 @@ class Strategy {
     }
 
     async handleExecutionSuccess(trace, action, startTime) {
-        console.log(`strategy.handleExecutionSuccess:: 
+        console.log(`strategy.handleExecutionSuccess::
 					action = ${JSON.stringify(action)}
 		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
         this.executor = null;
     }
 
     async handleExecutionError(err, action, startTime) {
-        console.log(`strategy.handleExecutionError:: 
+        console.log(`strategy.handleExecutionError::
 					action = ${JSON.stringify(action)}
 		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
 
@@ -270,4 +270,3 @@ class Strategy {
 module.exports = {
     Strategy,
     RunningMode,
-};

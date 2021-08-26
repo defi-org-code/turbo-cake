@@ -2,15 +2,13 @@
 const Action = {
     NO_OP: "no-op",
     ENTER: "enter-syrup-pool",
-    HARVEST: "harvest",
+    COMPOUND: "compound",
     SWITCH: "switch-syrup-pool",
     EXIT: "exit-syrup-pool",
 }
 
 
 class Policy {
-
-    action
 
     constructor() {
         this.action = {
@@ -29,59 +27,60 @@ class GreedyPolicy extends Policy {
 
     constructor(config) {
         super();
-        this.minSecBetweenSyrupSwitch = config.minSecBetweenSyrupSwitch;
-        this.minSecBetweenHarvests = config.minSecBetweenHarvests;
+        this.minTimeBufferSyrupSwitch = config.minTimeBufferSyrupSwitch;
+        this.minTimeBufferCompounds = config.minTimeBufferCompounds;
+        this.apySwitchTh = config.apySwitchTh;
 
     }
 
-    getTopYielderAddr(poolsInfo, cakeAmount) {
-        // assume poolsInfo is up to date and contains
-        // bestRoute - with cost per swap,
-        // syrup token volatility estimate
+    getTopYielderAddr(poolsInfo) {
 
-        return null;
+    	let apyDict = {}
+
+		for (const poolAddr of Object.keys(poolsInfo)) {
+			apyDict[poolsInfo[poolAddr]['apy']] = poolAddr
+		}
+
+		return apyDict[Object.keys(poolsInfo).reduce((a, b) => poolsInfo[a] > poolsInfo[b] ? a : b)]
     }
 
 
-    shouldSwitchPools(from, to) {
+    shouldSwitchPools(poolsInfo, curSyrupPoolAddr, topYielderAddr) {
 
-        // if (topYielderAddr != args.curSyrupPoolAddr) {
-        //
-        // }
-        // const curSyrupPoolInfo = args.poolsInfo[args.curSyrupPoolAddr];
-        // const cur
-        //
-        // if (args.poolsInfo[topYielderAddr]['apr'] > curSyrupPoolInfo['apr'] * (1 + this.minSwitchRiskBuffer) ) {
-        //     return {addr: topYielderAddr};
-        // }
+		if (curSyrupPoolAddr >= topYielderAddr) {
+			return false
+		}
 
-   // }
-        return false;
+		return poolsInfo[topYielderAddr]['apy'] - poolsInfo[curSyrupPoolAddr]['apy'] >= this.apySwitchTh;
     }
 
     async getAction(args) {
+
+		/*
+		* get best pool apy
+		* check move criteria
+		* return action
+		* */
 
         let action = {
             name: Action.NO_OP,
         };
 
         if (args.curSyrupPoolAddr == null) { // enter "top" syrup pool apy estimate
-            const topYielderAddr = this.getTopYielderAddr(args.poolsInfo, args.cakeBalance);
-            // const topYielderPoolInfo = this.poolsInfo[topYielderAddr];
             action = {
                 name: Action.ENTER,
                 args: {
-                    to:  topYielderAddr,
-                    // amount: args.cakeBalance,
+                    to:  this.getTopYielderAddr(args.poolsInfo),
                 }
             }
         }
 
-        else if (Date.now() - args.lastActionTimestamp > this.minSecBetweenSyrupSwitch) { // check should switch syrup pool
-            const topYielderAddr = this.getTopYielderAddr(args.poolsInfo, args.cakeBalance);
-            const topYielderPoolInfo = this.poolsInfo[topYielderAddr];
-            const curSyrupPoolInfo = args.poolsInfo[args.curSyrupPoolAddr];
-            if (this.shouldSwitchPools(curSyrupPoolInfo, topYielderPoolInfo)) {
+        else if (Date.now() - args.lastActionTimestamp > this.minTimeBufferSyrupSwitch) { // check should switch syrup pool
+
+            const topYielderAddr = this.getTopYielderAddr(args.poolsInfo);
+
+            if (this.shouldSwitchPools(args.poolsInfo, args.curSyrupPoolAddr, topYielderAddr)) {
+
                 action = {
                     name: Action.SWITCH,
                     args: {
@@ -92,9 +91,10 @@ class GreedyPolicy extends Policy {
             }
         }
 
-        else if (Date.now() - args.lastActionTimestamp > this.minSecBetweenHarvests) {
+        else if (Date.now() - args.lastActionTimestamp > this.minTimeBufferCompounds) {
+
             action = {
-                name: Action.HARVEST,
+                name: Action.COMPOUND,
                 args: {
                     to: args.curSyrupPoolAddr,
                 }
