@@ -57,7 +57,7 @@ class Strategy {
             minSecBetweenHarvests: config.minSecBetweenHarvests,
 
         });
-        this.executor = null;
+        this.executor = new Executor({'notifClient': this.notif, 'signer': this.signer, 'action': Action, 'swapSlippage': env.swapSlippage, 'swapTimeLimit': env.swapTimeLimit});
         this.tickIndex = 0;
         this.config = config;
         this.tickInterval = config.tickInterval;
