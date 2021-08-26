@@ -85,7 +85,7 @@ class Strategy {
 	async init() {
 
 		await this.ps.init();
-		await this.executor.init(this.signer);
+		await this.executor.init();
 		await this.setupState();
 	}
 

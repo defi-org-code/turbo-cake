@@ -28,20 +28,23 @@ class Executor extends TxManager {
 
 
     constructor(args) {
-        super(args.notifClient);
-        this.name = "pancakeswap-executor";
-        this.notif = args.notifClient;
-        this.signer = args.signer;
-        this.action = args.action;
-        this.swapSlippage = args.swapSlippage;
-        this.swapTimeLimit = args.swapTimeLimit;
-        this.status = "start";
-        this.execStack = null;
-        this.trace = [];
-        this.result = null;
-        this.onSuccessCallback = null;
-        this.onFailureCallback = null;
-        
+		super(args.notifClient);
+		this.name = "pancakeswap-executor";
+		this.notif = args.notifClient;
+		this.signer = args.signer;
+		this.action = args.action;
+		this.swapSlippage = args.swapSlippage;
+		this.swapTimeLimit = args.swapTimeLimit;
+		this.status = "start";
+		this.execStack = null;
+		this.trace = [];
+		this.result = null;
+		this.onSuccessCallback = null;
+		this.onFailureCallback = null;
+	}
+
+	init() {
+
         this.cakeContract = new ethers.Contract(
             CAKE_ADDRESS,
             CAKE_ABI,
