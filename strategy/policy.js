@@ -36,16 +36,16 @@ class GreedyPolicy extends Policy {
     getTopYielderAddr(poolsInfo) {
 
     	let apyDict = {}
-
 		for (const poolAddr of Object.keys(poolsInfo)) {
 			apyDict[poolsInfo[poolAddr]['apy']] = poolAddr
 		}
+        return apyDict[Math.max.apply(null, Object.keys(apyDict))];
 
-		return apyDict[Object.keys(poolsInfo).reduce((a, b) => poolsInfo[a] > poolsInfo[b] ? a : b)]
     }
 
 
-    shouldSwitchPools(poolsInfo, curSyrupPoolAddr, topYielderAddr) {
+
+shouldSwitchPools(poolsInfo, curSyrupPoolAddr, topYielderAddr) {
 
 		if (curSyrupPoolAddr >= topYielderAddr) {
 			return false
@@ -80,7 +80,7 @@ class GreedyPolicy extends Policy {
             action = {
                 name: Action.ENTER,
                 args: {
-                    to:  this.getTopYielderAddr(args.poolsInfo),
+                    poolAddress:  this.getTopYielderAddr(args.poolsInfo),
                 }
             }
         }
@@ -104,9 +104,9 @@ class GreedyPolicy extends Policy {
         else if (Date.now() - args.lastActionTimestamp > this.minSecBetweenHarvests) {
 
             action = {
-                name: Action.COMPOUND,
+                name: Action.HARVEST,
                 args: {
-                    to: args.curSyrupPoolAddr,
+                    poolAddress: args.curSyrupPoolAddr,
                 }
             };
         }

@@ -2,8 +2,6 @@ const Web3 = require('web3')
 const web3 = new Web3(process.env.ENDPOINT_HTTPS)
 
 const asyncRedis = require("async-redis");
-
-const KeyEncryption = require('../keyEncryption');
 const Notifications = require('../notifications');
 const {GreedyPolicy, Action} = require("./policy");
 const {Executor} = require("./executor");
@@ -63,27 +61,22 @@ class Strategy {
         this.name = "pancakeswap-strategy";
         this.lastActionTimestamp = Date.now() - config.minSecBetweenSyrupSwitch - 1;
         this.curSyrupPoolAddr = null;
+        this.inTransition = false;
 
     }
 
 
     async start() {
         try {
-            if (this.runningMode === RunningMode.DEV) {
-                //DEBUG
-                this.policy.pause();
-                this.ps.pause();
-                // RMOVE
-            }
             await this.init();
+
+            this.intervalId = setInterval(() => this.run(), this.tickInterval);
+            await this.run();
 
         } catch (e) {
             this.notif.sendDiscord(`[ERROR] unhandled error: ${e}`);
             this.beforeExit(e);
         }
-
-        this.intervalId = setInterval(() => this.run(), this.tickInterval);
-        await this.run();
     }
 
     async init() {
@@ -107,14 +100,23 @@ class Strategy {
         });
     }
 
-    inTransition() {
-        return this.executor != null;
-    }
+
 
     runDevOverride() {
-
+        return;
+        if (this.runningMode !== RunningMode.DEV) {
+            return;
+        }
+        // this.policy.pause();
+        // this.ps.pause();
         this.tickIndex++;
-        console.log(" tick number: ", this.tickIndex);
+        let diff = 0;
+        if (this.tickTime) {
+            diff = Date.now() - this.tickTime;
+        }
+        this.tickTime = Date.now();
+
+        console.log(" tick number: ", this.tickIndex, this.inTransition, diff);
 
 
         if (this.tickIndex === 1) {
@@ -176,18 +178,21 @@ class Strategy {
     async run() {
 
         try {
-            if (this.inTransition()) {
+            if (this.inTransition) {
                 return;
             }
+            this.inTransition = true;
 
             this.runDevOverride();
+
             await this.ps.update();
             await this.setAction();
             await this.executeAction();
-        } catch (e) {
-            // TODO: web provider rate limit support
-            debug(e)
 
+            this.inTransition = false;
+
+        } catch (e) {
+            debug(e)
             if (e instanceof FatalError) {
                 this.beforeExit(e)
             } else {
@@ -197,8 +202,6 @@ class Strategy {
     }
 
     async setAction() {
-        console.log(" policy set action before: ", this.tickIndex, this.nextAction);
-
         const lastAction = this.nextAction;
         this.nextAction = await this.policy.getAction({
             'poolsInfo': this.ps.poolsInfo,
@@ -206,9 +209,6 @@ class Strategy {
             'lastActionTimestamp': this.lastActionTimestamp,
             'lastAction': lastAction,
         });
-
-        console.log(" policy set action After: ", this.tickIndex, this.nextAction);
-
     }
 
     async executeAction() {

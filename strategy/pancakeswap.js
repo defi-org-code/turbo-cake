@@ -3,15 +3,12 @@ const {SMARTCHEF_FACTORY_ABI, CAKE_ABI, BEP_20_ABI, ROUTER_V2_ABI} = require('..
 const {SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS, BNB_ADDRESS, ROUTER_V2_ADDRESS} = require('./params')
 const nodeFetch = require("node-fetch")
 
-const {ethers} = require("hardhat")
-
 require('dotenv').config();
 
 const BigNumber = require('bignumber.js')
 BigNumber.config({POW_PRECISION: 100, EXPONENTIAL_AT: 1e+9})
 
 const debug = (...messages) => console.log(...messages);
-const {NotImplementedError} =  require('../errors');
 
 
 class Pancakeswap {
@@ -90,21 +87,44 @@ class Pancakeswap {
 	}
 
 	async getPoolTvl(addr) {
-		return await this.cakeContract.methods.balanceOf(addr)
+		const tvl = await this.cakeContract.methods.balanceOf(addr).call();
+		return tvl;
 	}
 
 	aprToApy(apr, n=365, t=1.0) {
 		return 100 * ((1 + apr / 100 / n) ** (n*t) - 1)
 	}
 
-	async calcApy(rewardsPerBlock, tokenCakeRate, tvl) {
+	 calcApy(rewardsPerBlock, tokenCakeRate, tvl, poolAddress) {
+		tvl = new BigNumber(tvl);
+		tokenCakeRate = new BigNumber(tokenCakeRate);
+		rewardsPerBlock = new BigNumber(rewardsPerBlock);
 
-		const rewardForPeriod = this.BLOCKS_PER_YEAR * rewardsPerBlock
-		const cakeForPeriod = rewardForPeriod * tokenCakeRate //* (1 - this.FEE)
-		const apr = this.changePct(tvl, tvl + cakeForPeriod)
 
-		return this.aprToApy(apr)
+
+		if (tvl.lt(rewardsPerBlock)) {
+			console.log(" ERROR: calcApy bogus tvl", tvl.toString());
+			console.log(poolAddress)
+			return 0;
+		}
+		const rewardForPeriod = rewardsPerBlock.multipliedBy(this.BLOCKS_PER_YEAR);
+		const cakeForPeriod = rewardForPeriod.multipliedBy(tokenCakeRate); //* (1 - this.FEE)
+		const apr = (tvl.plus(cakeForPeriod).div(tvl).minus(1).multipliedBy(100));
+		if (apr.gt( new BigNumber(5000))) {
+			console.log(" ERROR: calcApy bogus apr", apr.toString());
+			return 0;
+		}
+		console.log(apr.toString())
+		const apy = this.aprToApy(apr.toString())
+		 if (poolAddress === '0x53A2D1db049b5271c6b6dB020dBa0e8A7C4Eb90d') {
+		 	console.log(rewardForPeriod, cakeForPeriod, tvl, apr.toString(), apy)
+		 	console.log('0x53A2D1db049b5271c6b6dB020dBa0e8A7C4Eb90d0x53A2D1db049b5271c6b6dB020dBa0e8A7C4Eb90d0x53A2D1db049b5271c6b6dB020dBa0e8A7C4Eb90d')
+		 }
+		console.log(apy)
+
+		return apy;
 	}
+
 
 	async getTokenCakeRate(poolAddr, defaultAmountIn='1000000000') {
 
@@ -130,9 +150,10 @@ class Pancakeswap {
 	}
 
 	async poolApy(poolAddr) {
-		const poolTvl = this.getPoolTvl(poolAddr)
+
+		const poolTvl = await this.getPoolTvl(poolAddr)
 		const tokenCakeRate = await this.getTokenCakeRate(poolAddr)
-		return this.calcApy(this.poolsInfo[poolAddr]['rewardPerBlock'], tokenCakeRate, poolTvl)
+		return this.calcApy(this.poolsInfo[poolAddr]['rewardPerBlock'], tokenCakeRate, poolTvl, poolAddr)
 	}
 
 	async removeOldPools() {
@@ -215,12 +236,7 @@ class Pancakeswap {
 		if (this.paused) {
 			return;
 		}
-		let blockNum2 = await ethers.provider.getBlockNumber();
-		console.log(blockNum2)
 		let blockNum = await this.web3.eth.getBlockNumber()
-
-		console.log(blockNum)
-
 
 		if (this.lastBlockUpdate == null) {
 			throw Error('lastBlockUpdate should be set')
