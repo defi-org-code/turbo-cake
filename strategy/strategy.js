@@ -51,10 +51,7 @@ class Strategy {
 
         });
         this.executor = null;
-        this.nextAction =
-            {
-                name: Action.NO_OP,
-            };
+        this.nextAction = { name: Action.NO_OP,};
         this.tickIndex = 0;
         this.config = config;
         this.tickInterval = config.tickInterval;
@@ -117,52 +114,53 @@ class Strategy {
         console.log(" tick number: ", this.tickIndex);
 
 
-        if (false) {//(this.tickIndex === 1) {
-            console.log("FAKE action");
+        if (this.tickIndex === 1) {
             this.nextAction =
                 {
                     name: Action.EXIT,
                     args: {
                         poolAddress: this.config.devSmartchefAddressList[0],
-                    }
+                    },
+                    description: "FAKE action",
                 }
 
         }
 
-        if (false) {//(this.tickIndex === 5) {
-            console.log("FAKE action");
+        if (this.tickIndex === 5) {
             this.nextAction =
                 {
                     name: Action.ENTER,
                     args: {
                         poolAddress: this.config.devSmartchefAddressList[0],
-                    }
+                    },
+                    description: "FAKE action",
                 }
 
         }
-        if (false) {//this.tickIndex === 10) {
-            console.log("FAKE action");
+        if (this.tickIndex === 10) {
             this.nextAction =
                 {
                     name: Action.HARVEST,
                     args: {
                         poolAddress: this.config.devSmartchefAddressList[0],
-                    }
+                    },
+                    description: "FAKE action",
                 }
         }
 
         if (this.tickIndex === 15) {
-            console.log("FAKE action");
             this.nextAction =
                 {
                     name: Action.SWITCH,
                     args: {
                         from: this.config.devSmartchefAddressList[0],
                         to: this.config.devSmartchefAddressList[1],
-                    }
+                    },
+                    description: "FAKE action",
                 }
             console.dir(this.nextAction);
         }
+
         if (this.tickIndex === 20) {
             clearInterval(this.intervalId);
             process.exit()
@@ -231,7 +229,7 @@ class Strategy {
         console.log(`strategy.handleExecutionSuccess:: 
 					action = ${JSON.stringify(action)}
 		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
-        this.nextAction = null;
+        this.nextAction = { name: Action.NO_OP,};
         this.executor = null;
     }
 
@@ -240,6 +238,8 @@ class Strategy {
 					action = ${JSON.stringify(action)}
 		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
 
+        this.nextAction = { name: Action.NO_OP,};
+        // TODO: continue flow according to trace - executor.retry
         this.executor = null;
     }
 

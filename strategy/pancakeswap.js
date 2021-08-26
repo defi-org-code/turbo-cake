@@ -34,6 +34,7 @@ class Pancakeswap {
 
         this.poolsInfo = {}
         this.lastBlockUpdate = null
+		this.paused = false;
     }
 
 	async init() {
@@ -50,9 +51,21 @@ class Pancakeswap {
 		return new this.web3.eth.Contract(contractAbi, contractAddress)
 	}
 
+
+	pause() {
+		this.paused = true;
+	}
+
+	resume() {
+		this.paused = false;
+	}
+
     async update() {
 
         try {
+			if (this.paused) {
+				return;
+			}
 
             if (this.lastUpdate != null && Date.now() - this.lastUpdate < this.pancakeUpdateInterval) {
                 return;
@@ -203,6 +216,9 @@ class Pancakeswap {
 
 		debug('fetchPools ... ')
 
+		if (this.paused) {
+			return;
+		}
 		let blockNum = await this.web3.eth.getBlockNumber()
 
         if (this.lastBlockUpdate == null) {
