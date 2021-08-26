@@ -4,13 +4,8 @@ const debug = (...messages) => console.log(...messages);
 
 
 class TxManager {
-
-	account = null
-
-	constructor(web3) {
-
-		this.web3 = web3;
-		this.notif = new Notifications();
+	constructor(notification) {
+		this.notif = notification;
 	}
 
 	async pendingTransactionReceipt(self, txHash) {
@@ -28,7 +23,7 @@ class TxManager {
 
 		if (res === null) {
 			console.log(`pending for transaction receipt (txHash=${txHash})`);
-			setTimeout(() => this.pendingTransactionReceipt(self, txHash), 5000);
+			setTimeout(() => this.pendingTransactionReceipt(self, txHash), 1000);
 		}
 
 		// TODO:check return status values
@@ -44,6 +39,8 @@ class TxManager {
 		}
 
 	}
+
+
 
 	async sendSignedTx(self, encodedTx, toAddress, maxGasUnits=500000) {
 
@@ -74,4 +71,6 @@ class TxManager {
 
 }
 
-module.exports = TxManager
+module.exports = {
+	TxManager,
+};

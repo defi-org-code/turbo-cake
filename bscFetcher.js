@@ -3,6 +3,10 @@ const EXCEED_MAX_ERROR = 'Returned error: exceed maximum block range: 5000'
 
 async function getPastEventsLoop(contract, eventName, nBlocks, endBlock, chunkSize=5000, filterObj=null) {
 
+	if (nBlocks === 0) {
+		return []
+	}
+
 	let events = []
 	let _chunkSize = chunkSize
 	let _toBlock = endBlock

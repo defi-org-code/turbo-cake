@@ -1,14 +1,14 @@
 const fetch = require('node-fetch');
+const { RunningMode } = require("./config");
 require('dotenv').config();
 
-
 class Notifications {
-	constructor() {
+	constructor(runningMode) {
+		this.runningMode = runningMode;
 	}
 
 	sendDiscord(msg) {
-
-		if (process.env.BOT_ID === "-1") {
+		if (this.runningMode === RunningMode.DEV) {
 			console.log(msg);
 			return
 		}
