@@ -45,7 +45,7 @@ class GreedyPolicy extends Policy {
 
 
 
-shouldSwitchPools(poolsInfo, curSyrupPoolAddr, topYielderAddr) {
+	shouldSwitchPools(poolsInfo, curSyrupPoolAddr, topYielderAddr) {
 
 		if (curSyrupPoolAddr >= topYielderAddr) {
 			return false
@@ -53,9 +53,11 @@ shouldSwitchPools(poolsInfo, curSyrupPoolAddr, topYielderAddr) {
 
 		return poolsInfo[topYielderAddr]['apy'] - poolsInfo[curSyrupPoolAddr]['apy'] >= this.apySwitchTh;
     }
+
     pause() {
         this.paused = true;
     }
+
     resume() {
         this.paused = false;
     }

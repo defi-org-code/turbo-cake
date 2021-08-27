@@ -100,8 +100,6 @@ class Pancakeswap {
 		tokenCakeRate = new BigNumber(tokenCakeRate);
 		rewardsPerBlock = new BigNumber(rewardsPerBlock);
 
-
-
 		if (tvl.lt(rewardsPerBlock)) {
 			console.log(" ERROR: calcApy bogus tvl", tvl.toString());
 			console.log(poolAddress)
@@ -167,7 +165,6 @@ class Pancakeswap {
 			debug(`bonusEndBlock=${bonusEndBlock}, blockNum=${blockNum}`)
 			if ((bonusEndBlock <= blockNum) || (poolAddr in this.EXCLUDED_POOLS)) {
 				delete this.poolsInfo[poolAddr]
-				await this.savePoolsInfo(blockNum)
 			}
 		}
 

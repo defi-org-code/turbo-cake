@@ -203,6 +203,8 @@ class Strategy {
 
     async setAction() {
         const lastAction = this.nextAction;
+        // debug(`setAction: nextAction=${JSON.stringify(this.nextAction)}`)
+
         this.nextAction = await this.policy.getAction({
             'poolsInfo': this.ps.poolsInfo,
             'curSyrupPoolAddr': this.curSyrupPoolAddr,
@@ -239,7 +241,8 @@ class Strategy {
         console.log(`strategy.handleExecutionSuccess::
 					action = ${JSON.stringify(action)}
 		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
-        this.nextAction = { name: Action.NO_OP,};
+        // this.nextAction = { name: Action.NO_OP,};
+        this.curSyrupPoolAddr = action.args.poolAddress
         this.executor = null;
     }
 
@@ -248,7 +251,7 @@ class Strategy {
 					action = ${JSON.stringify(action)}
 		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
 
-        this.nextAction = { name: Action.NO_OP,};
+        // this.nextAction = { name: Action.NO_OP,};
         // TODO: continue flow according to trace - executor.retry
         this.executor = null;
     }
