@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const { ethers } = require("hardhat");
+const { ethers } = require("ethers");
 
 const KeyEncryption = require('./keyEncryption');
 const env = require('dotenv').config();
@@ -22,9 +22,9 @@ async function main() {
 
     let signer;
     if (runningMode === RunningMode.PRODUCTION) {
+    	const provider = ethers.getDefaultProvider(process.env.ENDPOINT_HTTPS)
         const wallet = new ethers.Wallet(await new KeyEncryption().loadKey());
-        signer = wallet.connect(ethers.provider);
-
+        signer = wallet.connect(provider);
     } else if (runningMode === RunningMode.DEV) {
         signer = await ethers.getSigner(DEV_ACCOUNT);
 
