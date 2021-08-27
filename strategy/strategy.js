@@ -193,6 +193,7 @@ class Strategy {
             if (this.inTransition) {
                 return;
             }
+
             this.inTransition = true;
 
             this.runDevOverride();

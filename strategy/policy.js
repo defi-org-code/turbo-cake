@@ -27,7 +27,7 @@ class GreedyPolicy extends Policy {
 
     constructor(config) {
         super();
-        this.minSecBetweenSyrupSwitch = config.minSecBetweenSyrupSwitch;
+        this.minSecBetweenSyrupSwitch = config.minSecBetweenSyrupSwitch; // TODO: change name to minMilisecBetweenSyrupSwitch
         this.minSecBetweenHarvests = config.minSecBetweenHarvests;
         this.apySwitchTh = config.apySwitchTh;
         this.paused = false;
