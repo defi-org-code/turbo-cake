@@ -129,7 +129,6 @@ class Executor extends TxManager {
         }
     }
 
-
     on(event, cb) {
         if (event === "success") {
             this.onSuccessCallback = cb;
@@ -138,7 +137,6 @@ class Executor extends TxManager {
             this.onFailureCallback = cb;
         }
     }
-
 
     async sendTransactionWait(tx) {
         if (!tx) {
@@ -168,6 +166,7 @@ class Executor extends TxManager {
 
         const syrupPool = await this.setupSyrupPool(args.poolAddress);
         const cakeBalance = await this.cakeContract.balanceOf(this.signer.address);
+        console.log('cakeBalance: ', cakeBalance)
         await this.depositCake(syrupPool, cakeBalance);
 
         console.log("executor.enterPosition: end");

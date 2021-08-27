@@ -1,6 +1,6 @@
 const {getPastEventsLoop} = require('../bscFetcher')
 const {SMARTCHEF_FACTORY_ABI, CAKE_ABI, BEP_20_ABI, ROUTER_V2_ABI} = require('../abis')
-const {SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS, BNB_ADDRESS, ROUTER_V2_ADDRESS} = require('./params')
+const {MASTER_CHEF_ADDRESS, SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS, BNB_ADDRESS, ROUTER_V2_ADDRESS} = require('./params')
 const nodeFetch = require("node-fetch")
 
 require('dotenv').config();
@@ -59,6 +59,30 @@ class Pancakeswap {
 		this.paused = false;
 	}
 
+	async getStakingAddr() {
+
+		let res, contract
+		let stakingAddr = []
+
+		for (const poolAddr of Object.keys(this.poolsInfo)) {
+			contract = this.getContract(this.poolsInfo[poolAddr]['abi'], poolAddr)
+
+			if (poolAddr === MASTER_CHEF_ADDRESS) {
+				res = await contract.methods.userInfo(0, process.env.BOT_ADDRESS).call()
+			}
+			else {
+				res = await contract.methods.userInfo(process.env.BOT_ADDRESS).call()
+			}
+
+			console.log('poolAddr=', poolAddr, 'getSTakingAddr: res=', res)
+			if (res['amount'] !== '0') {
+				stakingAddr.push(poolAddr)
+			}
+		}
+
+		return stakingAddr
+	}
+
     async update() {
 
         try {
@@ -87,8 +111,7 @@ class Pancakeswap {
 	}
 
 	async getPoolTvl(addr) {
-		const tvl = await this.cakeContract.methods.balanceOf(addr).call();
-		return tvl;
+		return await this.cakeContract.methods.balanceOf(addr).call();
 	}
 
 	aprToApy(apr, n=365, t=1.0) {
@@ -163,7 +186,7 @@ class Pancakeswap {
 
 			bonusEndBlock = this.poolsInfo[poolAddr]['bonusEndBlock']
 			debug(`bonusEndBlock=${bonusEndBlock}, blockNum=${blockNum}`)
-			if ((bonusEndBlock <= blockNum) || (poolAddr in this.EXCLUDED_POOLS)) {
+			if ((bonusEndBlock <= blockNum) || (poolAddr in this.EXCLUDED_POOLS) || (this.poolsInfo[poolAddr]['hasUserLimit'] === true)) {
 				delete this.poolsInfo[poolAddr]
 			}
 		}

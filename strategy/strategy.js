@@ -82,6 +82,18 @@ class Strategy {
     async init() {
         await this.ps.init();
         await this.setupState();
+
+        const stakingAddr = await this.ps.getStakingAddr()
+		debug(`init: stakingAddr = ${stakingAddr}`)
+
+        if (stakingAddr.length === 1) {
+			this.curSyrupPoolAddr = stakingAddr[0]
+		}
+
+        else if (stakingAddr.length > 1) {
+        	throw Error(`Bot (${process.env.BOT_ADDRESS}) has staking in more than 1 pool`)
+        }
+
     }
 
     async setupState() {
@@ -185,11 +197,12 @@ class Strategy {
 
             this.runDevOverride();
 
+			// const stakingAddr = await this.ps.getStakingAddr()
+			// debug(`stakingAddr = ${stakingAddr}`)
+
             await this.ps.update();
             await this.setAction();
             await this.executeAction();
-
-            this.inTransition = false;
 
         } catch (e) {
             debug(e)
@@ -220,6 +233,7 @@ class Strategy {
 
         if (action.name === Action.NO_OP) {
             this.executor = null;
+			this.inTransition = false;
             return;
         }
 
@@ -244,6 +258,7 @@ class Strategy {
         // this.nextAction = { name: Action.NO_OP,};
         this.curSyrupPoolAddr = action.args.poolAddress
         this.executor = null;
+		this.inTransition = false;
     }
 
     async handleExecutionError(err, action, startTime) {
@@ -254,6 +269,7 @@ class Strategy {
         // this.nextAction = { name: Action.NO_OP,};
         // TODO: continue flow according to trace - executor.retry
         this.executor = null;
+		this.inTransition = false;
     }
 
 
