@@ -2,15 +2,6 @@ require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-web3");
 
 
-// task action function receives the Hardhat Runtime Environment as second argument
-task("accounts", "Prints accounts", async (_, { web3 }) => {
-    console.log(await web3.eth.getAccounts());
-});
-
-// module.exports = {};
-
-// const { mnemonic } = require('./secrets.json');
-
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
 task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
@@ -29,32 +20,22 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
  */
 module.exports = {
     solidity: "0.8.0",
-    defaultNetwork: "hardhat",
+
+    defaultNetwork: "mainnet",
 
     networks: {
 
         hardhat: {
             forking: {
                 url: "https://long-thrumming-dream.bsc.quiknode.pro/4361da560bd47300da588fc1ec5ea1c2ba05891f/",
-                // url: "https://cold-silent-rain.bsc.quiknode.pro/f39277cc46387375f0eb657b7aca8ba81431a05e/",
-                // url: "https://bsc-dataseed.binance.org/",
-                // blockNumber: 9879809,
-                // accounts: {
-                // 	accountsBalance: "1000000",
-                // },
-                chainId: 56,
-                // blockGasLimit: 12e6,
-                // gasPrice: 20000000000,
+                chainId: 31337,
                 unlocked_accounts: ["0x73feaa1eE314F8c655E354234017bE2193C9E24E", "0xeb79a35801281f34db87848682db56d005806cec"],
-                // accounts: { mnemonic: },
             }
         },
 
         mainnet: {
-            url: "https://bsc-dataseed.binance.org/",
+            url: "https://long-thrumming-dream.bsc.quiknode.pro/4361da560bd47300da588fc1ec5ea1c2ba05891f",
             chainId: 56,
-            gasPrice: 20000000000,
-            // accounts: {mnemonic: mnemonic}
         }
     },
 
