@@ -31,7 +31,12 @@ class GreedyPolicy extends Policy {
         this.minSecBetweenHarvests = config.minSecBetweenHarvests;
         this.apySwitchTh = config.apySwitchTh;
         this.paused = false;
+        this.lastActionTimestamp = Date.now() - config.minSecBetweenSyrupSwitch - 1;
     }
+
+	getRandomInt(max) {
+	  return Math.floor(Math.random() * max);
+	}
 
     getTopYielderAddr(poolsInfo) {
 
@@ -39,8 +44,12 @@ class GreedyPolicy extends Policy {
 		for (const poolAddr of Object.keys(poolsInfo)) {
 			apyDict[poolsInfo[poolAddr]['apy']] = poolAddr
 		}
-        return apyDict[Math.max.apply(null, Object.keys(apyDict))];
 
+		// dbg only
+		// const apyArr = Object.keys(apyDict)
+		// return apyDict[apyArr[this.getRandomInt(apyArr.length)]]
+
+        return apyDict[Math.max.apply(null, Object.keys(apyDict))];
     }
 
 
@@ -74,11 +83,15 @@ class GreedyPolicy extends Policy {
             name: Action.NO_OP,
         };
 
-        if (this.paused) {
-            return args.lastAction;
-        }
+        // if (this.paused) {
+        //     return args.lastAction;
+        // }
 
         if (args.curSyrupPoolAddr == null) { // enter "top" syrup pool apy estimate
+
+			// TODO: better update after tx result
+			this.lastActionTimestamp = Date.now()
+
             action = {
                 name: Action.ENTER,
                 args: {
@@ -87,11 +100,14 @@ class GreedyPolicy extends Policy {
             }
         }
 
-        else if (Date.now() - args.lastActionTimestamp > this.minSecBetweenSyrupSwitch) { // check should switch syrup pool
+        else if (Date.now() - this.lastActionTimestamp > this.minSecBetweenSyrupSwitch) { // check should switch syrup pool
 
             const topYielderAddr = this.getTopYielderAddr(args.poolsInfo);
 
             if (this.shouldSwitchPools(args.poolsInfo, args.curSyrupPoolAddr, topYielderAddr)) {
+
+				// TODO: better update after tx result
+		        this.lastActionTimestamp = Date.now()
 
                 action = {
                     name: Action.SWITCH,
@@ -103,7 +119,10 @@ class GreedyPolicy extends Policy {
             }
         }
 
-        else if (Date.now() - args.lastActionTimestamp > this.minSecBetweenHarvests) {
+        else if (Date.now() - this.lastActionTimestamp > this.minSecBetweenHarvests) {
+
+			// TODO: better update after tx result
+			this.lastActionTimestamp = Date.now()
 
             action = {
                 name: Action.HARVEST,
