@@ -21,7 +21,7 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 module.exports = {
     solidity: "0.8.0",
 
-    defaultNetwork: "mainnet",
+    defaultNetwork: "bsc",
 
     networks: {
 
@@ -33,8 +33,8 @@ module.exports = {
             }
         },
 
-        mainnet: {
-            url: "https://long-thrumming-dream.bsc.quiknode.pro/4361da560bd47300da588fc1ec5ea1c2ba05891f",
+        bsc: {
+            url: "https://long-thrumming-dream.bsc.quiknode.pro/4361da560bd47300da588fc1ec5ea1c2ba05891f/",
             chainId: 56,
         }
     },

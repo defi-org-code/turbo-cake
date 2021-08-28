@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const { ethers } = require("ethers");
+const { ethers } = require("hardhat");
 
 const KeyEncryption = require('./keyEncryption');
 const env = require('dotenv').config();
@@ -16,15 +16,14 @@ const sleep = (milliseconds) => {
 
 async function main() {
 
-	console.debug(`[PID pid ${process.pid}] Starting Bot-${process.env.BOT_ID}`);
-    await hre.run('compile');
-    const runningMode = (argv.dev? RunningMode.DEV: RunningMode.PRODUCTION);
+    const runningMode = (argv.prod==="true"? RunningMode.PRODUCTION: RunningMode.DEV);
 
     let signer;
     if (runningMode === RunningMode.PRODUCTION) {
-    	const provider = ethers.getDefaultProvider(process.env.ENDPOINT_HTTPS)
+    	// const provider = ethers.getDefaultProvider(process.env.ENDPOINT_HTTPS)
         const wallet = new ethers.Wallet(await new KeyEncryption().loadKey());
-        signer = wallet.connect(provider);
+        signer = wallet.connect(ethers.provider);
+
     } else if (runningMode === RunningMode.DEV) {
         signer = await ethers.getSigner(DEV_ACCOUNT);
 
@@ -38,6 +37,8 @@ async function main() {
         });
 
     }
+
+    console.debug(`[PID pid ${process.pid}] Starting Bot-${signer.address} in ${runningMode} mode`);
 
     const strategy = new Strategy(env, runningMode, signer);
     await strategy.start();

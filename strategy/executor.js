@@ -144,6 +144,9 @@ class Executor extends TxManager {
         }
         try {
 
+            tx.gasPrice = ethers.utils.parseUnits('5', 'gwei');
+            tx.gasLimit = (await ethers.provider.estimateGas(tx)).mul(2);
+
             const txResponse = await this.signer.sendTransaction(tx);
             console.log('## txResponse ##');
             console.dir(txResponse);
@@ -166,7 +169,7 @@ class Executor extends TxManager {
 
         const syrupPool = await this.setupSyrupPool(args.poolAddress);
         const cakeBalance = await this.cakeContract.balanceOf(this.signer.address);
-        console.log('cakeBalance: ', cakeBalance)
+        console.log('cakeBalance: ', cakeBalance.toString());
         await this.depositCake(syrupPool, cakeBalance);
 
         console.log("executor.enterPosition: end");
