@@ -51,6 +51,7 @@ class Strategy {
             minSecBetweenHarvests: config.minSecBetweenHarvests,
 
         });
+
         this.executor = null;
         this.nextAction = { name: Action.NO_OP,};
         this.tickIndex = 0;
@@ -64,7 +65,6 @@ class Strategy {
         this.inTransition = false;
 
     }
-
 
     async start() {
         try {

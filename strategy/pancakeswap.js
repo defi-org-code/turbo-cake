@@ -97,7 +97,7 @@ class Pancakeswap {
 			this.lastUpdate = Date.now()
 
 			await this.fetchPools();
-			await this.removeOldPools()
+			await this.setActivePools()
 			await this.updatePoolsApy()
 
         } catch (e) {
@@ -119,6 +119,11 @@ class Pancakeswap {
 	}
 
 	 calcApy(rewardsPerBlock, tokenCakeRate, tvl, poolAddress) {
+
+	 	if (this.poolsInfo[poolAddress]['active'] === false) {
+	 		return 0
+	 	}
+
 		tvl = new BigNumber(tvl);
 		tokenCakeRate = new BigNumber(tokenCakeRate);
 		rewardsPerBlock = new BigNumber(rewardsPerBlock);
@@ -177,7 +182,7 @@ class Pancakeswap {
 		return this.calcApy(this.poolsInfo[poolAddr]['rewardPerBlock'], tokenCakeRate, poolTvl, poolAddr)
 	}
 
-	async removeOldPools() {
+	async setActivePools() {
 
 		const blockNum = await this.web3.eth.getBlockNumber()
 		let bonusEndBlock
@@ -187,7 +192,8 @@ class Pancakeswap {
 			bonusEndBlock = this.poolsInfo[poolAddr]['bonusEndBlock']
 			debug(`bonusEndBlock=${bonusEndBlock}, blockNum=${blockNum}`)
 			if ((bonusEndBlock <= blockNum) || (poolAddr in this.EXCLUDED_POOLS) || (this.poolsInfo[poolAddr]['hasUserLimit'] === true)) {
-				delete this.poolsInfo[poolAddr]
+				this.poolsInfo[poolAddr]['active'] = false
+				await this.savePoolsInfo()
 			}
 		}
 
@@ -317,7 +323,8 @@ class Pancakeswap {
                 'rewardPerBlock': rewardPerBlock,
                 'bonusEndBlock': bonusEndBlock,
                 'abi': abi,
-                'routeToCake': [rewardToken, BNB_ADDRESS, CAKE_ADDRESS]
+                'routeToCake': [rewardToken, BNB_ADDRESS, CAKE_ADDRESS],
+                'active': true, // default will be set to false on setActivePools
             }
         }
 
