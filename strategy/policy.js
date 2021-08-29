@@ -55,11 +55,6 @@ class GreedyPolicy extends Policy {
 
 
 	shouldSwitchPools(poolsInfo, curSyrupPoolAddr, topYielderAddr) {
-
-		if (curSyrupPoolAddr >= topYielderAddr) {
-			return false
-		}
-
 		return poolsInfo[topYielderAddr]['apy'] - poolsInfo[curSyrupPoolAddr]['apy'] >= this.apySwitchTh;
     }
 
@@ -100,6 +95,23 @@ class GreedyPolicy extends Policy {
             }
         }
 
+        else if ((await this.isActivePool(args.curSyrupPoolAddr, args.poolsInfo)) === "false") {
+
+            console.log("isActivePoolisActivePoolisActivePoolisActivePool inactive switch", args.curSyrupPoolAddr);
+            const topYielderAddr = this.getTopYielderAddr(args.poolsInfo);
+
+            // TODO: better update after tx result
+            this.lastActionTimestamp = Date.now()
+
+            action = {
+                name: Action.SWITCH,
+                args: {
+                    from: args.curSyrupPoolAddr,
+                    to: topYielderAddr,
+                }
+            };
+        }
+
         else if (Date.now() - this.lastActionTimestamp > this.minSecBetweenSyrupSwitch) { // check should switch syrup pool
 
             const topYielderAddr = this.getTopYielderAddr(args.poolsInfo);
@@ -136,6 +148,12 @@ class GreedyPolicy extends Policy {
     }
 
 
+    async isActivePool(curSyrupPoolAddr, activePoolsInfo) {
+        if (activePoolsInfo[curSyrupPoolAddr] && activePoolsInfo[curSyrupPoolAddr]['apy'] > 0) {
+            return true;
+        }
+        return "false";
+    }
 }
 
 module.exports = {
