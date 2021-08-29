@@ -193,7 +193,6 @@ class Pancakeswap {
 			debug(`bonusEndBlock=${bonusEndBlock}, blockNum=${blockNum}`)
 			if ((bonusEndBlock <= blockNum) || (poolAddr in this.EXCLUDED_POOLS) || (this.poolsInfo[poolAddr]['hasUserLimit'] === true)) {
 				this.poolsInfo[poolAddr]['active'] = false
-				await this.savePoolsInfo()
 			}
 		}
 
