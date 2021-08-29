@@ -1,6 +1,3 @@
-const Web3 = require('web3')
-const web3 = new Web3(process.env.ENDPOINT_HTTPS)
-
 const asyncRedis = require("async-redis");
 const Notifications = require('../notifications');
 const {GreedyPolicy, Action} = require("./policy");
@@ -33,7 +30,7 @@ function loadConfig(env) {
 
 class Strategy {
 
-    constructor(env, runningMode, signer) {
+    constructor(env, runningMode, account, web3) {
         this.state = {
             position: null,
             terminating: false,
@@ -41,7 +38,8 @@ class Strategy {
         const config = loadConfig(env);
         debug(config);
 
-        this.signer = signer;
+        this.web3 = web3;
+        this.account = account;
         this.notif = new Notifications(runningMode);
         this.redisInit();
         this.ps = new Pancakeswap(this.redisClient, web3, this.notif,
@@ -80,6 +78,7 @@ class Strategy {
     }
 
     async init() {
+
         await this.ps.init();
         await this.setupState();
 
@@ -119,8 +118,8 @@ class Strategy {
         if (this.runningMode !== RunningMode.DEV) {
             return;
         }
-        // this.policy.pause();
-        // this.ps.pause();
+        this.policy.pause();
+        this.ps.pause();
         this.tickIndex++;
         let diff = 0;
         if (this.tickTime) {
@@ -130,8 +129,18 @@ class Strategy {
 
         console.log(" tick number: ", this.tickIndex, this.inTransition, diff);
 
-
         if (this.tickIndex === 1) {
+            this.nextAction =
+                {
+                    name: Action.ENTER,
+                    args: {
+                        poolAddress: this.config.devSmartchefAddressList[0],
+                    },
+                    description: "FAKE action",
+                }
+        }
+
+        if (this.tickIndex === 3) {
             this.nextAction =
                 {
                     name: Action.EXIT,
@@ -141,11 +150,9 @@ class Strategy {
                     description: "FAKE action",
                 }
             console.log(" override action: ",  this.nextAction);
-
-
         }
 
-        if (this.tickIndex === 5) {
+        if (this.tickIndex === 7) {
             this.nextAction =
                 {
                     name: Action.ENTER,
@@ -154,9 +161,9 @@ class Strategy {
                     },
                     description: "FAKE action",
                 }
-
         }
-        if (this.tickIndex === 10) {
+
+        if (this.tickIndex === 12) {
             this.nextAction =
                 {
                     name: Action.HARVEST,
@@ -167,7 +174,7 @@ class Strategy {
                 }
         }
 
-        if (this.tickIndex === 15) {
+        if (this.tickIndex === 16) {
             this.nextAction =
                 {
                     name: Action.SWITCH,
@@ -197,9 +204,6 @@ class Strategy {
             this.inTransition = true;
 
             this.runDevOverride();
-
-			// const stakingAddr = await this.ps.getStakingAddr()
-			// debug(`stakingAddr = ${stakingAddr}`)
 
             await this.ps.update();
             await this.setAction();
@@ -240,7 +244,8 @@ class Strategy {
 
         this.executor = new Executor({
             action: action,
-            signer: this.signer,
+            web3: this.web3,
+            account: this.account,
             notifClient: this.notif,
             swapSlippage: this.config.swapSlippage,
             swapTimeLimit: this.config.swapTimeLimit,
