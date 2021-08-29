@@ -68,7 +68,7 @@ describe("MultiWorkersTest", function () {
 	let withdraw=false, swap=false, deposit=true;
 	for (let i=0; i<N_WORKERS; i+=batch_size) {
 		console.log(`doHardWork: deposit indices: [${i}, ${i+batch_size}]`);
-		await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 10, i, i+batch_size, [swapRouter, 0, revvSwapPath, deadline]]).send({from: admin});
+		await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 10, i, i+batch_size, 0, [swapRouter, 0, revvSwapPath, deadline]]).send({from: admin});
 	}
 
 	let res;
@@ -90,7 +90,7 @@ describe("MultiWorkersTest", function () {
 	withdraw=true; swap=false; deposit=false;
 	for (let i=0; i<N_WORKERS; i+=batch_size) {
 		console.log(`doHardWork: withdraw indices: [${i}, ${i+batch_size}]`);
-		await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 10, i, i+batch_size, [swapRouter, 0, revvSwapPath, deadline]]).send({from: admin});
+		await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 10, i, i+batch_size, 0, [swapRouter, 0, revvSwapPath, deadline]]).send({from: admin});
 	}
 
 	for (const worker of WorkersAddr) {

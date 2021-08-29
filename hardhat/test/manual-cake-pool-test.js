@@ -64,7 +64,7 @@ describe("ManualCakePoolTest", function () {
 	// workers doHardWork - deposit in cake pool
 	// ################################################################################
 	let withdraw=false, swap=false, deposit=true;
-  	await managerContract.methods.doHardWork([withdraw, swap, deposit, manualCakePoolAddr, manualCakePoolAddr, TRANSFER_BALANCE, 0, 0, N_WORKERS, [swapRouter, 0, revvSwapPath, deadline]]).send({from: admin});
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, manualCakePoolAddr, manualCakePoolAddr, TRANSFER_BALANCE, 0, 0, N_WORKERS, 0, [swapRouter, 0, revvSwapPath, deadline]]).send({from: admin});
 
 	let res;
 	for (const worker of WorkersAddr) {
@@ -83,7 +83,7 @@ describe("ManualCakePoolTest", function () {
 	// workers doHardWork - withdraw cakes from manual pool
 	// ################################################################################
 	withdraw=true; swap=false; deposit=false;
-  	await managerContract.methods.doHardWork([withdraw, swap, deposit, manualCakePoolAddr, manualCakePoolAddr, TRANSFER_BALANCE, 0, 0, N_WORKERS, [swapRouter, 0, revvSwapPath, deadline]]).send({from: admin});
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, manualCakePoolAddr, manualCakePoolAddr, TRANSFER_BALANCE, 0, 0, N_WORKERS, 0, [swapRouter, 0, revvSwapPath, deadline]]).send({from: admin});
 
 	// ################################################################################
 	// check cakes sent back to workers (manual cake pool)
