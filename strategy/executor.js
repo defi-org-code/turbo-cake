@@ -146,6 +146,7 @@ class Executor extends TxManager {
 
             tx.gasPrice = ethers.utils.parseUnits('5', 'gwei');
             tx.gasLimit = (await ethers.provider.estimateGas(tx)).mul(2);
+            tx.nonce = await ethers.provider.getTransactionCount(this.signer.address);
 
             const txResponse = await this.signer.sendTransaction(tx);
             console.log('## txResponse ##');
