@@ -160,7 +160,14 @@ class Pancakeswap {
 
 		const contract = this.getContract(this.poolsInfo[poolAddr]['abi'], poolAddr)
 
-		let res = await contract.methods.userInfo(process.env.BOT_ADDRESS).call()
+		let res;
+		if (poolAddr === MASTER_CHEF_ADDRESS) {
+			res = await contract.methods.userInfo(0, process.env.BOT_ADDRESS).call()
+		}
+		else {
+			res = await contract.methods.userInfo(process.env.BOT_ADDRESS).call()
+		}
+
 		let amountIn
 
 		if (res[0] === '0') {
