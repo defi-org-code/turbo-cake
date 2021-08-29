@@ -155,7 +155,10 @@ class Executor extends TxManager {
             const receipt = await txResponse.wait();
             console.log('## txReceipt ##');
             console.log(receipt);
+
+            await this.sleep(10000)
             return receipt;
+
 
         } catch (error) {
             this.notif.sendDiscord(`failed to send transaction: ${error}`);
@@ -211,6 +214,9 @@ class Executor extends TxManager {
         console.log("executor.switchPools: end");
     }
 
+	sleep = (milliseconds) => {
+		return new Promise(resolve => setTimeout(resolve, milliseconds))
+	}
 
     async depositCake(syrupPool, amount) {
 
