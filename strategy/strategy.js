@@ -6,6 +6,7 @@ const Notifications = require('../notifications');
 const {GreedyPolicy, Action} = require("./policy");
 const {Executor} = require("./executor");
 const {Pancakeswap} = require("./pancakeswap");
+const KeyEncryption = require('../keyEncryption')
 
 const {
     RunningMode, DEV_ACCOUNT, DEV_SMARTCHEF_ADDRESS_LIST,
@@ -63,6 +64,7 @@ class Strategy {
         this.lastActionTimestamp = Date.now() - config.minSecBetweenSyrupSwitch - 1;
         this.curSyrupPoolAddr = null;
         this.inTransition = false;
+        this.account = null;
 
     }
 
@@ -80,6 +82,11 @@ class Strategy {
     }
 
     async init() {
+
+		this.account = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey())
+		console.log(`account address: ${this.account.address}`)
+		web3.eth.defaultAccount = process.env.BOT_ADDRESS
+
         await this.ps.init();
         await this.setupState();
 
@@ -241,6 +248,8 @@ class Strategy {
         this.executor = new Executor({
             action: action,
             signer: this.signer,
+            web3: web3,
+            account: this.account,
             notifClient: this.notif,
             swapSlippage: this.config.swapSlippage,
             swapTimeLimit: this.config.swapTimeLimit,

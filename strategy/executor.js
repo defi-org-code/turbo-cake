@@ -29,6 +29,8 @@ class Executor extends TxManager {
         this.notif = args.notifClient;
         this.signer = args.signer;
         this.action = args.action;
+        this.web3 = args.web3;
+        this.account = args.account;
         this.swapSlippage = args.swapSlippage;
         this.swapTimeLimit = args.swapTimeLimit;
         this.status = "start";
@@ -138,25 +140,30 @@ class Executor extends TxManager {
         }
     }
 
-    async sendTransactionWait(tx) {
-        if (!tx) {
+    async sendTransactionWait(transactionObject) {
+        if (!transactionObject) {
             return null;
         }
         try {
 
-            tx.gasPrice = ethers.utils.parseUnits('5', 'gwei');
-            tx.gasLimit = (await ethers.provider.estimateGas(tx)).mul(2);
-            tx.nonce = await ethers.provider.getTransactionCount(this.signer.address);
+        	transactionObject.gas = 500000
+			const signedTx = await this.account.signTransaction(transactionObject);
+			const txResponse = await this.web3.eth.sendSignedTransaction(signedTx.rawTransaction);
 
-            const txResponse = await this.signer.sendTransaction(tx);
+            // tx.gasPrice = ethers.utils.parseUnits('5', 'gwei');
+            // tx.gasLimit = (await ethers.provider.estimateGas(tx)).mul(2);
+            // tx.nonce = await ethers.provider.getTransactionCount(this.signer.address);
+
+            // const txResponse = await this.signer.sendTransaction(tx);
             console.log('## txResponse ##');
             console.dir(txResponse);
 
-            const receipt = await txResponse.wait();
+            // const receipt = await txResponse.wait();
+			const receipt = await this.web3.eth.getTransactionReceipt(txResponse.transactionHash);
             console.log('## txReceipt ##');
             console.log(receipt);
 
-            await this.sleep(10000)
+            // await this.sleep(30000)
             return receipt;
 
 

@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const { ethers } = require("ethers");
+const { ethers } = require("hardhat");
 
 const KeyEncryption = require('./keyEncryption');
 const env = require('dotenv').config();
