@@ -54,6 +54,11 @@ class GreedyPolicy extends Policy {
 
 
 	shouldSwitchPools(poolsInfo, curSyrupPoolAddr, topYielderAddr) {
+
+        if (Date.now() - this.lastActionTimestamp < this.minSecBetweenSyrupSwitch) {
+            return false
+        }
+
         return (poolsInfo[topYielderAddr]['apy'] - poolsInfo[curSyrupPoolAddr]['apy'] >= this.apySwitchTh) ||
             (poolsInfo[curSyrupPoolAddr]['active'] === false);
     }
