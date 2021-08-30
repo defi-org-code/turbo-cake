@@ -33,6 +33,7 @@ function loadConfig(runningMode) {
 		config.tickInterval = TICK_INTERVAL;
 	}
 
+    config.runningMode = runningMode;
     config.swapSlippage = SWAP_SLIPPAGE;
     config.swapTimeLimit = SWAP_TIME_LIMIT;
     config.devSmartchefAddressList = DEV_SMARTCHEF_ADDRESS_LIST;
@@ -79,7 +80,6 @@ class Strategy {
             await this.init();
 
             this.intervalId = setInterval(() => this.run(), this.tickInterval);
-            setTimeout(this.run,0);
 
         } catch (e) {
             this.notif.sendDiscord(`[ERROR] unhandled error: ${e}`);

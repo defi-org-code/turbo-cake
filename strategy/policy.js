@@ -1,3 +1,4 @@
+const {RunningMode} = require("../config");
 
 const Action = {
     NO_OP: "no-op",
