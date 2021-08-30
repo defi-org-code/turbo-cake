@@ -266,6 +266,7 @@ class Strategy {
         this.curSyrupPoolAddr = action.args.poolAddress
         this.executor = null;
 		this.inTransition = false;
+		this.lastActionTimestamp = Date.now()
     }
 
     async handleExecutionError(err, action, startTime) {
@@ -277,6 +278,7 @@ class Strategy {
         // TODO: continue flow according to trace - executor.retry
         this.executor = null;
 		this.inTransition = false;
+		this.lastActionTimestamp = Date.now()
     }
 
 

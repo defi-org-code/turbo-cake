@@ -31,7 +31,6 @@ class GreedyPolicy extends Policy {
         this.harvestInterval = config.harvestInterval;
         this.apySwitchTh = config.apySwitchTh;
         this.paused = false;
-        this.lastActionTimestamp = Date.now() - config.syrupSwitchInterval - 1;
     }
 
 	getRandomInt(max) {
@@ -52,9 +51,9 @@ class GreedyPolicy extends Policy {
         return apyDict[Math.max.apply(null, Object.keys(apyDict))];
     }
 
-	shouldSwitchPools(poolsInfo, curSyrupPoolAddr, topYielderAddr) {
+	shouldSwitchPools(poolsInfo, curSyrupPoolAddr, topYielderAddr, lastActionTimestamp) {
 
-		if (Date.now() - this.lastActionTimestamp < this.syrupSwitchInterval) {
+		if (Date.now() - lastActionTimestamp < this.syrupSwitchInterval) {
 			console.log('shouldSwitchPools: outside interval update')
 			return false
 		}
@@ -85,9 +84,6 @@ class GreedyPolicy extends Policy {
 
         if (args.curSyrupPoolAddr == null) { // enter "top" syrup pool apy estimate
 
-			// TODO: better update after tx result
-			this.lastActionTimestamp = Date.now()
-
             return {
                 name: Action.ENTER,
                 args: {
@@ -99,10 +95,7 @@ class GreedyPolicy extends Policy {
 
 		const topYielderAddr = this.getTopYielderAddr(args.poolsInfo);
 
-		if (this.shouldSwitchPools(args.poolsInfo, args.curSyrupPoolAddr, topYielderAddr)) {
-
-			// TODO: better update after tx result
-			this.lastActionTimestamp = Date.now()
+		if (this.shouldSwitchPools(args.poolsInfo, args.curSyrupPoolAddr, topYielderAddr, args.lastActionTimestamp)) {
 
 			return {
 				name: Action.SWITCH,
@@ -113,10 +106,7 @@ class GreedyPolicy extends Policy {
 			};
 		}
 
-        if (Date.now() - this.lastActionTimestamp > this.harvestInterval) {
-
-			// TODO: better update after tx result
-			this.lastActionTimestamp = Date.now()
+        if (Date.now() - args.lastActionTimestamp > this.harvestInterval) {
 
             return {
                 name: Action.HARVEST,
