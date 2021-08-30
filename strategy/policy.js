@@ -52,10 +52,13 @@ class GreedyPolicy extends Policy {
         return apyDict[Math.max.apply(null, Object.keys(apyDict))];
     }
 
-
-
 	shouldSwitchPools(poolsInfo, curSyrupPoolAddr, topYielderAddr) {
-		return (poolsInfo[topYielderAddr]['apy'] - poolsInfo[curSyrupPoolAddr]['apy'] >= this.apySwitchTh) ||
+
+	if (Date.now() - this.lastActionTimestamp < this.minSecBetweenSyrupSwitch) {
+		return false
+	}
+
+	return (poolsInfo[topYielderAddr]['apy'] - poolsInfo[curSyrupPoolAddr]['apy'] >= this.apySwitchTh) ||
 			(poolsInfo[curSyrupPoolAddr]['active'] === false);
     }
 

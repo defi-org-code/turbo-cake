@@ -9,8 +9,8 @@ const {Pancakeswap} = require("./pancakeswap");
 
 const {
     RunningMode, DEV_ACCOUNT, DEV_SMARTCHEF_ADDRESS_LIST,
-    MIN_SEC_BETWEEN_SYRUP_SWITCH, MIN_SEC_BETWEEN_HARVESTS,
-    PANCAKE_UPDATE_INTERVAL, TICK_INTERVAL, SWAP_SLIPPAGE, SWAP_TIME_LIMIT,
+    SYRUP_SWITCH_INTERVAL, HARVEST_INTERVAL,
+    PANCAKE_UPDATE_INTERVAL, TICK_INTERVAL, SWAP_SLIPPAGE, SWAP_TIME_LIMIT, APY_SWITCH_TH
 } = require("../config");
 const debug = (...messages) => console.log(...messages)
 const {TransactionFailure, FatalError, GasError, NotImplementedError} = require('../errors');
@@ -20,13 +20,14 @@ function loadConfig(env) {
     let config = {};
 
     config.pancakeUpdateInterval = PANCAKE_UPDATE_INTERVAL;
-    config.minSecBetweenSyrupSwitch = MIN_SEC_BETWEEN_SYRUP_SWITCH;
-    config.minSecBetweenHarvests = MIN_SEC_BETWEEN_HARVESTS;
+    config.minSecBetweenSyrupSwitch = SYRUP_SWITCH_INTERVAL;
+    config.minSecBetweenHarvests = HARVEST_INTERVAL;
     config.tickInterval = TICK_INTERVAL;
     config.swapSlippage = SWAP_SLIPPAGE;
     config.swapTimeLimit = SWAP_TIME_LIMIT;
     config.devSmartchefAddressList = DEV_SMARTCHEF_ADDRESS_LIST;
     config.devAccount = DEV_ACCOUNT;
+    config.apySwitchTh = APY_SWITCH_TH;
     return config;
 }
 
@@ -49,7 +50,7 @@ class Strategy {
         this.policy = new GreedyPolicy({
             minSecBetweenSyrupSwitch: config.minSecBetweenSyrupSwitch,
             minSecBetweenHarvests: config.minSecBetweenHarvests,
-
+            apySwitchTh: config.apySwitchTh
         });
 
         this.executor = null;
