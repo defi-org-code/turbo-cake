@@ -7,19 +7,32 @@ const {Pancakeswap} = require("./pancakeswap");
 const {
     RunningMode, DEV_ACCOUNT, DEV_SMARTCHEF_ADDRESS_LIST,
     SYRUP_SWITCH_INTERVAL, HARVEST_INTERVAL,
-    PANCAKE_UPDATE_INTERVAL, TICK_INTERVAL, SWAP_SLIPPAGE, SWAP_TIME_LIMIT, APY_SWITCH_TH
+    PANCAKE_UPDATE_INTERVAL, TICK_INTERVAL, SWAP_SLIPPAGE, SWAP_TIME_LIMIT, APY_SWITCH_TH,
+    DEV_TICK_INTERVAL, DEV_PANCAKE_UPDATE_INTERVAL,	DEV_SYRUP_SWITCH_INTERVAL,	DEV_HARVEST_INTERVAL
 } = require("../config");
 const debug = (...messages) => console.log(...messages)
 const {TransactionFailure, FatalError, GasError, NotImplementedError} = require('../errors');
 
 
-function loadConfig(env) {
+function loadConfig(runningMode) {
     let config = {};
 
-    config.pancakeUpdateInterval = PANCAKE_UPDATE_INTERVAL;
-    config.syrupSwitchInterval = SYRUP_SWITCH_INTERVAL;
-    config.harvestInterval = HARVEST_INTERVAL;
-    config.tickInterval = TICK_INTERVAL;
+	if (runningMode === RunningMode.DEV) {
+
+		config.pancakeUpdateInterval = DEV_PANCAKE_UPDATE_INTERVAL
+		config.syrupSwitchInterval =  DEV_SYRUP_SWITCH_INTERVAL
+		config.harvestInterval = DEV_HARVEST_INTERVAL
+		config.tickInterval = DEV_TICK_INTERVAL
+	}
+
+	else {
+
+		config.pancakeUpdateInterval = PANCAKE_UPDATE_INTERVAL;
+		config.syrupSwitchInterval = SYRUP_SWITCH_INTERVAL;
+		config.harvestInterval = HARVEST_INTERVAL;
+		config.tickInterval = TICK_INTERVAL;
+	}
+
     config.swapSlippage = SWAP_SLIPPAGE;
     config.swapTimeLimit = SWAP_TIME_LIMIT;
     config.devSmartchefAddressList = DEV_SMARTCHEF_ADDRESS_LIST;
@@ -36,7 +49,7 @@ class Strategy {
             position: null,
             terminating: false,
         }
-        const config = loadConfig(env);
+        const config = loadConfig(runningMode);
         debug(config);
 
         this.web3 = web3;
