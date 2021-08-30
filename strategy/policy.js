@@ -79,6 +79,10 @@ class GreedyPolicy extends Policy {
 		* return action
 		* */
 
+        if (this.paused) {
+            return args.lastAction;
+        }
+
         if (args.curSyrupPoolAddr == null) { // enter "top" syrup pool apy estimate
 
 			// TODO: better update after tx result

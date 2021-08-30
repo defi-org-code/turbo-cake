@@ -1,5 +1,3 @@
-const {ethers} = require("hardhat");
-
 const {Action} = require("./policy");
 const {TxManager} = require("./txManager");
 const {
@@ -9,6 +7,8 @@ const {
     MASTERCHEF_ABI,
     SMARTCHEF_INITIALIZABLE_ABI,
     CAKE_ABI,
+    BEP_20_ABI,
+    ROUTER_V2_ABI,
 } = require('../abis')
 const {TransactionFailure, FatalError, GasError, NotImplementedError} = require('../errors');
 
@@ -25,9 +25,10 @@ class Executor extends TxManager {
 
     constructor(args) {
         super(args.notifClient);
+        this.web3 = args.web3;
         this.name = "pancakeswap-executor";
         this.notif = args.notifClient;
-        this.signer = args.signer;
+        this.account = args.account;
         this.action = args.action;
         this.swapSlippage = args.swapSlippage;
         this.swapTimeLimit = args.swapTimeLimit;
@@ -38,26 +39,19 @@ class Executor extends TxManager {
         this.onSuccessCallback = null;
         this.onFailureCallback = null;
 
-        this.cakeContract = new ethers.Contract(
-            CAKE_ADDRESS,
+        this.cakeContract =  new this.web3.eth.Contract(
             CAKE_ABI,
-            this.signer
-        );
+            CAKE_ADDRESS);
 
-        this.masterchefContract = new ethers.Contract(
-            MASTER_CHEF_ADDRESS,
+        this.masterchefContract = new this.web3.eth.Contract(
             MASTERCHEF_ABI,
-            this.signer
+            MASTER_CHEF_ADDRESS
         );
 
-        this.router = new ethers.Contract(
-            ROUTER_ADDRESS,
-            [
-                'function getAmountsOut(uint amountIn, address[] memory path) public view returns (uint[] memory amounts)',
-                'function swapExactTokensForTokens(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline) external returns (uint[] memory amounts)',
-            ],
-            this.signer
-        );
+
+        this.router = new this.web3.eth.Contract(
+            ROUTER_V2_ABI,
+            ROUTER_ADDRESS);
     }
 
 
@@ -138,26 +132,34 @@ class Executor extends TxManager {
         }
     }
 
-    async sendTransactionWait(tx) {
-        if (!tx) {
+    async sendTransactionWait(encodedTx, to, gas=undefined) {
+        if (!encodedTx) {
             return null;
         }
         try {
 
-            tx.gasPrice = ethers.utils.parseUnits('5', 'gwei');
-            tx.gasLimit = (await ethers.provider.estimateGas(tx)).mul(2);
-            tx.nonce = await ethers.provider.getTransactionCount(this.signer.address);
 
-            const txResponse = await this.signer.sendTransaction(tx);
+            let transactionObject = {
+                gas: (gas? gas: 500000),
+                data: encodedTx,
+                from: this.account.address,
+                to: to,
+            };
+
+            console.log("sendTransactionWait ");
+            console.log(transactionObject);
+            const signedTx = await this.account.signTransaction(transactionObject);
+            console.log(signedTx)
+
+            const txResponse = await this.web3.eth.sendSignedTransaction(signedTx.rawTransaction);
             console.log('## txResponse ##');
             console.dir(txResponse);
 
-            const receipt = await txResponse.wait();
-            console.log('## txReceipt ##');
-            console.log(receipt);
+            const res = await this.pendingWait(1000, txResponse.transactionHash);
+            console.log('## txReceipt ##', res.gasUsed);
+            console.log(res);
 
-            await this.sleep(10000)
-            return receipt;
+            return res;
 
 
         } catch (error) {
@@ -168,11 +170,22 @@ class Executor extends TxManager {
     }
 
 
+    pendingWait = (milliseconds, txHash) => {
+        return new Promise(resolve => setTimeout(async () => {
+            const res = await this.web3.eth.getTransactionReceipt(txHash);
+            if (res === null) { return this.pendingWait(milliseconds, txHash)}
+            if (res['status'] === true) { resolve(res)}
+            return null;
+        }, milliseconds), )
+    }
+
+
+
     async enterPosition(args) {
         console.log(`executor.enterPosition: start pool ${args.poolAddress} `);
 
         const syrupPool = await this.setupSyrupPool(args.poolAddress);
-        const cakeBalance = await this.cakeContract.balanceOf(this.signer.address);
+        const cakeBalance = await this.cakeContract.methods.balanceOf(this.account.address).call();
         console.log('cakeBalance: ', cakeBalance.toString());
         await this.depositCake(syrupPool, cakeBalance);
 
@@ -184,7 +197,7 @@ class Executor extends TxManager {
         console.log(`executor.exitPosition: start pool ${args.poolAddress} `);
 
             const syrupPool = await this.setupSyrupPool(args.poolAddress);
-            const stakedAmount = await this.getStakedAmount(syrupPool, this.signer.address);
+            const stakedAmount = await this.getStakedAmount(syrupPool, this.account.address);
             const withdrawn = await this.withdraw(syrupPool, stakedAmount);
             await this.swapAllToCake(withdrawn.rewardTokenAddr);
 
@@ -197,7 +210,7 @@ class Executor extends TxManager {
             const syrupPool = await this.setupSyrupPool(args.poolAddress);
             const withdrawn = await this.withdraw(syrupPool, 0);
             await this.swapAllToCake(withdrawn.rewardTokenAddr);
-            const cakeBalance = await this.cakeContract.balanceOf(this.signer.address);
+            const cakeBalance = await this.cakeContract.methods.balanceOf(this.account.address).call();
             await this.depositCake(syrupPool, cakeBalance);
 
         console.log("executor.harvest: end");
@@ -220,37 +233,31 @@ class Executor extends TxManager {
 
     async depositCake(syrupPool, amount) {
 
-        console.log(`executor.depositCake: syrup ${syrupPool.address}  amount ${amount}`);
+        console.log(`executor.depositCake: syrup ${syrupPool.options.address}  amount ${amount}`);
         const result = {
             step: "depositCake",
-            to: syrupPool.address,
+            to: syrupPool.options.address,
             amount: amount,
             receipt: null,
         };
 
         if (amount > 0) {
-            // { // assert user.cakeBalance >= amount
-            //     const userBalance = await this.cakeContract.balanceOf(this.signer.address);
-            //     console.log(userBalance);
-            //     if (userBalance.amount.lt(ethers.BigNumber.from(amount))) {
-            //         throw new FatalError("deposit cake amount is gt user cake balance ");
-            //     }
-            // }
 
-            await this.approve(CAKE_ADDRESS, syrupPool.address, amount);
+            await this.approve(CAKE_ADDRESS, syrupPool.options.address, amount);
 
             let tx;
 
-            if (syrupPool.type === SyrupPoolType.SMARTCHEF) {
+            if (syrupPool.syrupType === SyrupPoolType.SMARTCHEF) {
                 console.log("executor.depositCake: deposit cake to Smartchef");
-                tx = await syrupPool.populateTransaction.deposit(amount);
 
-            } else if (syrupPool.type === SyrupPoolType.MANUAL_CAKE) {
+                tx = await syrupPool.methods.deposit(amount).encodeABI();
+
+            } else if (syrupPool.syrupType === SyrupPoolType.MANUAL_CAKE) {
                 console.log("executor.depositCake: deposit cake to ManualCake");
-                tx = await syrupPool.populateTransaction.enterStaking(amount);
+                tx = await syrupPool.methods.enterStaking(amount).encodeABI();
             }
 
-            result.receipt = await this.sendTransactionWait(tx);
+            result.receipt = await this.sendTransactionWait(tx, syrupPool.options.address);
         }
 
         this.trace.push(result);
@@ -258,28 +265,32 @@ class Executor extends TxManager {
     }
 
     async withdraw(syrupPool, amount) {
-        console.log(`executor.withdraw: from pool ${syrupPool.address} type ${SyrupPoolType.SMARTCHEF}`);
+        console.log(`executor.withdraw: from pool ${syrupPool.options.address} type ${SyrupPoolType.SMARTCHEF}`);
 
         const result = {
             step: "withdraw",
-            poolAddress: syrupPool.address,
+            poolAddress: syrupPool.options.address,
             amount: amount,
-            syrupType: syrupPool.type,
+            syrupType: syrupPool.syrupType,
             rewardTokenAddr: null,
             receipt: null,
         };
 
         let tx;
+        let gas;
 
-        if (syrupPool.type === SyrupPoolType.SMARTCHEF) {
-            result.rewardTokenAddr = await syrupPool.rewardToken();
-            tx = await syrupPool.populateTransaction.withdraw(amount);
+        if (syrupPool.syrupType === SyrupPoolType.SMARTCHEF) {
+            result.rewardTokenAddr = await syrupPool.methods.rewardToken().call();
+            tx = await syrupPool.methods.withdraw(amount).encodeABI();
+            gas = await syrupPool.methods.withdraw(amount).estimateGas();
 
         } else if (syrupPool.syrupType === SyrupPoolType.MANUAL_CAKE) {
-            tx = await this.masterchefContract.populateTransaction.leaveStaking(amount);
+            result.rewardTokenAddr = CAKE_ADDRESS;
+            tx = await syrupPool.methods.leaveStaking(amount).encodeABI();
+            gas = await syrupPool.methods.leaveStaking(amount).estimateGas();
         }
 
-        result.receipt = await this.sendTransactionWait(tx);
+        result.receipt = await this.sendTransactionWait(tx, syrupPool.options.address, gas);
         this.trace.push(result);
 
         return result;
@@ -292,14 +303,13 @@ class Executor extends TxManager {
             return;
         }
 
-        const token = new ethers.Contract(
-            tokenIn,
-            ['function balanceOf(address account) external view returns (uint256)'],
-            this.signer
+        const token = new this.web3.eth.Contract(
+            BEP_20_ABI,
+            tokenIn
         );
 
-        const swapAmount = await token.balanceOf(this.signer.address);
-        await this.approve(tokenIn, this.router.address, swapAmount);
+        const swapAmount = await token.methods.balanceOf(this.account.address).call();
+        await this.approve(tokenIn, this.router.options.address, swapAmount);
 
         const viaBnb = [tokenIn, WBNB_ADDRESS, CAKE_ADDRESS];
         await this.swap(tokenIn, swapAmount, viaBnb);
@@ -317,14 +327,12 @@ class Executor extends TxManager {
             receipt: null,
         };
 
-        const token = new ethers.Contract(
-            tokenAddr,
-            ['function approve(address spender, uint256 amount) external returns (bool)'],
-            this.signer
-        );
+        const token = new this.web3.eth.Contract(
+            BEP_20_ABI,
+            tokenAddr);
 
-        const tx = await token.populateTransaction.approve(spender, amount);
-        result.receipt = await this.sendTransactionWait(tx);
+        const tx = await token.methods.approve(spender, amount).encodeABI();
+        result.receipt = await this.sendTransactionWait(tx, token.options.address);
 
         this.trace.push(result);
         return result;
@@ -343,20 +351,21 @@ class Executor extends TxManager {
 
         if (amountIn > 0) {
             const viaBnb = [tokenIn, WBNB_ADDRESS, CAKE_ADDRESS];
-            const amounts = await this.router.getAmountsOut(amountIn, viaBnb);
-            const amountOutMin = amounts[1].sub(amounts[1].div(this.swapSlippage));
-            const recipient = this.signer.address;
+            const amounts = await this.router.methods.getAmountsOut(amountIn, viaBnb).call();
+            const amountBN = this.web3.utils.toBN(amounts[1]);
+            const amountOutMin = amountBN.sub(amountBN.divn(this.swapSlippage));
+            const recipient = this.account.address;
             const deadline = Date.now() + this.swapTimeLimit;
 
-            const tx = await this.router.populateTransaction.swapExactTokensForTokens(
+            const tx = await this.router.methods.swapExactTokensForTokens(
                 amountIn,
                 amountOutMin,
                 viaBnb,
                 recipient,
                 deadline
-            );
+            ).encodeABI();
 
-            result.receipt = await this.sendTransactionWait(tx);
+            result.receipt = await this.sendTransactionWait(tx, this.router.options.address);
         }
 
         this.trace.push(result);
@@ -367,51 +376,34 @@ class Executor extends TxManager {
 
     async setupSyrupPool(syrupAddr) {
 
-        const syrupType = await this.getSyrupType(syrupAddr);
         let syrupPool;
 
-        if (syrupType === SyrupPoolType.SMARTCHEF) {
-            syrupPool = new ethers.Contract(
-                syrupAddr,
-                SMARTCHEF_INITIALIZABLE_ABI,
-                this.signer
-            );
-
-        } else {
-
-            syrupPool = this.masterchefContract;
-        }
-        syrupPool.type = syrupType;
-
-        return syrupPool;
-    }
-
-    async getSyrupType(syrupAddr) {
-
         if (syrupAddr === MASTER_CHEF_ADDRESS) {
-            return SyrupPoolType.MANUAL_CAKE;
+            syrupPool = this.masterchefContract;
+            syrupPool.syrupType = SyrupPoolType.MANUAL_CAKE;
         }
 
         try {
-            const syrupPool = new ethers.Contract(
-                syrupAddr,
+            syrupPool = new this.web3.eth.Contract(
                 SMARTCHEF_INITIALIZABLE_ABI,
-                this.signer);
+                syrupAddr);
+            syrupPool.syrupType = SyrupPoolType.SMARTCHEF;
 
-            const factoryAddr = await syrupPool.SMART_CHEF_FACTORY();
-            if (ethers.utils.isAddress(factoryAddr) && (factoryAddr === SMARTCHEF_FACTORY_ADDRESS)) {
-                return SyrupPoolType.SMARTCHEF;
+            const factoryAddr = await syrupPool.methods.SMART_CHEF_FACTORY().call();
+            if (factoryAddr !== SMARTCHEF_FACTORY_ADDRESS) {
+                return null;
             }
-
         } catch (e) {
             console.log(e);
             throw new FatalError(`executor.getSyrupType: unsupported pool type for syrup address ${syrupAddr} `);
         }
+
+        return syrupPool;
     }
 
     async getStakedAmount(syrupPool, user) {
-        return (syrupPool.type === SyrupPoolType.SMARTCHEF ?
-            await syrupPool.userInfo(user) : await syrupPool.userInfo(0, user)).amount;
+        return (syrupPool.syrupType === SyrupPoolType.SMARTCHEF ?
+            await syrupPool.methods.userInfo(user).call() : await syrupPool.methods.userInfo(0, user).call()).amount;
     }
 
     handleExecutionError(err) {
