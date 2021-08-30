@@ -27,11 +27,11 @@ class GreedyPolicy extends Policy {
 
     constructor(config) {
         super();
-        this.minSecBetweenSyrupSwitch = config.minSecBetweenSyrupSwitch; // TODO: change name to minMilisecBetweenSyrupSwitch
-        this.minSecBetweenHarvests = config.minSecBetweenHarvests;
+        this.syrupSwitchInterval = config.syrupSwitchInterval; // TODO: change name to minMilisecBetweenSyrupSwitch
+        this.harvestInterval = config.harvestInterval;
         this.apySwitchTh = config.apySwitchTh;
         this.paused = false;
-        this.lastActionTimestamp = Date.now() - config.minSecBetweenSyrupSwitch - 1;
+        this.lastActionTimestamp = Date.now() - config.syrupSwitchInterval - 1;
     }
 
 	getRandomInt(max) {
@@ -54,13 +54,14 @@ class GreedyPolicy extends Policy {
 
 	shouldSwitchPools(poolsInfo, curSyrupPoolAddr, topYielderAddr) {
 
-	if (Date.now() - this.lastActionTimestamp < this.minSecBetweenSyrupSwitch) {
-		return false
-	}
+		if (Date.now() - this.lastActionTimestamp < this.syrupSwitchInterval) {
+			console.log('shouldSwitchPools: outside interval update')
+			return false
+		}
 
-	return (poolsInfo[topYielderAddr]['apy'] - poolsInfo[curSyrupPoolAddr]['apy'] >= this.apySwitchTh) ||
-			(poolsInfo[curSyrupPoolAddr]['active'] === false);
-    }
+		return (poolsInfo[topYielderAddr]['apy'] - poolsInfo[curSyrupPoolAddr]['apy'] >= this.apySwitchTh) ||
+				(poolsInfo[curSyrupPoolAddr]['active'] === false);
+	}
 
     pause() {
         this.paused = true;
@@ -91,7 +92,7 @@ class GreedyPolicy extends Policy {
             }
         }
 
-        // if (Date.now() - this.lastActionTimestamp > this.minSecBetweenSyrupSwitch) { // check should switch syrup pool
+        // if (Date.now() - this.lastActionTimestamp > this.syrupSwitchInterval) { // check should switch syrup pool
 
 		const topYielderAddr = this.getTopYielderAddr(args.poolsInfo);
 
@@ -109,7 +110,7 @@ class GreedyPolicy extends Policy {
 			};
 		}
 
-        if (Date.now() - this.lastActionTimestamp > this.minSecBetweenHarvests) {
+        if (Date.now() - this.lastActionTimestamp > this.harvestInterval) {
 
 			// TODO: better update after tx result
 			this.lastActionTimestamp = Date.now()
