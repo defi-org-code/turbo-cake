@@ -17,8 +17,8 @@ function loadConfig(env) {
     let config = {};
 
     config.pancakeUpdateInterval = PANCAKE_UPDATE_INTERVAL;
-    config.minSecBetweenSyrupSwitch = SYRUP_SWITCH_INTERVAL;
-    config.minSecBetweenHarvests = HARVEST_INTERVAL;
+    config.syrupSwitchInterval = SYRUP_SWITCH_INTERVAL;
+    config.harvestInterval = HARVEST_INTERVAL;
     config.tickInterval = TICK_INTERVAL;
     config.swapSlippage = SWAP_SLIPPAGE;
     config.swapTimeLimit = SWAP_TIME_LIMIT;
@@ -46,8 +46,8 @@ class Strategy {
         this.ps = new Pancakeswap(this.redisClient, web3, this.notif,
             config.pancakeUpdateInterval);
         this.policy = new GreedyPolicy({
-            minSecBetweenSyrupSwitch: config.minSecBetweenSyrupSwitch,
-            minSecBetweenHarvests: config.minSecBetweenHarvests,
+            syrupSwitchInterval: config.syrupSwitchInterval,
+            harvestInterval: config.harvestInterval,
             apySwitchTh: config.apySwitchTh
         });
 
@@ -59,7 +59,7 @@ class Strategy {
 
         this.runningMode = runningMode;
         this.name = "pancakeswap-strategy";
-        this.lastActionTimestamp = Date.now() - config.minSecBetweenSyrupSwitch - 1;
+        this.lastActionTimestamp = Date.now() - config.syrupSwitchInterval - 1;
         this.curSyrupPoolAddr = null;
         this.inTransition = false;
 
