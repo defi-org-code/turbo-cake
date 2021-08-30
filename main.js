@@ -56,7 +56,7 @@ async function main() {
 
 main()
     .then(() => {
-		console.debug("Bot is running");
+		console.debug("Bot initialized and running");
 	})
 	.catch((error) => {
         console.error(error);
