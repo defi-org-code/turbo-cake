@@ -1,3 +1,4 @@
+const { RunningMode } = require("../config");
 
 const Action = {
     NO_OP: "no-op",
@@ -31,6 +32,7 @@ class GreedyPolicy extends Policy {
         this.harvestInterval = config.harvestInterval;
         this.apySwitchTh = config.apySwitchTh;
         this.paused = false;
+        this.runningMode = config.runningMode
     }
 
 	getRandomInt(max) {
@@ -44,9 +46,10 @@ class GreedyPolicy extends Policy {
 			apyDict[poolsInfo[poolAddr]['apy']] = poolAddr
 		}
 
-		// dbg only
-		// const apyArr = Object.keys(apyDict)
-		// return apyDict[apyArr[this.getRandomInt(apyArr.length)]]
+		if (this.runningMode === RunningMode.DEV) {
+			const apyArr = Object.keys(apyDict)
+			return apyDict[apyArr[this.getRandomInt(apyArr.length)]]
+		}
 
         return apyDict[Math.max.apply(null, Object.keys(apyDict))];
     }
@@ -119,10 +122,6 @@ class GreedyPolicy extends Policy {
         return {name: Action.NO_OP}
     }
 
-
-    async isActivePool(curSyrupPoolAddr, activePoolsInfo) {
-        return activePoolsInfo[curSyrupPoolAddr] && activePoolsInfo[curSyrupPoolAddr]['active'];
-    }
 }
 
 module.exports = {

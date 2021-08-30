@@ -45,11 +45,7 @@ class Strategy {
         this.redisInit();
         this.ps = new Pancakeswap(this.redisClient, web3, this.notif,
             config.pancakeUpdateInterval);
-        this.policy = new GreedyPolicy({
-            syrupSwitchInterval: config.syrupSwitchInterval,
-            harvestInterval: config.harvestInterval,
-            apySwitchTh: config.apySwitchTh
-        });
+        this.policy = new GreedyPolicy(config);
 
         this.executor = null;
         this.nextAction = { name: Action.NO_OP,};
@@ -111,8 +107,6 @@ class Strategy {
             debug('redis ready')
         });
     }
-
-
 
     runDevOverride() {
         return;
