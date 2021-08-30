@@ -196,10 +196,10 @@ class Executor extends TxManager {
     async exitPosition(args) {
         console.log(`executor.exitPosition: start pool ${args.poolAddress} `);
 
-            const syrupPool = await this.setupSyrupPool(args.poolAddress);
-            const stakedAmount = await this.getStakedAmount(syrupPool, this.account.address);
-            const withdrawn = await this.withdraw(syrupPool, stakedAmount);
-            await this.swapAllToCake(withdrawn.rewardTokenAddr);
+		const syrupPool = await this.setupSyrupPool(args.poolAddress);
+		const stakedAmount = await this.getStakedAmount(syrupPool, this.account.address);
+		const withdrawn = await this.withdraw(syrupPool, stakedAmount);
+		await this.swapAllToCake(withdrawn.rewardTokenAddr);
 
         console.log("executor.exitPosition: end");
     }
@@ -207,14 +207,13 @@ class Executor extends TxManager {
     async harvest(args) {
         console.log(`executor.harvest: start pool ${args.poolAddress} `);
 
-            const syrupPool = await this.setupSyrupPool(args.poolAddress);
-            const withdrawn = await this.withdraw(syrupPool, 0);
-            await this.swapAllToCake(withdrawn.rewardTokenAddr);
-            const cakeBalance = await this.cakeContract.methods.balanceOf(this.account.address).call();
-            await this.depositCake(syrupPool, cakeBalance);
+		const syrupPool = await this.setupSyrupPool(args.poolAddress);
+		const withdrawn = await this.withdraw(syrupPool, 0);  // TODO: GAD why?
+		await this.swapAllToCake(withdrawn.rewardTokenAddr);
+		const cakeBalance = await this.cakeContract.methods.balanceOf(this.account.address).call();
+		await this.depositCake(syrupPool, cakeBalance);
 
         console.log("executor.harvest: end");
-
     }
 
 
