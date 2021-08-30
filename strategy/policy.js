@@ -30,8 +30,7 @@ class GreedyPolicy extends Policy {
         this.syrupSwitchInterval = config.syrupSwitchInterval; // TODO: change name to minMilisecBetweenSyrupSwitch
         this.harvestInterval = config.harvestInterval;
         this.apySwitchTh = config.apySwitchTh;
-        this.paused = false;
-        this.lastActionTimestamp = Date.now() - config.syrupSwitchInterval - 1;
+        this.runningMode = config.runningMode
     }
 
 	getRandomInt(max) {
@@ -45,16 +44,17 @@ class GreedyPolicy extends Policy {
 			apyDict[poolsInfo[poolAddr]['apy']] = poolAddr
 		}
 
-		// dbg only
-		// const apyArr = Object.keys(apyDict)
-		// return apyDict[apyArr[this.getRandomInt(apyArr.length)]]
+		if (this.runningMode === RunningMode.DEV) {
+			const apyArr = Object.keys(apyDict)
+			return apyDict[apyArr[this.getRandomInt(apyArr.length)]]
+		}
 
         return apyDict[Math.max.apply(null, Object.keys(apyDict))];
     }
 
-	shouldSwitchPools(poolsInfo, curSyrupPoolAddr, topYielderAddr) {
+	shouldSwitchPools(poolsInfo, curSyrupPoolAddr, topYielderAddr, lastActionTimestamp) {
 
-		if (Date.now() - this.lastActionTimestamp < this.syrupSwitchInterval) {
+		if (Date.now() - lastActionTimestamp < this.syrupSwitchInterval) {
 			console.log('shouldSwitchPools: outside interval update')
 			return false
 		}
@@ -63,13 +63,6 @@ class GreedyPolicy extends Policy {
 				(poolsInfo[curSyrupPoolAddr]['active'] === false);
 	}
 
-    pause() {
-        this.paused = true;
-    }
-
-    resume() {
-        this.paused = false;
-    }
 
     async getAction(args) {
 
@@ -79,14 +72,7 @@ class GreedyPolicy extends Policy {
 		* return action
 		* */
 
-        if (this.paused) {
-            return args.lastAction;
-        }
-
         if (args.curSyrupPoolAddr == null) { // enter "top" syrup pool apy estimate
-
-			// TODO: better update after tx result
-			this.lastActionTimestamp = Date.now()
 
             return {
                 name: Action.ENTER,
@@ -99,10 +85,7 @@ class GreedyPolicy extends Policy {
 
 		const topYielderAddr = this.getTopYielderAddr(args.poolsInfo);
 
-		if (this.shouldSwitchPools(args.poolsInfo, args.curSyrupPoolAddr, topYielderAddr)) {
-
-			// TODO: better update after tx result
-			this.lastActionTimestamp = Date.now()
+		if (this.shouldSwitchPools(args.poolsInfo, args.curSyrupPoolAddr, topYielderAddr, args.lastActionTimestamp)) {
 
 			return {
 				name: Action.SWITCH,
@@ -113,10 +96,7 @@ class GreedyPolicy extends Policy {
 			};
 		}
 
-        if (Date.now() - this.lastActionTimestamp > this.harvestInterval) {
-
-			// TODO: better update after tx result
-			this.lastActionTimestamp = Date.now()
+        if (Date.now() - args.lastActionTimestamp > this.harvestInterval) {
 
             return {
                 name: Action.HARVEST,
@@ -129,10 +109,6 @@ class GreedyPolicy extends Policy {
         return {name: Action.NO_OP}
     }
 
-
-    async isActivePool(curSyrupPoolAddr, activePoolsInfo) {
-        return activePoolsInfo[curSyrupPoolAddr] && activePoolsInfo[curSyrupPoolAddr]['active'];
-    }
 }
 
 module.exports = {

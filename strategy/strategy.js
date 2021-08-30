@@ -7,19 +7,32 @@ const {Pancakeswap} = require("./pancakeswap");
 const {
     RunningMode, DEV_ACCOUNT, DEV_SMARTCHEF_ADDRESS_LIST,
     SYRUP_SWITCH_INTERVAL, HARVEST_INTERVAL,
-    PANCAKE_UPDATE_INTERVAL, TICK_INTERVAL, SWAP_SLIPPAGE, SWAP_TIME_LIMIT, APY_SWITCH_TH
+    PANCAKE_UPDATE_INTERVAL, TICK_INTERVAL, SWAP_SLIPPAGE, SWAP_TIME_LIMIT, APY_SWITCH_TH,
+    DEV_TICK_INTERVAL, DEV_PANCAKE_UPDATE_INTERVAL,	DEV_SYRUP_SWITCH_INTERVAL,	DEV_HARVEST_INTERVAL
 } = require("../config");
 const debug = (...messages) => console.log(...messages)
 const {TransactionFailure, FatalError, GasError, NotImplementedError} = require('../errors');
 
 
-function loadConfig(env) {
+function loadConfig(runningMode) {
     let config = {};
 
-    config.pancakeUpdateInterval = PANCAKE_UPDATE_INTERVAL;
-    config.syrupSwitchInterval = SYRUP_SWITCH_INTERVAL;
-    config.harvestInterval = HARVEST_INTERVAL;
-    config.tickInterval = TICK_INTERVAL;
+	if (runningMode === RunningMode.DEV) {
+
+		config.pancakeUpdateInterval = DEV_PANCAKE_UPDATE_INTERVAL
+		config.syrupSwitchInterval =  DEV_SYRUP_SWITCH_INTERVAL
+		config.harvestInterval = DEV_HARVEST_INTERVAL
+		config.tickInterval = DEV_TICK_INTERVAL
+	}
+
+	else {
+
+		config.pancakeUpdateInterval = PANCAKE_UPDATE_INTERVAL;
+		config.syrupSwitchInterval = SYRUP_SWITCH_INTERVAL;
+		config.harvestInterval = HARVEST_INTERVAL;
+		config.tickInterval = TICK_INTERVAL;
+	}
+
     config.swapSlippage = SWAP_SLIPPAGE;
     config.swapTimeLimit = SWAP_TIME_LIMIT;
     config.devSmartchefAddressList = DEV_SMARTCHEF_ADDRESS_LIST;
@@ -36,7 +49,7 @@ class Strategy {
             position: null,
             terminating: false,
         }
-        const config = loadConfig(env);
+        const config = loadConfig(runningMode);
         debug(config);
 
         this.web3 = web3;
@@ -45,11 +58,7 @@ class Strategy {
         this.redisInit();
         this.ps = new Pancakeswap(this.redisClient, web3, this.notif,
             config.pancakeUpdateInterval);
-        this.policy = new GreedyPolicy({
-            syrupSwitchInterval: config.syrupSwitchInterval,
-            harvestInterval: config.harvestInterval,
-            apySwitchTh: config.apySwitchTh
-        });
+        this.policy = new GreedyPolicy(config);
 
         this.executor = null;
         this.nextAction = { name: Action.NO_OP,};
@@ -113,88 +122,6 @@ class Strategy {
     }
 
 
-
-    runDevOverride() {
-        return;
-        if (this.runningMode !== RunningMode.DEV) {
-            return;
-        }
-        this.policy.pause();
-        this.ps.pause();
-        this.tickIndex++;
-        let diff = 0;
-        if (this.tickTime) {
-            diff = Date.now() - this.tickTime;
-        }
-        this.tickTime = Date.now();
-
-        console.log(" tick number: ", this.tickIndex, this.inTransition, diff);
-
-        if (this.tickIndex === 1) {
-            this.nextAction =
-                {
-                    name: Action.ENTER,
-                    args: {
-                        poolAddress: this.config.devSmartchefAddressList[0],
-                    },
-                    description: "FAKE action",
-                }
-        }
-
-        if (this.tickIndex === 3) {
-            this.nextAction =
-                {
-                    name: Action.EXIT,
-                    args: {
-                        poolAddress: this.config.devSmartchefAddressList[0],
-                    },
-                    description: "FAKE action",
-                }
-            console.log(" override action: ",  this.nextAction);
-        }
-
-        if (this.tickIndex === 7) {
-            this.nextAction =
-                {
-                    name: Action.ENTER,
-                    args: {
-                        poolAddress: this.config.devSmartchefAddressList[0],
-                    },
-                    description: "FAKE action",
-                }
-        }
-
-        if (this.tickIndex === 12) {
-            this.nextAction =
-                {
-                    name: Action.HARVEST,
-                    args: {
-                        poolAddress: this.config.devSmartchefAddressList[0],
-                    },
-                    description: "FAKE action",
-                }
-        }
-
-        if (this.tickIndex === 16) {
-            this.nextAction =
-                {
-                    name: Action.SWITCH,
-                    args: {
-                        from: this.config.devSmartchefAddressList[0],
-                        to: this.config.devSmartchefAddressList[1],
-                    },
-                    description: "FAKE action",
-                }
-            console.dir(this.nextAction);
-        }
-
-        if (this.tickIndex === 20) {
-            clearInterval(this.intervalId);
-            process.exit()
-        }
-
-    }
-
     async run() {
 
         try {
@@ -203,8 +130,6 @@ class Strategy {
             }
 
             this.inTransition = true;
-
-            this.runDevOverride();
 
             await this.ps.update();
             await this.setAction();
@@ -266,6 +191,7 @@ class Strategy {
         this.curSyrupPoolAddr = action.args.poolAddress
         this.executor = null;
 		this.inTransition = false;
+		this.lastActionTimestamp = Date.now()
     }
 
     async handleExecutionError(err, action, startTime) {
@@ -277,6 +203,7 @@ class Strategy {
         // TODO: continue flow according to trace - executor.retry
         this.executor = null;
 		this.inTransition = false;
+		this.lastActionTimestamp = Date.now()
     }
 
 

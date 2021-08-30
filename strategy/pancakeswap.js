@@ -20,7 +20,7 @@ class Pancakeswap {
 	BLOCKS_PER_DAY = this.SECONDS_PER_DAY / this.AVG_BLOCK_SEC
 	BLOCKS_PER_YEAR = this.BLOCKS_PER_DAY * 365
 
-	PAST_EVENTS_N_DAYS =  90// TODO: change
+	PAST_EVENTS_N_DAYS =  90
 	PAST_EVENTS_N_BLOCKS = Math.floor(this.PAST_EVENTS_N_DAYS * this.BLOCKS_PER_DAY)
 
 	EXCLUDED_POOLS = ["0xa80240Eb5d7E05d3F250cF000eEc0891d00b51CC"]
@@ -50,7 +50,6 @@ class Pancakeswap {
 	getContract(contractAbi, contractAddress) {
 		return new this.web3.eth.Contract(contractAbi, contractAddress)
 	}
-
 
 	pause() {
 		this.paused = true;
@@ -137,19 +136,15 @@ class Pancakeswap {
 		const rewardForPeriod = rewardsPerBlock.multipliedBy(this.BLOCKS_PER_YEAR);
 		const cakeForPeriod = rewardForPeriod.multipliedBy(tokenCakeRate); //* (1 - this.FEE)
 		const apr = (tvl.plus(cakeForPeriod).div(tvl).minus(1).multipliedBy(100));
+
 		if (apr.gt( new BigNumber(5000))) {
 			console.log(" ERROR: calcApy bogus apr", apr.toString());
 			return 0;
 		}
-		console.log(apr.toString())
-		const apy = this.aprToApy(apr.toString())
-		 if (poolAddress === '0x53A2D1db049b5271c6b6dB020dBa0e8A7C4Eb90d') {
-		 	console.log(rewardForPeriod, cakeForPeriod, tvl, apr.toString(), apy)
-		 	console.log('0x53A2D1db049b5271c6b6dB020dBa0e8A7C4Eb90d0x53A2D1db049b5271c6b6dB020dBa0e8A7C4Eb90d0x53A2D1db049b5271c6b6dB020dBa0e8A7C4Eb90d')
-		 }
-		console.log(apy)
 
-		return apy;
+		console.log(apr.toString())
+
+		return this.aprToApy(apr.toString())
 	}
 
 
@@ -221,7 +216,7 @@ class Pancakeswap {
 
 		if (reply == null) {
 			reply = blockNum - this.PAST_EVENTS_N_BLOCKS
-			debug(`reply was set to ${reply}`)
+			debug(`lastBlockUpdate was not found in redis`)
 		}
 
 		this.lastBlockUpdate = reply
@@ -238,19 +233,25 @@ class Pancakeswap {
 		}
 
 		if (reply == null) {
-			debug('setting poolInfo to null...')
+			debug('poolInfo was not found in redis')
 			this.poolsInfo = {}
 			return
 		}
 
 		this.poolsInfo = JSON.parse(reply)
+		debug('poolInfo was successfully loaded')
 	}
 
 	async savePoolsInfo(lastBlockUpdate) {
 
 		if (!Object.keys(this.poolsInfo).length) {
-			throw new FatalError("panacakeswap No pools found");
+			throw new FatalError("No pools found");
 		}
+
+		if (!lastBlockUpdate) {
+			throw new FatalError(`Invalid lastBlockUpdate ${lastBlockUpdate}`)
+		}
+
 		this.lastBlockUpdate = lastBlockUpdate
 		await this.redisClient.set('lastBlockUpdate', this.lastBlockUpdate)
 		await this.redisClient.set('poolsInfo', JSON.stringify(this.poolsInfo))
@@ -272,6 +273,7 @@ class Pancakeswap {
 		if (this.paused) {
 			return;
 		}
+
 		let blockNum = await this.web3.eth.getBlockNumber()
 
 		if (this.lastBlockUpdate == null) {
@@ -334,7 +336,7 @@ class Pancakeswap {
                 'bonusEndBlock': bonusEndBlock,
                 'abi': abi,
                 'routeToCake': [rewardToken, BNB_ADDRESS, CAKE_ADDRESS],
-                'active': true, // default will be set to false on setActivePools
+                'active': true, // default, will be set to false on setActivePools
             }
         }
 
