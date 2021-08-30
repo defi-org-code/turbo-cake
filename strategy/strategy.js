@@ -79,7 +79,7 @@ class Strategy {
             await this.init();
 
             this.intervalId = setInterval(() => this.run(), this.tickInterval);
-            await this.run();
+            setTimeout(this.run,0);
 
         } catch (e) {
             this.notif.sendDiscord(`[ERROR] unhandled error: ${e}`);

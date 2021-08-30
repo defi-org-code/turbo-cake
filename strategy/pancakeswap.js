@@ -20,7 +20,7 @@ class Pancakeswap {
 	BLOCKS_PER_DAY = this.SECONDS_PER_DAY / this.AVG_BLOCK_SEC
 	BLOCKS_PER_YEAR = this.BLOCKS_PER_DAY * 365
 
-	PAST_EVENTS_N_DAYS =  90
+	PAST_EVENTS_N_DAYS =  10
 	PAST_EVENTS_N_BLOCKS = Math.floor(this.PAST_EVENTS_N_DAYS * this.BLOCKS_PER_DAY)
 
 	EXCLUDED_POOLS = ["0xa80240Eb5d7E05d3F250cF000eEc0891d00b51CC"]
@@ -34,7 +34,6 @@ class Pancakeswap {
 
         this.poolsInfo = {}
         this.lastBlockUpdate = null
-		this.paused = false;
     }
 
 	async init() {
@@ -49,14 +48,6 @@ class Pancakeswap {
 
 	getContract(contractAbi, contractAddress) {
 		return new this.web3.eth.Contract(contractAbi, contractAddress)
-	}
-
-	pause() {
-		this.paused = true;
-	}
-
-	resume() {
-		this.paused = false;
 	}
 
 	async getStakingAddr() {
@@ -86,9 +77,6 @@ class Pancakeswap {
     async update() {
 
         try {
-			if (this.paused) {
-				return;
-			}
 
             if (this.lastUpdate != null && Date.now() - this.lastUpdate < this.pancakeUpdateInterval) {
                 return;
@@ -269,10 +257,6 @@ class Pancakeswap {
     async fetchPools() {
 
 		debug('fetchPools ... ')
-
-		if (this.paused) {
-			return;
-		}
 
 		let blockNum = await this.web3.eth.getBlockNumber()
 
