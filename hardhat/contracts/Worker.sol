@@ -44,11 +44,11 @@ contract Worker is ReentrancyGuard, IWorker {
 
 	function withdraw(address stakedPoolAddr, uint256 amount, uint256 pid) private {
 
-		if (amount == 0) {
-			UserInfo memory userInfo;
-			userInfo = ICakePools(stakedPoolAddr).userInfo(address(this));
-			amount = userInfo.amount;
-		}
+//		if (amount == 0) {
+//			UserInfo memory userInfo;
+//			userInfo = ICakePools(stakedPoolAddr).userInfo(address(this));
+//			amount = userInfo.amount;
+//		}
 
 		if (pid == 0) {
 			ICakePools(stakedPoolAddr).leaveStaking(amount);

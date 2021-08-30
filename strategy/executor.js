@@ -208,7 +208,7 @@ class Executor extends TxManager {
         console.log(`executor.harvest: start pool ${args.poolAddress} `);
 
 		const syrupPool = await this.setupSyrupPool(args.poolAddress);
-		const withdrawn = await this.withdraw(syrupPool, 0);  // TODO: GAD why?
+		const withdrawn = await this.withdraw(syrupPool, 0);
 		await this.swapAllToCake(withdrawn.rewardTokenAddr);
 		const cakeBalance = await this.cakeContract.methods.balanceOf(this.account.address).call();
 		await this.depositCake(syrupPool, cakeBalance);
