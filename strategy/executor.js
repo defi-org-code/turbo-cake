@@ -2,6 +2,7 @@ const {Action} = require("./policy");
 const {TxManager} = require("./txManager");
 const {
     SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS, MASTER_CHEF_ADDRESS, WBNB_ADDRESS, ROUTER_ADDRESS,
+    MANAGER_ADDRESS
 } = require('./params')
 const {
     MASTERCHEF_ABI,
@@ -9,6 +10,7 @@ const {
     CAKE_ABI,
     BEP_20_ABI,
     ROUTER_V2_ABI,
+    MANAGER_ABI
 } = require('../abis')
 const {TransactionFailure, FatalError, GasError, NotImplementedError} = require('../errors');
 
@@ -21,7 +23,6 @@ const SyrupPoolType = {
 
 
 class Executor extends TxManager {
-
 
     constructor(args) {
         super(args.notifClient);
@@ -38,6 +39,7 @@ class Executor extends TxManager {
         this.result = null;
         this.onSuccessCallback = null;
         this.onFailureCallback = null;
+        this.managerContract = this.getContract(MANAGER_ABI, MANAGER_ADDRESS)
 
         this.cakeContract =  new this.web3.eth.Contract(
             CAKE_ABI,
@@ -54,10 +56,17 @@ class Executor extends TxManager {
             ROUTER_ADDRESS);
     }
 
+	getContract(contractAbi, contractAddress) {
+		return new this.web3.eth.Contract(contractAbi, contractAddress)
+	}
 
     async run() {
 
-        console.log("executor.run: start");
+		console.log("executor.run: start");
+		setTimeout(async () => await this.worker(), 0)
+	}
+
+	async worker() {
 
         try {
             this.status = "running";
@@ -75,7 +84,6 @@ class Executor extends TxManager {
 
                 case Action.HARVEST:
                     await this.harvest(args);
-
                     break;
 
                 case Action.SWITCH:
@@ -133,6 +141,7 @@ class Executor extends TxManager {
     }
 
     async sendTransactionWait(encodedTx, to, gas=undefined) {
+
         if (!encodedTx) {
             return null;
         }
@@ -161,14 +170,12 @@ class Executor extends TxManager {
 
             return res;
 
-
         } catch (error) {
             this.notif.sendDiscord(`failed to send transaction: ${error}`);
             console.log(error);
             throw new TransactionFailure(error);
         }
     }
-
 
     pendingWait = (milliseconds, txHash) => {
         return new Promise(resolve => setTimeout(async () => {
@@ -179,11 +186,16 @@ class Executor extends TxManager {
         }, milliseconds), )
     }
 
+	async transferToWorkers(amount, start, end) {
+		let tx = this.managerContract.methods.transferToWorkers([this.cakeContract, amount, start, end]).encodeABI();
+		result.receipt = await this.sendTransactionWait(tx, syrupPool.options.address);
 
+	}
 
     async enterPosition(args) {
-        console.log(`executor.enterPosition: start pool ${args.poolAddress} `);
+        console.log(`executor.enterPosition: start pool ${args.poolAddress}`);
 
+		await this.manager.methods.deposit([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 10, 0, N_WORKERS, 0, [swapRouter, 0, revvSwapPath, deadline]])
         const syrupPool = await this.setupSyrupPool(args.poolAddress);
         const cakeBalance = await this.cakeContract.methods.balanceOf(this.account.address).call();
         console.log('cakeBalance: ', cakeBalance.toString());
@@ -377,6 +389,7 @@ class Executor extends TxManager {
 
         let syrupPool;
 
+		// TODO: gad is this a bug
         if (syrupAddr === MASTER_CHEF_ADDRESS) {
             syrupPool = this.masterchefContract;
             syrupPool.syrupType = SyrupPoolType.MANUAL_CAKE;

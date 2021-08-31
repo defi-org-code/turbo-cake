@@ -11,10 +11,6 @@ const { hideBin } = require('yargs/helpers');
 const argv = yargs(hideBin(process.argv)).argv;
 
 
-const sleep = (milliseconds) => {
-    return new Promise(resolve => setTimeout(resolve, milliseconds))
-}
-
 async function main() {
 
     const runningMode = (argv.prod==="true"? RunningMode.PRODUCTION: RunningMode.DEV);
