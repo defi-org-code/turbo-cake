@@ -43,19 +43,6 @@ class KeyEncryption {
 
 	async readPrivateKey() {
 		const epk = fs.readFileSync(this.configFileName, {'encoding': 'utf8'});
-		let input;
-
-		// if (process.env.BOT_ID !== '-1') {
-		// 	input = await prompts({
-		// 		type: "password",
-		// 		name: "password",
-		// 		message: "password",
-		// 	});
-		// } else {
-		// 	input = {"password": "1234"}
-		// }
-
-		// const password = input.password;
 		const password = process.env.PASSWORD;
 
 		if (!password || !password.length) throw new Error("invalid password");

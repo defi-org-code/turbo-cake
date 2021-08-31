@@ -166,27 +166,22 @@ class Pancakeswap {
 	async setActivePools() {
 
 		const blockNum = await this.web3.eth.getBlockNumber()
-		let bonusEndBlock
-
-		debug(this.poolsInfo)
+		let bonusEndBlock, startBlock
 
 		for (const poolAddr of Object.keys(this.poolsInfo)) {
 
 			bonusEndBlock = this.poolsInfo[poolAddr]['bonusEndBlock']
-			debug(`bonusEndBlock=${bonusEndBlock}, blockNum=${blockNum}`)
+			startBlock = this.poolsInfo[poolAddr]['startBlock']
 
 			if (!('poolRewards' in Object.keys(this.poolsInfo[poolAddr]))) {
 				this.poolsInfo[poolAddr]['poolRewards'] = await this.fetchPoolRewards(poolAddr)
 			}
 
-			debug(`poolRewards=${this.poolsInfo[poolAddr]['poolRewards']}`)
-
-			if ((bonusEndBlock <= blockNum) || (poolAddr in this.EXCLUDED_POOLS) ||
-			(this.poolsInfo[poolAddr]['hasUserLimit'] === true) || (this.poolsInfo[poolAddr]['poolRewards'] === 0)) {
-				this.poolsInfo[poolAddr]['active'] = false
-			}
+			this.poolsInfo[poolAddr]['active'] = !((startBlock > blockNum) || (bonusEndBlock <= blockNum) || (poolAddr in this.EXCLUDED_POOLS) ||
+				(this.poolsInfo[poolAddr]['hasUserLimit'] === true) || (this.poolsInfo[poolAddr]['poolRewards'] === '0'));
 		}
 
+		debug(this.poolsInfo)
 	}
 
 	async updatePoolsApy() {
@@ -292,6 +287,7 @@ class Pancakeswap {
 				const hasUserLimit = await smartChef.methods.hasUserLimit().call()
 				const rewardPerBlock = await smartChef.methods.rewardPerBlock().call()
 				const bonusEndBlock = await smartChef.methods.bonusEndBlock().call()
+				const startBlock = await smartChef.methods.startBlock().call()
 
 				debug(`poolAddr=${poolAddr}, bonusEndBlock=${bonusEndBlock}, rewardToken=${rewardToken}, stakedToken=${stakedToken}, hasUserLimit=${hasUserLimit}, ${hasUserLimit === true}`)
 
@@ -308,7 +304,7 @@ class Pancakeswap {
 					'rewardSymbol': symbol,
 					'hasUserLimit': hasUserLimit,
 					'rewardPerBlock': rewardPerBlock,
-					'bonusEndBlock': bonusEndBlock,
+					'startBlock': startBlock,
 					'abi': SMARTCHEF_INITIALIZABLE_ABI,
 					'routeToCake': [rewardToken, BNB_ADDRESS, CAKE_ADDRESS],
 					'active': true, // default, will be set to false on setActivePools
