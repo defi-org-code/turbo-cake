@@ -21,7 +21,7 @@ async function main() {
     const runningMode = (argv.prod==="true"? RunningMode.PRODUCTION: RunningMode.DEV);
 
     const web3 = new Web3(process.env.ENDPOINT_HTTPS);
-    const account = w3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
+    const account = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
 
     //
     // let w3;
