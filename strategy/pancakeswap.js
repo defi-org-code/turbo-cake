@@ -1,5 +1,5 @@
 const {getPastEventsLoop} = require('../bscFetcher')
-const {SMARTCHEF_FACTORY_ABI, CAKE_ABI, BEP_20_ABI, ROUTER_V2_ABI} = require('../abis')
+const {SMARTCHEF_FACTORY_ABI, CAKE_ABI, BEP_20_ABI, SMARTCHEF_INITIALIZABLE_ABI,  ROUTER_V2_ABI} = require('../abis')
 const {MASTER_CHEF_ADDRESS, SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS, BNB_ADDRESS, ROUTER_V2_ADDRESS} = require('./params')
 const nodeFetch = require("node-fetch")
 
@@ -37,9 +37,9 @@ class Pancakeswap {
     }
 
 	async init() {
-		this.smartchefFactoryContract = await this.getContract(SMARTCHEF_FACTORY_ABI, SMARTCHEF_FACTORY_ADDRESS)
-		this.cakeContract = await this.getContract(CAKE_ABI, CAKE_ADDRESS)
-		this.routerV2Contract = await this.getContract(ROUTER_V2_ABI, ROUTER_V2_ADDRESS)
+		this.smartchefFactoryContract = this.getContract(SMARTCHEF_FACTORY_ABI, SMARTCHEF_FACTORY_ADDRESS)
+		this.cakeContract =this.getContract(CAKE_ABI, CAKE_ADDRESS)
+		this.routerV2Contract = this.getContract(ROUTER_V2_ABI, ROUTER_V2_ADDRESS)
 
 		await this.getLastBlockUpdate()
 		await this.getPoolsInfo()
@@ -248,7 +248,6 @@ class Pancakeswap {
 	}
 
 	async fetchAbi(addr) {
-
 		const bscscanAbiUrl =  `https://api.bscscan.com/api?module=contract&action=getabi&address=${addr}&apiKey=${process.env.BSCSCAN_API_KEY}`
 		const data = await nodeFetch(bscscanAbiUrl).then(response => response.json())
 		return JSON.parse(data.result)
@@ -278,49 +277,41 @@ class Pancakeswap {
 		const fetchNBlocks = blockNum - this.lastBlockUpdate
 
         let events = await getPastEventsLoop(this.smartchefFactoryContract, 'NewSmartChefContract', fetchNBlocks, blockNum)
-        // let events = await getPastEventsLoop(this.smartchefFactoryContract, 'NewSmartChefContract', 1, 9676518) // 9676510, TODO : remove me dbg only
-
-        let symbol
 
         for (const event of events) {
-            let poolAddr = event['returnValues']['smartChef']
-            let abi = await this.fetchAbi(poolAddr)
-            let contract = this.getContract(abi, poolAddr)
-            let rewardToken = await contract.methods.rewardToken().call()
-            let stakedToken = await contract.methods.stakedToken().call()
-            let hasUserLimit = await contract.methods.hasUserLimit().call()
-            let rewardPerBlock = await contract.methods.rewardPerBlock().call()
-            let bonusEndBlock = await contract.methods.bonusEndBlock().call()
 
-            debug(`poolAddr=${poolAddr}, bonusEndBlock=${bonusEndBlock}, rewardToken=${rewardToken}, stakedToken=${stakedToken}, hasUserLimit=${hasUserLimit}, ${hasUserLimit === true}`)
+        	try {
+				const poolAddr = event['returnValues']['smartChef']
+				const smartChef = this.getContract(SMARTCHEF_INITIALIZABLE_ABI, poolAddr);
+				const rewardToken = await smartChef.methods.rewardToken().call()
+				const stakedToken = await smartChef.methods.stakedToken().call()
+				const hasUserLimit = await smartChef.methods.hasUserLimit().call()
+				const rewardPerBlock = await smartChef.methods.rewardPerBlock().call()
+				const bonusEndBlock = await smartChef.methods.bonusEndBlock().call()
 
-            if (stakedToken !== CAKE_ADDRESS) {
-                continue
-            }
+				debug(`poolAddr=${poolAddr}, bonusEndBlock=${bonusEndBlock}, rewardToken=${rewardToken}, stakedToken=${stakedToken}, hasUserLimit=${hasUserLimit}, ${hasUserLimit === true}`)
 
-            try {
-                contract = this.getContract(await this.fetchAbi(rewardToken), rewardToken)
-                symbol = await contract.methods.symbol().call()
+				if (stakedToken !== CAKE_ADDRESS) {
+					continue
+				}
+
+            	const bep20 = this.getContract(BEP_20_ABI, rewardToken);
+				const symbol = await bep20.methods.symbol().call()
+				debug(poolAddr, symbol, rewardToken, stakedToken)
+
+				this.poolsInfo[poolAddr] = {
+					'rewardToken': rewardToken,
+					'rewardSymbol': symbol,
+					'hasUserLimit': hasUserLimit,
+					'rewardPerBlock': rewardPerBlock,
+					'bonusEndBlock': bonusEndBlock,
+					'abi': SMARTCHEF_INITIALIZABLE_ABI,
+					'routeToCake': [rewardToken, BNB_ADDRESS, CAKE_ADDRESS],
+					'active': true, // default, will be set to false on setActivePools
+				}
 
             } catch (e) {
-                this.notif.sendDiscord(`failed to fetch rewardToken (${rewardToken}): ${e}, trying fetch with bep-20 abi ...`)
-
-                contract = this.getContract(BEP_20_ABI, rewardToken)
-                symbol = await contract.methods.symbol().call()
-                this.notif.sendDiscord(`succeeded fetching (${rewardToken}) info`)
-            }
-
-            debug(poolAddr, symbol, rewardToken, stakedToken)
-
-            this.poolsInfo[poolAddr] = {
-                'rewardToken': rewardToken,
-                'rewardSymbol': symbol,
-                'hasUserLimit': hasUserLimit,
-                'rewardPerBlock': rewardPerBlock,
-                'bonusEndBlock': bonusEndBlock,
-                'abi': abi,
-                'routeToCake': [rewardToken, BNB_ADDRESS, CAKE_ADDRESS],
-                'active': true, // default, will be set to false on setActivePools
+                this.notif.sendDiscord(`failed to setup smartChef info for (${event['returnValues']['smartChef']}): ${e}`)
             }
         }
 

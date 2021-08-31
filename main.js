@@ -20,6 +20,9 @@ async function main() {
 
     const runningMode = (argv.prod==="true"? RunningMode.PRODUCTION: RunningMode.DEV);
 
+
+
+
     let w3;
     let account;
     if (runningMode === RunningMode.PRODUCTION) {

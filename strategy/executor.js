@@ -3,6 +3,7 @@ const {TxManager} = require("./txManager");
 const {
     SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS, MASTER_CHEF_ADDRESS, WBNB_ADDRESS, ROUTER_ADDRESS,
 } = require('./params')
+
 const {
     MASTERCHEF_ABI,
     SMARTCHEF_INITIALIZABLE_ABI,
@@ -267,7 +268,7 @@ class Executor extends TxManager {
     }
 
     async withdraw(syrupPool, amount) {
-        console.log(`executor.withdraw: from pool ${syrupPool.options.address} type ${SyrupPoolType.SMARTCHEF}`);
+        console.log(`executor.withdraw: from pool ${syrupPool.options.address} type ${SyrupPoolType.SMARTCHEF} the amount ${amount}`);
 
         const result = {
             step: "withdraw",
