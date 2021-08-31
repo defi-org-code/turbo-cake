@@ -43,6 +43,11 @@ class GreedyPolicy extends Policy {
 
     	let apyDict = {}
 		for (const poolAddr of Object.keys(poolsInfo)) {
+
+			if (poolAddr[poolAddr]['active'] === false) {
+				continue
+			}
+
 			apyDict[poolsInfo[poolAddr]['apy']] = poolAddr
 		}
 

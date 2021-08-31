@@ -20,7 +20,7 @@ class Pancakeswap {
 	BLOCKS_PER_DAY = this.SECONDS_PER_DAY / this.AVG_BLOCK_SEC
 	BLOCKS_PER_YEAR = this.BLOCKS_PER_DAY * 365
 
-	PAST_EVENTS_N_DAYS =  90
+	PAST_EVENTS_N_DAYS =  10
 	PAST_EVENTS_N_BLOCKS = Math.floor(this.PAST_EVENTS_N_DAYS * this.BLOCKS_PER_DAY)
 
 	EXCLUDED_POOLS = ["0xa80240Eb5d7E05d3F250cF000eEc0891d00b51CC"]
@@ -118,31 +118,15 @@ class Pancakeswap {
 		return 100 * ((1 + apr / 100 / n) ** (n*t) - 1)
 	}
 
-	 calcApy(rewardsPerBlock, tokenCakeRate, tvl, poolAddress) {
-
-	 	if (this.poolsInfo[poolAddress]['active'] === false) {
-	 		return 0
-	 	}
+	 calcApy(rewardsPerBlock, tokenCakeRate, tvl) {
 
 		tvl = new BigNumber(tvl);
 		tokenCakeRate = new BigNumber(tokenCakeRate);
 		rewardsPerBlock = new BigNumber(rewardsPerBlock);
 
-		if (tvl.lt(rewardsPerBlock)) {
-			console.log(" ERROR: calcApy bogus tvl", tvl.toString());
-			console.log(poolAddress)
-			return 0;
-		}
 		const rewardForPeriod = rewardsPerBlock.multipliedBy(this.BLOCKS_PER_YEAR);
 		const cakeForPeriod = rewardForPeriod.multipliedBy(tokenCakeRate); //* (1 - this.FEE)
 		const apr = (tvl.plus(cakeForPeriod).div(tvl).minus(1).multipliedBy(100));
-
-		if (apr.gt( new BigNumber(5000))) {
-			console.log(" ERROR: calcApy bogus apr", apr.toString());
-			return 0;
-		}
-
-		console.log(apr.toString())
 
 		return this.aprToApy(apr.toString())
 	}
@@ -182,7 +166,13 @@ class Pancakeswap {
 
 		const poolTvl = await this.getPoolTvl(poolAddr)
 		const tokenCakeRate = await this.getTokenCakeRate(poolAddr)
-		return this.calcApy(this.poolsInfo[poolAddr]['rewardPerBlock'], tokenCakeRate, poolTvl, poolAddr)
+		return this.calcApy(this.poolsInfo[poolAddr]['rewardPerBlock'], tokenCakeRate, poolTvl)
+	}
+
+	async fetchPoolRewards(poolAddr) {
+		const rewardContract = await this.getContract(BEP_20_ABI, this.poolsInfo[poolAddr]['rewardToken'])
+
+		return await rewardContract.methods.balanceOf(poolAddr).call()
 	}
 
 	async setActivePools() {
@@ -190,11 +180,21 @@ class Pancakeswap {
 		const blockNum = await this.web3.eth.getBlockNumber()
 		let bonusEndBlock
 
+		debug(this.poolsInfo)
+
 		for (const poolAddr of Object.keys(this.poolsInfo)) {
 
 			bonusEndBlock = this.poolsInfo[poolAddr]['bonusEndBlock']
 			debug(`bonusEndBlock=${bonusEndBlock}, blockNum=${blockNum}`)
-			if ((bonusEndBlock <= blockNum) || (poolAddr in this.EXCLUDED_POOLS) || (this.poolsInfo[poolAddr]['hasUserLimit'] === true)) {
+
+			if (!('poolRewards' in Object.keys(this.poolsInfo[poolAddr]))) {
+				this.poolsInfo[poolAddr]['poolRewards'] = await this.fetchPoolRewards(poolAddr)
+			}
+
+			debug(`poolRewards=${this.poolsInfo[poolAddr]['poolRewards']}`)
+
+			if ((bonusEndBlock <= blockNum) || (poolAddr in this.EXCLUDED_POOLS) ||
+			(this.poolsInfo[poolAddr]['hasUserLimit'] === true) || (this.poolsInfo[poolAddr]['poolRewards'] === 0)) {
 				this.poolsInfo[poolAddr]['active'] = false
 			}
 		}
@@ -207,6 +207,8 @@ class Pancakeswap {
 			debug('poolAddr=', poolAddr)
 			this.poolsInfo[poolAddr]['apy'] = await this.poolApy(poolAddr)
 		}
+
+		debug(`poolsInfo: ${this.poolsInfo}`)
 	}
 
 	async getLastBlockUpdate() {
@@ -296,7 +298,7 @@ class Pancakeswap {
         let events = await getPastEventsLoop(this.smartchefFactoryContract, 'NewSmartChefContract', fetchNBlocks, blockNum)
         // let events = await getPastEventsLoop(this.smartchefFactoryContract, 'NewSmartChefContract', 1, 9676518) // 9676510, TODO : remove me dbg only
 
-        let symbol
+        let symbol, poolRewards
 
         for (const event of events) {
             let poolAddr = event['returnValues']['smartChef']
@@ -315,17 +317,15 @@ class Pancakeswap {
             }
 
             try {
-                contract = this.getContract(await this.fetchAbi(rewardToken), rewardToken)
-                symbol = await contract.methods.symbol().call()
+                contract = this.getContract(BEP_20_ABI, rewardToken)
 
             } catch (e) {
-                this.notif.sendDiscord(`failed to fetch rewardToken (${rewardToken}): ${e}, trying fetch with bep-20 abi ...`)
-
-                contract = this.getContract(BEP_20_ABI, rewardToken)
-                symbol = await contract.methods.symbol().call()
-                this.notif.sendDiscord(`succeeded fetching (${rewardToken}) info`)
+                this.notif.sendDiscord(`failed to fetch rewardToken (${rewardToken}): ${e}`)
+				continue
             }
 
+			symbol = await contract.methods.symbol().call()
+			poolRewards = contract.methods.balanceOf(poolAddr)
             debug(poolAddr, symbol, rewardToken, stakedToken)
 
             this.poolsInfo[poolAddr] = {
@@ -337,6 +337,7 @@ class Pancakeswap {
                 'abi': abi,
                 'routeToCake': [rewardToken, BNB_ADDRESS, CAKE_ADDRESS],
                 'active': true, // default, will be set to false on setActivePools
+                'poolRewards': poolRewards
             }
         }
 
