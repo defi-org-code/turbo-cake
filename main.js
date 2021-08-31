@@ -1,6 +1,4 @@
 const hre = require("hardhat");
-// const Web3 = require("web3");
-const { web3 } = require("hardhat");
 
 const KeyEncryption = require('./keyEncryption');
 const env = require('dotenv').config();
@@ -16,13 +14,15 @@ async function main() {
 
     const runningMode = (argv.prod==="true"? RunningMode.PRODUCTION: RunningMode.DEV);
 
-    // const web3 = new Web3(process.env.ENDPOINT_HTTPS);
     let account
 
     if (runningMode === RunningMode.PRODUCTION) {
+    	const Web3 = require("web3");
+		const web3 = new Web3(process.env.ENDPOINT_HTTPS);
 	    account = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
 
     } else if (runningMode === RunningMode.DEV) {
+		const {web3} = require("hardhat");
         // account = web3.eth.accounts.create();
 	    account = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
 
