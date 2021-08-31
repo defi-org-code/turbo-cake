@@ -1,4 +1,4 @@
-const { RunningMode } = require("../config");
+const {RunningMode} = require("../config");
 
 const Action = {
     NO_OP: "no-op",
@@ -31,7 +31,6 @@ class GreedyPolicy extends Policy {
         this.syrupSwitchInterval = config.syrupSwitchInterval; // TODO: change name to minMilisecBetweenSyrupSwitch
         this.harvestInterval = config.harvestInterval;
         this.apySwitchTh = config.apySwitchTh;
-        this.paused = false;
         this.runningMode = config.runningMode
     }
 
@@ -70,13 +69,6 @@ class GreedyPolicy extends Policy {
 				(poolsInfo[curSyrupPoolAddr]['active'] === false);
 	}
 
-    pause() {
-        this.paused = true;
-    }
-
-    resume() {
-        this.paused = false;
-    }
 
     async getAction(args) {
 
@@ -85,10 +77,6 @@ class GreedyPolicy extends Policy {
 		* check move criteria
 		* return action
 		* */
-
-        if (this.paused) {
-            return args.lastAction;
-        }
 
         if (args.curSyrupPoolAddr == null) { // enter "top" syrup pool apy estimate
 

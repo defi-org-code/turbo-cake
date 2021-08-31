@@ -3,6 +3,7 @@ const {TxManager} = require("./txManager");
 const {
     SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS, MASTER_CHEF_ADDRESS, WBNB_ADDRESS, ROUTER_ADDRESS,
 } = require('./params')
+
 const {
     MASTERCHEF_ABI,
     SMARTCHEF_INITIALIZABLE_ABI,
@@ -39,7 +40,7 @@ class Executor extends TxManager {
         this.onSuccessCallback = null;
         this.onFailureCallback = null;
 
-        this.cakeContract =  new this.web3.eth.Contract(
+        this.cakeContract = new this.web3.eth.Contract(
             CAKE_ABI,
             CAKE_ADDRESS);
 
@@ -132,7 +133,7 @@ class Executor extends TxManager {
         }
     }
 
-    async sendTransactionWait(encodedTx, to, gas=undefined) {
+    async sendTransactionWait(encodedTx, to, gas = undefined) {
         if (!encodedTx) {
             return null;
         }
@@ -140,7 +141,7 @@ class Executor extends TxManager {
 
 
             let transactionObject = {
-                gas: (gas? gas: 500000),
+                gas: (gas ? gas : 500000),
                 data: encodedTx,
                 from: this.account.address,
                 to: to,
@@ -173,12 +174,15 @@ class Executor extends TxManager {
     pendingWait = (milliseconds, txHash) => {
         return new Promise(resolve => setTimeout(async () => {
             const res = await this.web3.eth.getTransactionReceipt(txHash);
-            if (res === null) { return this.pendingWait(milliseconds, txHash)}
-            if (res['status'] === true) { resolve(res)}
+            if (res === null) {
+                return this.pendingWait(milliseconds, txHash)
+            }
+            if (res['status'] === true) {
+                resolve(res)
+            }
             return null;
-        }, milliseconds), )
+        }, milliseconds),)
     }
-
 
 
     async enterPosition(args) {
@@ -196,10 +200,10 @@ class Executor extends TxManager {
     async exitPosition(args) {
         console.log(`executor.exitPosition: start pool ${args.poolAddress} `);
 
-		const syrupPool = await this.setupSyrupPool(args.poolAddress);
-		const stakedAmount = await this.getStakedAmount(syrupPool, this.account.address);
-		const withdrawn = await this.withdraw(syrupPool, stakedAmount);
-		await this.swapAllToCake(withdrawn.rewardTokenAddr);
+        const syrupPool = await this.setupSyrupPool(args.poolAddress);
+        const stakedAmount = await this.getStakedAmount(syrupPool, this.account.address);
+        const withdrawn = await this.withdraw(syrupPool, stakedAmount);
+        await this.swapAllToCake(withdrawn.rewardTokenAddr);
 
         console.log("executor.exitPosition: end");
     }
@@ -207,11 +211,11 @@ class Executor extends TxManager {
     async harvest(args) {
         console.log(`executor.harvest: start pool ${args.poolAddress} `);
 
-		const syrupPool = await this.setupSyrupPool(args.poolAddress);
-		const withdrawn = await this.withdraw(syrupPool, 0);
-		await this.swapAllToCake(withdrawn.rewardTokenAddr);
-		const cakeBalance = await this.cakeContract.methods.balanceOf(this.account.address).call();
-		await this.depositCake(syrupPool, cakeBalance);
+        const syrupPool = await this.setupSyrupPool(args.poolAddress);
+        const withdrawn = await this.withdraw(syrupPool, 0);
+        await this.swapAllToCake(withdrawn.rewardTokenAddr);
+        const cakeBalance = await this.cakeContract.methods.balanceOf(this.account.address).call();
+        await this.depositCake(syrupPool, cakeBalance);
 
         console.log("executor.harvest: end");
     }
@@ -226,9 +230,9 @@ class Executor extends TxManager {
         console.log("executor.switchPools: end");
     }
 
-	sleep = (milliseconds) => {
-		return new Promise(resolve => setTimeout(resolve, milliseconds))
-	}
+    sleep = (milliseconds) => {
+        return new Promise(resolve => setTimeout(resolve, milliseconds))
+    }
 
     async depositCake(syrupPool, amount) {
 
@@ -264,7 +268,7 @@ class Executor extends TxManager {
     }
 
     async withdraw(syrupPool, amount) {
-        console.log(`executor.withdraw: from pool ${syrupPool.options.address} type ${SyrupPoolType.SMARTCHEF}`);
+        console.log(`executor.withdraw: from pool ${syrupPool.options.address} type ${SyrupPoolType.SMARTCHEF} the amount ${amount}`);
 
         const result = {
             step: "withdraw",
