@@ -27,7 +27,7 @@ async function main() {
     let account;
     if (runningMode === RunningMode.PRODUCTION) {
         w3 = new Web3(process.env.ENDPOINT_HTTPS);
-        account = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
+        account = w3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
 
     } else if (runningMode === RunningMode.DEV) {
         w3 = web3;
