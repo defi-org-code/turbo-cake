@@ -181,7 +181,6 @@ class Pancakeswap {
 				(this.poolsInfo[poolAddr]['hasUserLimit'] === true) || (this.poolsInfo[poolAddr]['poolRewards'] === '0'));
 		}
 
-		debug(this.poolsInfo)
 	}
 
 	async updatePoolsApy() {
