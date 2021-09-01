@@ -131,9 +131,10 @@ class Strategy {
             await this.executeAction();
 
         } catch (e) {
-            debug(e)
+
             if (e instanceof FatalError) {
                 this.beforeExit(e)
+
             } else {
                 this.beforeExit(e)
             }
