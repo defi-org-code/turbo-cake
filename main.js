@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-let {web3} = require("hardhat");
+// let {web3} = require("hardhat");
 
 const KeyEncryption = require('./keyEncryption');
 const env = require('dotenv').config();
@@ -34,7 +34,6 @@ async function main() {
         const cakeContract =  new web3.eth.Contract(CAKE_ABI, CAKE_ADDRESS);
         let amount = await cakeContract.methods.balanceOf(CAKE_WHALE_ACCOUNT).call()
         await cakeContract.methods.transfer(account.address, amount.toString()).send({ from: CAKE_WHALE_ACCOUNT});
-
     }
 
     web3.eth.defaultAccount = account.address;
