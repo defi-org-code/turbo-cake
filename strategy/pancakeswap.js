@@ -171,8 +171,8 @@ class Pancakeswap {
 
 		for (const poolAddr of Object.keys(this.poolsInfo)) {
 
-			bonusEndBlock = this.poolsInfo[poolAddr]['bonusEndBlock']
-			startBlock = this.poolsInfo[poolAddr]['startBlock']
+			bonusEndBlock = Number(this.poolsInfo[poolAddr]['bonusEndBlock'])
+			startBlock = Number(this.poolsInfo[poolAddr]['startBlock'])
 
 			if (!('poolRewards' in Object.keys(this.poolsInfo[poolAddr]))) {
 				this.poolsInfo[poolAddr]['poolRewards'] = await this.fetchPoolRewards(poolAddr)
