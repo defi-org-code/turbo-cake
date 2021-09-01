@@ -8,7 +8,7 @@ class Notifications {
 	}
 
 	sendDiscord(msg) {
-		if (this.runningMode === RunningMode.DEV || (process.env.MUTE_DISCORD===true)) {
+		if (this.runningMode === RunningMode.DEV || (process.env.MUTE_DISCORD==="true")) {
 			console.log(msg);
 			return
 		}
