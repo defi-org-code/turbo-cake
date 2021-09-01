@@ -139,7 +139,6 @@ class Executor extends TxManager {
         }
         try {
 
-
             let transactionObject = {
                 gas: (gas ? gas : 500000),
                 data: encodedTx,
@@ -148,9 +147,9 @@ class Executor extends TxManager {
             };
 
             console.log("sendTransactionWait ");
-            console.log(transactionObject);
+            console.log('transactionObject: ', transactionObject);
             const signedTx = await this.account.signTransaction(transactionObject);
-            console.log(signedTx)
+            console.log('signedTx:', signedTx)
 
             const txResponse = await this.web3.eth.sendSignedTransaction(signedTx.rawTransaction);
             console.log('## txResponse ##');
@@ -165,7 +164,6 @@ class Executor extends TxManager {
 
         } catch (error) {
             this.notif.sendDiscord(`failed to send transaction: ${error}`);
-            console.log(error);
             throw new TransactionFailure(error);
         }
     }
@@ -397,7 +395,6 @@ class Executor extends TxManager {
                 return null;
             }
         } catch (e) {
-            console.log(e);
             throw new FatalError(`executor.getSyrupType: unsupported pool type for syrup address ${syrupAddr} `);
         }
 
@@ -410,10 +407,9 @@ class Executor extends TxManager {
     }
 
     handleExecutionError(err) {
-        console.log(err);
+        this.notif.sendDiscord(err);
         this.status = "failure";
     }
-
 
     invalidAction() {
         return Promise.resolve(undefined);

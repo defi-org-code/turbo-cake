@@ -25,9 +25,12 @@ const RunningMode = {
     PRODUCTION: "production",
 }
 
+const MUTE_NOTIF = true
+
 
 module.exports = {
     RunningMode,
+    MUTE_NOTIF,
     PANCAKE_UPDATE_INTERVAL,
     SYRUP_SWITCH_INTERVAL,
     HARVEST_INTERVAL,

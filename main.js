@@ -15,7 +15,6 @@ async function main() {
     const runningMode = (argv.prod==="true"? RunningMode.PRODUCTION: RunningMode.DEV);
 
     let account
-
 	let web3
 
     if (runningMode === RunningMode.PRODUCTION) {
@@ -38,7 +37,7 @@ async function main() {
 
     web3.eth.defaultAccount = account.address;
 
-    console.debug(`[PID pid ${process.pid}] Starting Bot at address ${account.address} in ${runningMode} mode`);
+    console.debug(`[PID pid ${process.pid}] Starting Bot: address=${account.address}, mode=${runningMode}`);
 
     const strategy = new Strategy(env, runningMode, account, web3);
     await strategy.start();

@@ -88,9 +88,10 @@ class Pancakeswap {
 			await this.setActivePools()
 			await this.updatePoolsApy()
 
+			debug(`poolsInfo: ${this.poolsInfo}`)
+
         } catch (e) {
-            console.log("Error updating pancakeswap.env.poolsInfo");
-            console.error(e);
+            this.notif.sendDiscord(`strategy update error: ${e}`);
         }
     }
 
