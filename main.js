@@ -16,9 +16,9 @@ async function main() {
     const runningMode = (argv.prod==="true"? RunningMode.PRODUCTION: RunningMode.DEV);
 
     let account
+	let web3
 
     if (runningMode === RunningMode.PRODUCTION) {
-		let web3
     	const Web3 = require("web3");
 		web3 = new Web3(process.env.ENDPOINT_HTTPS);
 	    account = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
