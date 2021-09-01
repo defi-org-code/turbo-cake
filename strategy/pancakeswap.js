@@ -88,8 +88,6 @@ class Pancakeswap {
 			await this.setActivePools()
 			await this.updatePoolsApy()
 
-			debug(`poolsInfo: ${JSON.stringify(this.poolsInfo)}`)
-
         } catch (e) {
             this.notif.sendDiscord(`strategy update error: ${e}`);
         }
@@ -187,8 +185,8 @@ class Pancakeswap {
 	async updatePoolsApy() {
 
 		for (const poolAddr of Object.keys(this.poolsInfo)) {
-			debug('poolAddr=', poolAddr)
 			this.poolsInfo[poolAddr]['apy'] = await this.poolApy(poolAddr)
+			debug(`poolsInfo[${poolAddr}]=${this.poolsInfo[poolAddr]}`)
 		}
 	}
 
