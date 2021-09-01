@@ -16,13 +16,15 @@ async function main() {
 
     let account
 
+	let web3
+
     if (runningMode === RunningMode.PRODUCTION) {
     	const Web3 = require("web3");
-		const web3 = new Web3(process.env.ENDPOINT_HTTPS);
+		web3 = new Web3(process.env.ENDPOINT_HTTPS);
 	    account = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
 
     } else if (runningMode === RunningMode.DEV) {
-		const {web3} = require("hardhat");
+		web3 = require("hardhat");
         // account = web3.eth.accounts.create();
 	    account = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
 
