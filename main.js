@@ -4,7 +4,7 @@ let {web3} = require("hardhat");
 const KeyEncryption = require('./keyEncryption');
 const env = require('dotenv').config();
 const { Strategy } = require('./strategy/strategy');
-const { RunningMode, CAKE_WHALE_ACCOUNT, CAKE_ADDRESS, MUTE_DISCORD } = require('./config');
+const { RunningMode, CAKE_WHALE_ACCOUNT, CAKE_ADDRESS} = require('./config');
 const yargs = require('yargs/yargs');
 const {CAKE_ABI} = require("./abis");
 const { hideBin } = require('yargs/helpers');
@@ -39,7 +39,7 @@ async function main() {
 
     web3.eth.defaultAccount = account.address;
 
-    console.debug(`[PID pid ${process.pid}] Starting Bot: address=${account.address}, mode=${runningMode}, mute-discord=${MUTE_DISCORD}`);
+    console.debug(`[PID pid ${process.pid}] Starting Bot: address=${account.address}, mode=${runningMode}, mute-discord=${process.env.MUTE_DISCORD}`);
 
     const strategy = new Strategy(env, runningMode, account, web3);
     await strategy.start();
@@ -48,7 +48,7 @@ async function main() {
 
 main()
     .then(() => {
-		console.debug(`Bot initialized and running, mute discord notification = ${MUTE_DISCORD}`);
+		console.debug(`Bot initialized and running, mute discord notification = ${process.env.MUTE_DISCORD}`);
 	})
 	.catch((error) => {
         console.error(error);

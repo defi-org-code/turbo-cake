@@ -25,12 +25,8 @@ const RunningMode = {
     PRODUCTION: "production",
 }
 
-const MUTE_DISCORD = true
-
-
 module.exports = {
     RunningMode,
-    MUTE_DISCORD,
     PANCAKE_UPDATE_INTERVAL,
     SYRUP_SWITCH_INTERVAL,
     HARVEST_INTERVAL,
