@@ -120,6 +120,7 @@ class Strategy {
 
     async run() {
 
+		debug('strategy run')
         try {
             if (this.inTransition) {
                 return;
@@ -128,8 +129,11 @@ class Strategy {
             this.inTransition = true;
 
             await this.ps.update();
+            debug('ps udpate ended')
             await this.setAction();
+            debug('set action ended')
             await this.executeAction();
+            debug('executeAction ended')
 
         } catch (e) {
 
@@ -217,6 +221,8 @@ class Strategy {
     }
 
     async executeAction() {
+
+		debug('executeAction')
 
         const action = this.nextAction; // closure
         const startTime = Date.now();

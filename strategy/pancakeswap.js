@@ -158,8 +158,13 @@ class Pancakeswap {
 
 	async fetchPoolRewards(poolAddr) {
 		const rewardContract = await this.getContract(BEP_20_ABI, this.poolsInfo[poolAddr]['rewardToken'])
-
 		return await rewardContract.methods.balanceOf(poolAddr).call()
+	}
+
+	async fetchUpdateBonusInfo(poolAddr) {
+		const poolContract = await this.getContract(this.poolsInfo[poolAddr]['abi'], poolAddr)
+		this.poolsInfo[poolAddr]['bonusEndBlock'] = await poolContract.methods.bonusEndBlock().call()
+		this.poolsInfo[poolAddr]['startBlock'] =  await poolContract.methods.startBlock().call()
 	}
 
 	async setActivePools() {
@@ -168,6 +173,10 @@ class Pancakeswap {
 		let bonusEndBlock, startBlock
 
 		for (const poolAddr of Object.keys(this.poolsInfo)) {
+
+			if (!('bonusEndBlock' in this.poolsInfo) || !('startBlock' in this.poolsInfo)) {
+				await this.fetchUpdateBonusInfo(poolAddr)
+			}
 
 			bonusEndBlock = Number(this.poolsInfo[poolAddr]['bonusEndBlock'])
 			startBlock = Number(this.poolsInfo[poolAddr]['startBlock'])
