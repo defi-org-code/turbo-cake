@@ -89,7 +89,7 @@ class Pancakeswap {
 			await this.updatePoolsApy()
 
         } catch (e) {
-            this.notif.sendDiscord(`strategy update error: ${e}`);
+            throw FatalError(`pancake update error: ${e}`);
         }
     }
 
@@ -186,8 +186,10 @@ class Pancakeswap {
 
 		for (const poolAddr of Object.keys(this.poolsInfo)) {
 			this.poolsInfo[poolAddr]['apy'] = await this.poolApy(poolAddr)
-			debug(`poolsInfo[${poolAddr}]=${this.poolsInfo[poolAddr]}`)
 		}
+
+		console.log(`poolsInfo: ${this.poolsInfo}`)
+
 	}
 
 	async getLastBlockUpdate() {
@@ -270,8 +272,6 @@ class Pancakeswap {
 		const fetchNBlocks = blockNum - this.lastBlockUpdate
 
         let events = await getPastEventsLoop(this.smartchefFactoryContract, 'NewSmartChefContract', fetchNBlocks, blockNum)
-
-        let symbol, poolRewards
 
         for (const event of events) {
 

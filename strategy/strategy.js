@@ -74,6 +74,7 @@ class Strategy {
 
     async start() {
         try {
+        	debug(`[Strategy] start`)
             await this.init();
 
             this.intervalId = setInterval(() => this.run(), this.tickInterval);

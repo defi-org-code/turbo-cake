@@ -165,8 +165,8 @@ class Executor extends TxManager {
 
 
         } catch (error) {
-            this.notif.sendDiscord(`failed to send transaction: ${error}`);
-            throw new TransactionFailure(error);
+            // this.notif.sendDiscord(`failed to send transaction: ${error}`);
+            throw new FatalError(`failed to send transaction: ${error}`);
         }
     }
 

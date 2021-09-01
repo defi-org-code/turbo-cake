@@ -1,5 +1,5 @@
 const fetch = require('node-fetch');
-const {RunningMode, MUTE_NOTIF} = require("./config");
+const {RunningMode, MUTE_DISCORD} = require("./config");
 require('dotenv').config();
 
 class Notifications {
@@ -8,7 +8,7 @@ class Notifications {
 	}
 
 	sendDiscord(msg) {
-		if (this.runningMode === RunningMode.DEV || (MUTE_NOTIF===true)) {
+		if (this.runningMode === RunningMode.DEV || (MUTE_DISCORD===true)) {
 			console.log(msg);
 			return
 		}

@@ -1,9 +1,10 @@
 const hre = require("hardhat");
+let {web3} = require("hardhat");
 
 const KeyEncryption = require('./keyEncryption');
 const env = require('dotenv').config();
 const { Strategy } = require('./strategy/strategy');
-const { RunningMode, CAKE_WHALE_ACCOUNT, CAKE_ADDRESS, MUTE_NOTIF } = require('./config');
+const { RunningMode, CAKE_WHALE_ACCOUNT, CAKE_ADDRESS, MUTE_DISCORD } = require('./config');
 const yargs = require('yargs/yargs');
 const {CAKE_ABI} = require("./abis");
 const { hideBin } = require('yargs/helpers');
@@ -15,15 +16,15 @@ async function main() {
     const runningMode = (argv.prod==="true"? RunningMode.PRODUCTION: RunningMode.DEV);
 
     let account
-	let web3
 
     if (runningMode === RunningMode.PRODUCTION) {
+		let web3
     	const Web3 = require("web3");
 		web3 = new Web3(process.env.ENDPOINT_HTTPS);
 	    account = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
 
     } else if (runningMode === RunningMode.DEV) {
-		web3 = require("hardhat");
+
         // account = web3.eth.accounts.create();
 	    account = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
 
@@ -33,11 +34,12 @@ async function main() {
         const cakeContract =  new web3.eth.Contract(CAKE_ABI, CAKE_ADDRESS);
         let amount = await cakeContract.methods.balanceOf(CAKE_WHALE_ACCOUNT).call()
         await cakeContract.methods.transfer(account.address, amount.toString()).send({ from: CAKE_WHALE_ACCOUNT});
+
     }
 
     web3.eth.defaultAccount = account.address;
 
-    console.debug(`[PID pid ${process.pid}] Starting Bot: address=${account.address}, mode=${runningMode}`);
+    console.debug(`[PID pid ${process.pid}] Starting Bot: address=${account.address}, mode=${runningMode}, mute-discord=${MUTE_DISCORD}`);
 
     const strategy = new Strategy(env, runningMode, account, web3);
     await strategy.start();
@@ -46,7 +48,7 @@ async function main() {
 
 main()
     .then(() => {
-		console.debug(`Bot initialized and running, mute discord notification = ${MUTE_NOTIF}`);
+		console.debug(`Bot initialized and running, mute discord notification = ${MUTE_DISCORD}`);
 	})
 	.catch((error) => {
         console.error(error);
