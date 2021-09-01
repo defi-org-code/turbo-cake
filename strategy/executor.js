@@ -134,9 +134,11 @@ class Executor extends TxManager {
     }
 
     async sendTransactionWait(encodedTx, to, gas = undefined) {
+
         if (!encodedTx) {
             return null;
         }
+
         try {
 
             let transactionObject = {
