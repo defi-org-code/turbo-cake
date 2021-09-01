@@ -8,8 +8,10 @@ class Notifications {
 	}
 
 	sendDiscord(msg) {
+
+		console.log(msg);
+
 		if (this.runningMode === RunningMode.DEV || (process.env.MUTE_DISCORD==="true")) {
-			console.log(msg);
 			return
 		}
 
@@ -21,9 +23,10 @@ class Notifications {
 			body: JSON.stringify({
 				"content": `[BOT_ID ${process.env.BOT_ID}]: ${msg}`
 			}),
-		}).then((response) => {
-			console.log(response);
-		});
+		})
+		// .then((response) => {
+		// 	console.log(response);
+		// });
 	}
 
 }
