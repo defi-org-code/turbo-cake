@@ -123,6 +123,7 @@ class Strategy {
 		debug('strategy run')
         try {
             if (this.inTransition) {
+            	debug('inTransition')
                 return;
             }
 
@@ -253,7 +254,7 @@ class Strategy {
 					action = ${JSON.stringify(action)}
 		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
 
-        this.curSyrupPoolAddr = action.args.poolAddress
+        this.curSyrupPoolAddr = action.args.to
         this.executor = null;
         this.inTransition = false;
         this.lastActionTimestamp = Date.now()

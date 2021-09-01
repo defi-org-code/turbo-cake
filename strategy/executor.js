@@ -62,7 +62,7 @@ class Executor extends TxManager {
 
         try {
             this.status = "running";
-            const args = this.action.args;
+            const args = this.action;
 
             switch (this.action.name) {
 
@@ -71,20 +71,20 @@ class Executor extends TxManager {
                     break;
 
                 case Action.ENTER:
-                    await this.enterPosition(args);
+                    await this.enterPosition(args.to);
                     break;
 
                 case Action.HARVEST:
-                    await this.harvest(args);
+                    await this.harvest(args.to);
 
                     break;
 
                 case Action.SWITCH:
-                    await this.switchPools(args);
+                    await this.switchPools(args.from, args.to);
                     break;
 
                 case Action.EXIT:
-                    await this.exitPosition(args);
+                    await this.exitPosition(args.from);
                     break;
 
                 default:
@@ -185,10 +185,10 @@ class Executor extends TxManager {
     }
 
 
-    async enterPosition(args) {
-        console.log(`executor.enterPosition: start pool ${args.poolAddress} `);
+    async enterPosition(addr) {
+        console.log(`executor.enterPosition: start pool ${addr} `);
 
-        const syrupPool = await this.setupSyrupPool(args.poolAddress);
+        const syrupPool = await this.setupSyrupPool(addr);
         const cakeBalance = await this.cakeContract.methods.balanceOf(this.account.address).call();
         console.log('cakeBalance: ', cakeBalance.toString());
         await this.depositCake(syrupPool, cakeBalance);
@@ -197,10 +197,10 @@ class Executor extends TxManager {
     }
 
 
-    async exitPosition(args) {
-        console.log(`executor.exitPosition: start pool ${args.poolAddress} `);
+    async exitPosition(addr) {
+        console.log(`executor.exitPosition: start pool ${addr}`);
 
-        const syrupPool = await this.setupSyrupPool(args.poolAddress);
+        const syrupPool = await this.setupSyrupPool(addr);
         const stakedAmount = await this.getStakedAmount(syrupPool, this.account.address);
         const withdrawn = await this.withdraw(syrupPool, stakedAmount);
         await this.swapAllToCake(withdrawn.rewardTokenAddr);
@@ -208,10 +208,10 @@ class Executor extends TxManager {
         console.log("executor.exitPosition: end");
     }
 
-    async harvest(args) {
-        console.log(`executor.harvest: start pool ${args.poolAddress} `);
+    async harvest(addr) {
+        console.log(`executor.harvest: start pool ${addr}`);
 
-        const syrupPool = await this.setupSyrupPool(args.poolAddress);
+        const syrupPool = await this.setupSyrupPool(addr);
         const withdrawn = await this.withdraw(syrupPool, 0);
         await this.swapAllToCake(withdrawn.rewardTokenAddr);
         const cakeBalance = await this.cakeContract.methods.balanceOf(this.account.address).call();
@@ -221,11 +221,11 @@ class Executor extends TxManager {
     }
 
 
-    async switchPools(args) {
-        console.log(`executor.switchPools: start from ${args.from}  to ${args.to} `);
+    async switchPools(fromAddr, toAddr) {
+        console.log(`executor.switchPools: start from ${fromAddr}  to ${toAddr} `);
 
-        await this.exitPosition({poolAddress: args.from});
-        await this.enterPosition({poolAddress: args.to});
+        await this.exitPosition(fromAddr);
+        await this.enterPosition(toAddr);
 
         console.log("executor.switchPools: end");
     }

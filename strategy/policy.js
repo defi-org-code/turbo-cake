@@ -77,28 +77,23 @@ class GreedyPolicy extends Policy {
 		* check move criteria
 		* return action
 		* */
+		const topYielderAddr = this.getTopYielderAddr(args.poolsInfo);
 
         if (args.curSyrupPoolAddr == null) { // enter "top" syrup pool apy estimate
 
             return {
                 name: Action.ENTER,
-                args: {
-                    poolAddress:  this.getTopYielderAddr(args.poolsInfo),
-                }
+                from: null,
+                to: topYielderAddr
             }
         }
-
-
-		const topYielderAddr = this.getTopYielderAddr(args.poolsInfo);
 
 		if (this.shouldSwitchPools(args.poolsInfo, args.curSyrupPoolAddr, topYielderAddr, args.lastActionTimestamp)) {
 
 			return {
 				name: Action.SWITCH,
-				args: {
-					from: args.curSyrupPoolAddr,
-					to: topYielderAddr,
-				}
+				from: args.curSyrupPoolAddr,
+				to: topYielderAddr
 			};
 		}
 
@@ -106,9 +101,8 @@ class GreedyPolicy extends Policy {
 
             return {
                 name: Action.HARVEST,
-                args: {
-                    poolAddress: args.curSyrupPoolAddr,
-                }
+                from: args.curSyrupPoolAddr,
+                to: args.curSyrupPoolAddr
             };
         }
 
