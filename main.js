@@ -3,7 +3,7 @@ const hre = require("hardhat");
 const KeyEncryption = require('./keyEncryption');
 const env = require('dotenv').config();
 const { Strategy } = require('./strategy/strategy');
-const { RunningMode, CAKE_WHALE_ACCOUNT, CAKE_ADDRESS } = require('./config');
+const { RunningMode, CAKE_WHALE_ACCOUNT, CAKE_ADDRESS, MUTE_NOTIF } = require('./config');
 const yargs = require('yargs/yargs');
 const {CAKE_ABI} = require("./abis");
 const { hideBin } = require('yargs/helpers');
@@ -46,7 +46,7 @@ async function main() {
 
 main()
     .then(() => {
-		console.debug("Bot initialized and running");
+		console.debug(`Bot initialized and running, mute discord notification = ${MUTE_NOTIF}`);
 	})
 	.catch((error) => {
         console.error(error);
