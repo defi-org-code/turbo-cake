@@ -32,6 +32,7 @@ class GreedyPolicy extends Policy {
         this.harvestInterval = config.harvestInterval;
         this.apySwitchTh = config.apySwitchTh;
         this.runningMode = config.runningMode
+        this.randApy = config.randApy
     }
 
 	getRandomInt(max) {
@@ -50,7 +51,7 @@ class GreedyPolicy extends Policy {
 			apyDict[poolsInfo[poolAddr]['apy']] = poolAddr
 		}
 
-		if (this.runningMode === RunningMode.DEV) {
+		if ((this.runningMode === RunningMode.DEV) && (this.randApy === true)) {
 			const apyArr = Object.keys(apyDict)
 			return apyDict[apyArr[this.getRandomInt(apyArr.length)]]
 		}

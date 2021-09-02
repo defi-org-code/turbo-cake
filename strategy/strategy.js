@@ -9,7 +9,7 @@ const {
     SYRUP_SWITCH_INTERVAL, HARVEST_INTERVAL,
     PANCAKE_UPDATE_INTERVAL, TICK_INTERVAL, SWAP_SLIPPAGE, SWAP_TIME_LIMIT, APY_SWITCH_TH,
     DEV_TICK_INTERVAL, DEV_PANCAKE_UPDATE_INTERVAL, DEV_SYRUP_SWITCH_INTERVAL, DEV_HARVEST_INTERVAL,
-    BEST_ROUTE_UPDATE_INTERVAL, DEV_BEST_ROUTE_UPDATE_INTERVAL
+    BEST_ROUTE_UPDATE_INTERVAL, DEV_BEST_ROUTE_UPDATE_INTERVAL, DEV_RAND_APY
 } = require("../config");
 const debug = (...messages) => console.log(...messages)
 const {TransactionFailure, FatalError, GasError, NotImplementedError} = require('../errors');
@@ -25,6 +25,7 @@ function loadConfig(runningMode) {
         config.harvestInterval = DEV_HARVEST_INTERVAL
         config.tickInterval = DEV_TICK_INTERVAL
         config.bestRouteUpdateInterval = DEV_BEST_ROUTE_UPDATE_INTERVAL
+        config.randApy = DEV_RAND_APY
 
     } else {
 
@@ -33,6 +34,7 @@ function loadConfig(runningMode) {
         config.harvestInterval = HARVEST_INTERVAL;
         config.tickInterval = TICK_INTERVAL;
         config.bestRouteUpdateInterval = BEST_ROUTE_UPDATE_INTERVAL
+        config.randApy = false
     }
 
     config.runningMode = runningMode;
