@@ -35,6 +35,8 @@ class Pancakeswap {
 
         this.poolsInfo = {}
         this.lastBlockUpdate = null
+
+        // this.logger =
     }
 
 	async init() {

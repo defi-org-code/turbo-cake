@@ -21,12 +21,10 @@ class Notifications {
 				'Content-Type': 'application/json; charset=UTF-8',
 			},
 			body: JSON.stringify({
-				"content": `[BOT_ID ${process.env.BOT_ID}]: ${msg}`
+				"content": `[BOT_ID ${process.env.BOT_ID}]: ${msg}`,
+				"username": 'turbo-cake'
 			}),
 		})
-		// .then((response) => {
-		// 	console.log(response);
-		// });
 	}
 
 }
