@@ -1,7 +1,7 @@
 
 const EXCEED_MAX_ERROR = 'exceed maximum block range'
 
-async function getPastEventsLoop(contract, eventName, nBlocks, endBlock, chunkSize=10000, filterObj=null) {
+async function getPastEventsLoop(contract, eventName, nBlocks, endBlock, chunkSize=5000, filterObj=null) {
 
 	if (nBlocks === 0) {
 		return []
