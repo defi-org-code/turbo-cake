@@ -82,7 +82,7 @@ class Pancakeswap {
                 return;
             }
 
-            if (Date.now() - this.lastUpdate < this.bestRouteUpdateInterval) {
+            if (Date.now() - this.lastUpdate > this.bestRouteUpdateInterval) {
                 await this.updateBestRoute()
             }
 
