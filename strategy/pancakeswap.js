@@ -183,7 +183,7 @@ class Pancakeswap {
 
 		// TODO: check and verify calculations
 		res = await this.routerV2Contract.methods.getAmountsOut(amountIn, this.poolsInfo[poolAddr]['routeToCake']).call()
-		return (new BigNumber(res[res.length-1]).dividedBy(res[0])).toString()
+		return (new BigNumber(res[res.length-1]).dividedBy(amountIn)).toString()
 	}
 
 	async poolApy(poolAddr) {
@@ -207,7 +207,7 @@ class Pancakeswap {
 	async setActivePools() {
 
 		const blockNum = await this.web3.eth.getBlockNumber()
-		let bonusEndBlock, startBlock
+		let bonusEndBlock, startBlock, poolRewards
 
 		for (const poolAddr of Object.keys(this.poolsInfo)) {
 
@@ -215,15 +215,16 @@ class Pancakeswap {
 				await this.fetchUpdateBonusInfo(poolAddr)
 			}
 
-			bonusEndBlock = Number(this.poolsInfo[poolAddr]['bonusEndBlock'])
-			startBlock = Number(this.poolsInfo[poolAddr]['startBlock'])
-
 			if (!('poolRewards' in Object.keys(this.poolsInfo[poolAddr]))) {
 				this.poolsInfo[poolAddr]['poolRewards'] = await this.fetchPoolRewards(poolAddr)
 			}
 
+			bonusEndBlock = Number(this.poolsInfo[poolAddr]['bonusEndBlock'])
+			startBlock = Number(this.poolsInfo[poolAddr]['startBlock'])
+			poolRewards = Number(this.poolsInfo[poolAddr]['poolRewards'])
+
 			this.poolsInfo[poolAddr]['active'] = !((startBlock > blockNum) || (bonusEndBlock <= blockNum) || (poolAddr in this.EXCLUDED_POOLS) ||
-				(this.poolsInfo[poolAddr]['hasUserLimit'] === true) || (this.poolsInfo[poolAddr]['poolRewards'] === '0'));
+				(this.poolsInfo[poolAddr]['hasUserLimit'] === true) || (poolRewards === 0));
 		}
 
 	}
