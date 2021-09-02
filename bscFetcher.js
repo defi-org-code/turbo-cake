@@ -1,5 +1,5 @@
 
-const EXCEED_MAX_ERROR = 'Returned error: exceed maximum block range: 10000'
+const EXCEED_MAX_ERROR = 'exceed maximum block range'
 
 async function getPastEventsLoop(contract, eventName, nBlocks, endBlock, chunkSize=10000, filterObj=null) {
 
@@ -24,7 +24,7 @@ async function getPastEventsLoop(contract, eventName, nBlocks, endBlock, chunkSi
 
 		} catch (e) {
 
-			if (e.message === EXCEED_MAX_ERROR) {
+			if (e.message.includes(EXCEED_MAX_ERROR)) {
 				_chunkSize = Math.max(Math.floor(_chunkSize/2) , 1)
 				console.log(`${e}: setting chunkSize to ${_chunkSize}`)
 			}
