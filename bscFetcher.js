@@ -29,7 +29,7 @@ async function getPastEventsLoop(contract, eventName, nBlocks, endBlock, chunkSi
 				console.log(`${e}: setting chunkSize to ${_chunkSize}`)
 			}
 			else {
-				if (retry < 5) {
+				if (retry < 10) {
 					retry += 1
 					console.log(`[ERROR] failed to fetch data: ${e.message}, retry ${retry} ...`)
 					continue
