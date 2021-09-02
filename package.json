@@ -12,7 +12,8 @@
     "ethereum-waffle": "^3.4.0",
     "ethers": "^5.4.5",
     "hardhat": "^2.6.1",
-    "web3": "^1.5.2"
+    "web3": "^1.5.2",
+    "winston": "^3.3.3"
   },
   "dependencies": {
     "@influxdata/influxdb-client": "^1.15.0",

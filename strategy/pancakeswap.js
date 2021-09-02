@@ -9,6 +9,7 @@ require('dotenv').config();
 const BigNumber = require('bignumber.js')
 BigNumber.config({POW_PRECISION: 100, EXPONENTIAL_AT: 1e+9})
 
+// const {getLogger} = require('../logger')
 const debug = (...messages) => console.log(...messages);
 
 
@@ -35,14 +36,14 @@ class Pancakeswap {
 
         this.poolsInfo = {}
         this.lastBlockUpdate = null
-
-        // this.logger =
     }
 
 	async init() {
 		this.smartchefFactoryContract = this.getContract(SMARTCHEF_FACTORY_ABI, SMARTCHEF_FACTORY_ADDRESS)
 		this.cakeContract =this.getContract(CAKE_ABI, CAKE_ADDRESS)
 		this.routerV2Contract = this.getContract(ROUTER_V2_ABI, ROUTER_V2_ADDRESS)
+
+		// await this.getTransferEvents()
 
 		await this.getLastBlockUpdate()
 		await this.getPoolsInfo()
@@ -111,7 +112,7 @@ class Pancakeswap {
 		return 100 * ((1 + apr / 100 / n) ** (n*t) - 1)
 	}
 
-	 calcApy(rewardsPerBlock, tokenCakeRate, tvl) {
+	 calcApy(poolAddr, rewardsPerBlock, tokenCakeRate, tvl) {
 
 		tvl = new BigNumber(tvl);
 		tokenCakeRate = new BigNumber(tokenCakeRate);
@@ -121,8 +122,8 @@ class Pancakeswap {
 		const cakeForPeriod = rewardForPeriod.multipliedBy(tokenCakeRate);
 		const apr = (tvl.plus(cakeForPeriod).div(tvl).minus(1).multipliedBy(100));
 
-		console.log(`rewardsPerBlock=${rewardsPerBlock}, tokenCakeRate=${tokenCakeRate}, tvl=${tvl}`)
-		console.log(`rewardForPeriod=${rewardForPeriod}, cakeForPeriod=${cakeForPeriod}, apr=${apr}`)
+		console.log(`poolAddr=${poolAddr}, rewardsPerBlock=${rewardsPerBlock}, tokenCakeRate=${tokenCakeRate}, tvl=${tvl}`)
+		console.log(`poolAddr=${poolAddr}, rewardForPeriod=${rewardForPeriod}, cakeForPeriod=${cakeForPeriod}, apr=${apr}`)
 
 		return this.aprToApy(apr.toString())
 	}
@@ -185,14 +186,16 @@ class Pancakeswap {
 
 		// TODO: check and verify calculations
 		res = await this.routerV2Contract.methods.getAmountsOut(amountIn, this.poolsInfo[poolAddr]['routeToCake']).call()
-		return (new BigNumber(res[res.length-1]).dividedBy(amountIn)).toString()
+		const rate = (new BigNumber(res[res.length-1]).dividedBy(amountIn)).toString()
+		debug(`getTokenCakeRate: poolAddr=${poolAddr}, res=${res}, amountIn=${amountIn}, apy=${rate}`)
+		return rate
 	}
 
 	async poolApy(poolAddr) {
 
 		const poolTvl = await this.getPoolTvl(poolAddr)
 		const tokenCakeRate = await this.getTokenCakeRate(poolAddr)
-		return this.calcApy(this.poolsInfo[poolAddr]['rewardPerBlock'], tokenCakeRate, poolTvl)
+		return this.calcApy(poolAddr, this.poolsInfo[poolAddr]['rewardPerBlock'], tokenCakeRate, poolTvl)
 	}
 
 	async fetchPoolRewards(poolAddr) {
@@ -295,6 +298,33 @@ class Pancakeswap {
 		const bscscanAbiUrl =  `https://api.bscscan.com/api?module=contract&action=getabi&address=${addr}&apiKey=${process.env.BSCSCAN_API_KEY}`
 		const data = await nodeFetch(bscscanAbiUrl).then(response => response.json())
 		return JSON.parse(data.result)
+	}
+
+	async getTransferEvents() {
+
+		debug('getTransferEvents ... ')
+
+		let blockNum = await this.web3.eth.getBlockNumber()
+
+		const fetchNBlocks = 90 * this.BLOCKS_PER_DAY // blockNum - this.lastBlockUpdate
+
+        let events = await getPastEventsLoop(this.cakeContract, 'Transfer', fetchNBlocks, blockNum, 5000, {'to': '0xEf61Fe3cC3BC8d0D0266325221F5F0A9B7014C84'})
+		let transfers = []
+
+		for (const event of events) {
+
+        	try {
+        		if (await this.web3.eth.getCode(event['from']) === '0x') {
+        			transfers.push(event)
+        		}
+        	}
+        	catch (e) {
+        		debug(`unexpected error while processing transfer events: ${e}, skipping event...`)
+        	}
+		}
+
+		return transfers
+
 	}
 
     async fetchPools() {

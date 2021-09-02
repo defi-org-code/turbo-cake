@@ -26,7 +26,6 @@ class Notifications {
 			}),
 		})
 	}
-
 }
 
 module.exports = Notifications

@@ -14,13 +14,12 @@ class Influx {
 		this.client = new InfluxDB({url: process.env.INFLUX_URL, token: process.env.INFLUX_TOKEN})
 		this.bucket = bucket
 		this.version = version
-
 	}
 
-	writePoint(measurementName, fields, tags= {}) {
+	report(measurementName, fields, tags= {}) {
 
 		const writeApi = this.client.getWriteApi(org, this.bucket);
-		writeApi.useDefaultTags({hostname: hostname, version: this.version, botId: process.env.BOT_ID});
+		writeApi.useDefaultTags({hostname: hostname, version: this.version, botId: process.env.BOT_ID, botAddress: process.env.BOT_ADDRESS});
 
 		const point = new Point(measurementName);
 

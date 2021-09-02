@@ -3,13 +3,15 @@ const Notifications = require('../notifications');
 const {GreedyPolicy, Action} = require("./policy");
 const {Executor} = require("./executor");
 const {Pancakeswap} = require("./pancakeswap");
+const {Reporter} = require('../reporter')
 
 const {
     RunningMode, DEV_ACCOUNT, DEV_SMARTCHEF_ADDRESS_LIST,
     SYRUP_SWITCH_INTERVAL, HARVEST_INTERVAL,
     PANCAKE_UPDATE_INTERVAL, TICK_INTERVAL, SWAP_SLIPPAGE, SWAP_TIME_LIMIT, APY_SWITCH_TH,
     DEV_TICK_INTERVAL, DEV_PANCAKE_UPDATE_INTERVAL, DEV_SYRUP_SWITCH_INTERVAL, DEV_HARVEST_INTERVAL,
-    BEST_ROUTE_UPDATE_INTERVAL, DEV_BEST_ROUTE_UPDATE_INTERVAL, DEV_RAND_APY
+    BEST_ROUTE_UPDATE_INTERVAL, DEV_BEST_ROUTE_UPDATE_INTERVAL, DEV_RAND_APY,
+    REPORT_INTERVAL
 } = require("../config");
 const debug = (...messages) => console.log(...messages)
 const {TransactionFailure, FatalError, GasError, NotImplementedError} = require('../errors');
@@ -43,6 +45,7 @@ function loadConfig(runningMode) {
     config.devSmartchefAddressList = DEV_SMARTCHEF_ADDRESS_LIST;
     config.devAccount = DEV_ACCOUNT;
     config.apySwitchTh = APY_SWITCH_TH;
+    config.reportInterval = REPORT_INTERVAL
     return config;
 }
 
@@ -70,12 +73,15 @@ class Strategy {
         this.tickIndex = 0;
         this.config = config;
         this.tickInterval = config.tickInterval;
+        this.reportInterval = config.reportInterval
 
         this.runningMode = runningMode;
         this.name = "pancakeswap-strategy";
         this.lastActionTimestamp = Date.now() - config.syrupSwitchInterval - 1;
         this.curSyrupPoolAddr = null;
         this.inTransition = false;
+
+		this.reporter = new Reporter(RunningMode)
     }
 
     async start() {
@@ -84,12 +90,18 @@ class Strategy {
             await this.init();
 
             this.intervalId = setInterval(() => this.run(), this.tickInterval);
+            // setInterval(() => this.reportStats(), this.reportInterval);
 
         } catch (e) {
             this.notif.sendDiscord(`[ERROR] unhandled error: ${e}`);
             this.beforeExit(e);
         }
     }
+
+	async reportStats() {
+		debug('reportStats')
+		await this.reporter.send()
+	}
 
     async init() {
 
