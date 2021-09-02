@@ -1,5 +1,6 @@
 const hre = require("hardhat");
-// let {web3} = require("hardhat");
+let {web3} = require("hardhat");
+const BigNumber = require('bignumber.js')
 
 const KeyEncryption = require('./keyEncryption');
 const env = require('dotenv').config();
@@ -16,7 +17,7 @@ async function main() {
     const runningMode = (argv.prod==="true"? RunningMode.PRODUCTION: RunningMode.DEV);
 
     let account
-	let web3
+	// let web3
 
     if (runningMode === RunningMode.PRODUCTION) {
     	const Web3 = require("web3");
@@ -32,7 +33,7 @@ async function main() {
         await hre.network.provider.request({method: "hardhat_setBalance", params: [account.address, "0x100000000000000000000"]});
 
         const cakeContract =  new web3.eth.Contract(CAKE_ABI, CAKE_ADDRESS);
-        let amount = await cakeContract.methods.balanceOf(CAKE_WHALE_ACCOUNT).call()
+        let amount = new BigNumber(1e18) //await cakeContract.methods.balanceOf(CAKE_WHALE_ACCOUNT).call()
         await cakeContract.methods.transfer(account.address, amount.toString()).send({ from: CAKE_WHALE_ACCOUNT});
     }
 

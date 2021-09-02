@@ -1,6 +1,6 @@
 const {getPastEventsLoop} = require('../bscFetcher')
 const {SMARTCHEF_FACTORY_ABI, CAKE_ABI, BEP_20_ABI, SMARTCHEF_INITIALIZABLE_ABI,  ROUTER_V2_ABI} = require('../abis')
-const {MASTER_CHEF_ADDRESS, SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS, BNB_ADDRESS, ROUTER_V2_ADDRESS} = require('./params')
+const {MASTER_CHEF_ADDRESS, SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS, BNB_ADDRESS, ROUTER_V2_ADDRESS, ROUTES_TO_CAKE} = require('./params')
 const nodeFetch = require("node-fetch")
 
 const {FatalError} = require('../errors');
@@ -25,10 +25,11 @@ class Pancakeswap {
 
 	EXCLUDED_POOLS = ["0xa80240Eb5d7E05d3F250cF000eEc0891d00b51CC"]
 
-    constructor(redisClient, web3, notif, pancakeUpdateInterval) {
+    constructor(redisClient, web3, notif, pancakeUpdateInterval, bestRouteUpdateInterval) {
         this.redisClient = redisClient;
         this.pancakeUpdateInterval = pancakeUpdateInterval;
-        this.lastUpdate = null;
+        this.bestRouteUpdateInterval = bestRouteUpdateInterval;
+        this.lastUpdate = Date.now() - Math.max(pancakeUpdateInterval, bestRouteUpdateInterval);
         this.web3 = web3
         this.notif = notif
 
@@ -65,7 +66,6 @@ class Pancakeswap {
 				res = await contract.methods.userInfo(process.env.BOT_ADDRESS).call()
 			}
 
-			console.log('poolAddr=', poolAddr, 'getSTakingAddr: res=', res)
 			if (res['amount'] !== '0') {
 				stakingAddr.push(poolAddr)
 			}
@@ -78,8 +78,12 @@ class Pancakeswap {
 
         try {
 
-            if (this.lastUpdate != null && Date.now() - this.lastUpdate < this.pancakeUpdateInterval) {
+            if (Date.now() - this.lastUpdate < this.pancakeUpdateInterval) {
                 return;
+            }
+
+            if (Date.now() - this.lastUpdate < this.bestRouteUpdateInterval) {
+                await this.updateBestRoute()
             }
 
 			this.lastUpdate = Date.now()
@@ -89,7 +93,7 @@ class Pancakeswap {
 			await this.updatePoolsApy()
 
         } catch (e) {
-            throw FatalError(`pancake update error: ${e}`);
+            throw new FatalError(`pancake update error: ${e}`);
         }
     }
 
@@ -112,12 +116,45 @@ class Pancakeswap {
 		rewardsPerBlock = new BigNumber(rewardsPerBlock);
 
 		const rewardForPeriod = rewardsPerBlock.multipliedBy(this.BLOCKS_PER_YEAR);
-		const cakeForPeriod = rewardForPeriod.multipliedBy(tokenCakeRate); //* (1 - this.FEE)
+		const cakeForPeriod = rewardForPeriod.multipliedBy(tokenCakeRate);
 		const apr = (tvl.plus(cakeForPeriod).div(tvl).minus(1).multipliedBy(100));
+
+		console.log(`rewardsPerBlock=${rewardsPerBlock}, tokenCakeRate=${tokenCakeRate}, tvl=${tvl}`)
+		console.log(`rewardForPeriod=${rewardForPeriod}, cakeForPeriod=${cakeForPeriod}, apr=${apr}`)
 
 		return this.aprToApy(apr.toString())
 	}
 
+	async updateBestRoute(amountIn='100000000000000000000') {
+
+		let res, amount
+		let bestRes = new BigNumber(0)
+
+		for (const poolAddr of Object.keys(this.poolsInfo)) {
+
+			for (let route of ROUTES_TO_CAKE) {
+
+				route = [this.poolsInfo[poolAddr]['rewardToken']].concat(route)
+				try {
+					res = await this.routerV2Contract.methods.getAmountsOut(amountIn, route).call()
+				}
+				catch (e) {
+					debug(`poolAddr ${poolAddr} skipping route ${route}: ${e}`)
+					continue
+				}
+
+				amount = new BigNumber(res[res.length-1])
+
+				if (amount.gt(bestRes)) {
+					bestRes = amount
+					this.poolsInfo[poolAddr]['routeToCake'] = route
+					debug(`setting ${poolAddr} best route to ${route}`)
+				}
+			}
+		}
+
+		debug('updateBestRoute ended')
+	}
 
 	async getTokenCakeRate(poolAddr, defaultAmountIn='1000000000') {
 

@@ -8,7 +8,8 @@ const {
     RunningMode, DEV_ACCOUNT, DEV_SMARTCHEF_ADDRESS_LIST,
     SYRUP_SWITCH_INTERVAL, HARVEST_INTERVAL,
     PANCAKE_UPDATE_INTERVAL, TICK_INTERVAL, SWAP_SLIPPAGE, SWAP_TIME_LIMIT, APY_SWITCH_TH,
-    DEV_TICK_INTERVAL, DEV_PANCAKE_UPDATE_INTERVAL, DEV_SYRUP_SWITCH_INTERVAL, DEV_HARVEST_INTERVAL
+    DEV_TICK_INTERVAL, DEV_PANCAKE_UPDATE_INTERVAL, DEV_SYRUP_SWITCH_INTERVAL, DEV_HARVEST_INTERVAL,
+    BEST_ROUTE_UPDATE_INTERVAL, DEV_BEST_ROUTE_UPDATE_INTERVAL
 } = require("../config");
 const debug = (...messages) => console.log(...messages)
 const {TransactionFailure, FatalError, GasError, NotImplementedError} = require('../errors');
@@ -23,12 +24,15 @@ function loadConfig(runningMode) {
         config.syrupSwitchInterval = DEV_SYRUP_SWITCH_INTERVAL
         config.harvestInterval = DEV_HARVEST_INTERVAL
         config.tickInterval = DEV_TICK_INTERVAL
+        config.bestRouteUpdateInterval = DEV_BEST_ROUTE_UPDATE_INTERVAL
+
     } else {
 
         config.pancakeUpdateInterval = PANCAKE_UPDATE_INTERVAL;
         config.syrupSwitchInterval = SYRUP_SWITCH_INTERVAL;
         config.harvestInterval = HARVEST_INTERVAL;
         config.tickInterval = TICK_INTERVAL;
+        config.bestRouteUpdateInterval = BEST_ROUTE_UPDATE_INTERVAL
     }
 
     config.runningMode = runningMode;
@@ -56,7 +60,7 @@ class Strategy {
         this.notif = new Notifications(runningMode);
         this.redisInit();
         this.ps = new Pancakeswap(this.redisClient, web3, this.notif,
-            config.pancakeUpdateInterval);
+            config.pancakeUpdateInterval, config.bestRouteUpdateInterval);
         this.policy = new GreedyPolicy(config);
 
         this.executor = null;
@@ -138,12 +142,14 @@ class Strategy {
 
         } catch (e) {
 
-            if (e instanceof FatalError) {
-                this.beforeExit(e)
+			this.beforeExit(e)
 
-            } else {
-                this.beforeExit(e)
-            }
+            // if (e instanceof FatalError) {
+            //     this.beforeExit(e)
+			//
+            // } else {
+            //     this.beforeExit(e)
+            // }
         }
     }
 
@@ -254,7 +260,7 @@ class Strategy {
 					action = ${JSON.stringify(action)}
 		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
 
-        this.curSyrupPoolAddr = action.args.to
+        this.curSyrupPoolAddr = action.to
         this.executor = null;
         this.inTransition = false;
         this.lastActionTimestamp = Date.now()
