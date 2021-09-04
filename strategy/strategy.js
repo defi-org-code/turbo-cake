@@ -81,7 +81,7 @@ class Strategy {
         this.curSyrupPoolAddr = null;
         this.inTransition = false;
 
-		this.reporter = new Reporter(RunningMode)
+		// this.reporter = new Reporter(RunningMode)
     }
 
     async start() {
