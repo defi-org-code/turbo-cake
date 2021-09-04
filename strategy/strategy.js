@@ -3,7 +3,7 @@ const Notifications = require('../notifications');
 const {GreedyPolicy, Action} = require("./policy");
 const {Executor} = require("./executor");
 const {Pancakeswap} = require("./pancakeswap");
-const {Reporter} = require('../reporter')
+// const {Reporter} = require('../reporter')
 
 const {
     RunningMode, DEV_ACCOUNT, DEV_SMARTCHEF_ADDRESS_LIST,
