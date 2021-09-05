@@ -271,7 +271,7 @@ class Strategy {
     }
 
     async handleExecutionSuccess(trace, action, startTime) {
-        this.notif.sendDiscord(`strategy.handleExecutionSuccess::
+        this.notif.sendDiscord(`strategy.handleExecutionSuccess:
 					action = ${JSON.stringify(action)}
 		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
 
@@ -287,7 +287,7 @@ class Strategy {
     }
 
     async handleExecutionError(err, action, startTime) {
-        this.notif.sendDiscord(`strategy.handleExecutionError::
+        this.notif.sendDiscord(`strategy.handleExecutionError:
 					action = ${JSON.stringify(action)}
 		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
 

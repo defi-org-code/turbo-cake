@@ -87,7 +87,7 @@ class GreedyPolicy extends Policy {
             return {
                 name: Action.ENTER,
                 from: null,
-                to: topYielderAddr
+                to: {address: topYielderAddr, name: args.poolsInfo[topYielderAddr].rewardSymbol, apy: args.poolsInfo[topYielderAddr].apy}
             }
         }
 
@@ -95,8 +95,8 @@ class GreedyPolicy extends Policy {
 
 			return {
 				name: Action.SWITCH,
-				from: args.curSyrupPoolAddr,
-				to: topYielderAddr
+				from: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy},
+				to: {address: topYielderAddr, name: args.poolsInfo[topYielderAddr].rewardSymbol, apy: args.poolsInfo[topYielderAddr].apy}
 			};
 		}
 
@@ -104,8 +104,8 @@ class GreedyPolicy extends Policy {
 
             return {
                 name: Action.HARVEST,
-                from: args.curSyrupPoolAddr,
-                to: args.curSyrupPoolAddr
+                from: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy},
+                to: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy},
             };
         }
 

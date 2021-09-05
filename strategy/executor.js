@@ -83,11 +83,11 @@ class Executor extends TxManager {
                     break;
 
                 case Action.SWITCH:
-                    await this.switchPools(args.from, args.to);
+                    await this.switchPools(args.from.address, args.to.address);
                     break;
 
                 case Action.EXIT:
-                    await this.exitPosition(args.from);
+                    await this.exitPosition(args.from.address);
                     break;
 
                 default:
