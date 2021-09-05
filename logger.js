@@ -38,19 +38,19 @@ class Logger {
 	}
 
 	debug(message) {
-		console.log(colours.fg.crimson, `[${new Date().toISOString()}][${this.name}][DEBUG] ` + message)
+		console.log(`[${new Date().toISOString()}][${this.name}][DEBUG] ` + message)
 	}
 
 	info(message) {
-		console.log(colours.fg.green, `[${new Date().toISOString()}][${this.name}][INFO] ` + message)
+		console.log(`[${new Date().toISOString()}][${this.name}][INFO] ` + message)
 	}
 
 	warning(message) {
-		console.log(colours.fg.yellow, `[${new Date().toISOString()}][${this.name}][WARNING] ` + message)
+		console.log(`[${new Date().toISOString()}][${this.name}][WARNING] ` + message)
 	}
 
 	error(message) {
-		console.log(colours.fg.red, `[${new Date().toISOString()}][${this.name}][ERROR] ` + message)
+		console.log(`[${new Date().toISOString()}][${this.name}][ERROR] ` + message)
 	}
 
 }
