@@ -1,5 +1,8 @@
 
 const EXCEED_MAX_ERROR = 'exceed maximum block range'
+const {Logger} = require('./logger')
+const logger = new Logger('bsc-fetcher')
+
 
 async function getPastEventsLoop(contract, eventName, nBlocks, endBlock, chunkSize=5000, filterObj=null) {
 
@@ -17,7 +20,7 @@ async function getPastEventsLoop(contract, eventName, nBlocks, endBlock, chunkSi
 	while (true) {
 
 		try {
-			console.log(`fromBlock=${_fromBlock}, toBlock=${_toBlock}`)
+			logger.info(`fromBlock=${_fromBlock}, toBlock=${_toBlock}`)
 			events = events.concat(await contract.getPastEvents(eventName, {filter: filterObj, fromBlock: _fromBlock, toBlock: _toBlock}))
 
 			console.log(events)
@@ -26,16 +29,16 @@ async function getPastEventsLoop(contract, eventName, nBlocks, endBlock, chunkSi
 
 			if (e.message.includes(EXCEED_MAX_ERROR)) {
 				_chunkSize = Math.max(Math.floor(_chunkSize/2) , 1)
-				console.log(`${e}: setting chunkSize to ${_chunkSize}`)
+				logger.info(`${e}: setting chunkSize to ${_chunkSize}`)
 			}
 			else {
 				if (retry < 10) {
 					retry += 1
-					console.log(`[ERROR] failed to fetch data: ${e.message}, retry ${retry} ...`)
+					logger.info(`[ERROR] failed to fetch data: ${e.message}, retry ${retry} ...`)
 					continue
 
 				} else {
-					console.log(`[ERROR] failed to fetch data: ${e.message}, skipping range fromBlock=${_fromBlock} toBlock=${_toBlock} ...`)
+					logger.info(`[ERROR] failed to fetch data: ${e.message}, skipping range fromBlock=${_fromBlock} toBlock=${_toBlock} ...`)
 				}
 			}
 

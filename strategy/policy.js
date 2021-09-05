@@ -1,4 +1,6 @@
 const {RunningMode} = require("../config");
+const {Logger} = require('../logger')
+const logger = new Logger('policy')
 
 const Action = {
     NO_OP: "no-op",
@@ -62,7 +64,7 @@ class GreedyPolicy extends Policy {
 	shouldSwitchPools(poolsInfo, curSyrupPoolAddr, topYielderAddr, lastActionTimestamp) {
 
 		if (Date.now() - lastActionTimestamp < this.syrupSwitchInterval) {
-			console.log('shouldSwitchPools: outside interval update')
+			logger.debug('shouldSwitchPools: outside interval update')
 			return false
 		}
 

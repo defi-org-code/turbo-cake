@@ -10,7 +10,8 @@ const BigNumber = require('bignumber.js')
 BigNumber.config({POW_PRECISION: 100, EXPONENTIAL_AT: 1e+9})
 
 // const {getLogger} = require('../logger')
-const debug = (...messages) => console.log(...messages);
+const {Logger} = require('../logger')
+const logger = new Logger('pancakeswap')
 
 
 class Pancakeswap {
@@ -122,8 +123,8 @@ class Pancakeswap {
 		const cakeForPeriod = rewardForPeriod.multipliedBy(tokenCakeRate);
 		const apr = (tvl.plus(cakeForPeriod).div(tvl).minus(1).multipliedBy(100));
 
-		console.log(`poolAddr=${poolAddr}, rewardsPerBlock=${rewardsPerBlock}, tokenCakeRate=${tokenCakeRate}, tvl=${tvl}`)
-		console.log(`poolAddr=${poolAddr}, rewardForPeriod=${rewardForPeriod}, cakeForPeriod=${cakeForPeriod}, apr=${apr}`)
+		logger.debug(`poolAddr=${poolAddr}, rewardsPerBlock=${rewardsPerBlock}, tokenCakeRate=${tokenCakeRate}, tvl=${tvl}`)
+		logger.debug(`poolAddr=${poolAddr}, rewardForPeriod=${rewardForPeriod}, cakeForPeriod=${cakeForPeriod}, apr=${apr}`)
 
 		return this.aprToApy(apr.toString())
 	}
@@ -142,7 +143,7 @@ class Pancakeswap {
 					res = await this.routerV2Contract.methods.getAmountsOut(amountIn, route).call()
 				}
 				catch (e) {
-					debug(`poolAddr ${poolAddr} skipping route ${route}: ${e}`)
+					logger.debug(`poolAddr ${poolAddr} skipping route ${route}: ${e}`)
 					continue
 				}
 
@@ -151,12 +152,12 @@ class Pancakeswap {
 				if (amount.gt(bestRes)) {
 					bestRes = amount
 					this.poolsInfo[poolAddr]['routeToCake'] = route
-					debug(`setting ${poolAddr} best route to ${route}`)
+					logger.debug(`setting ${poolAddr} best route to ${route}`)
 				}
 			}
 		}
 
-		debug('updateBestRoute ended')
+		logger.debug('updateBestRoute ended')
 	}
 
 	async getTokenCakeRate(poolAddr, defaultAmountIn='1000000000') {
@@ -187,7 +188,7 @@ class Pancakeswap {
 		// TODO: check and verify calculations
 		res = await this.routerV2Contract.methods.getAmountsOut(amountIn, this.poolsInfo[poolAddr]['routeToCake']).call()
 		const rate = (new BigNumber(res[res.length-1]).dividedBy(amountIn)).toString()
-		debug(`getTokenCakeRate: poolAddr=${poolAddr}, res=${res}, amountIn=${amountIn}, apy=${rate}`)
+		logger.debug(`getTokenCakeRate: poolAddr=${poolAddr}, res=${res}, amountIn=${amountIn}, apy=${rate}`)
 		return rate
 	}
 
@@ -240,7 +241,7 @@ class Pancakeswap {
 			this.poolsInfo[poolAddr]['apy'] = await this.poolApy(poolAddr)
 		}
 
-		console.log(`poolsInfo:`)
+		logger.debug(`poolsInfo:`)
 		console.log(this.poolsInfo)
 	}
 
@@ -251,11 +252,11 @@ class Pancakeswap {
 
 		if (reply == null) {
 			reply = blockNum - this.PAST_EVENTS_N_BLOCKS
-			debug(`lastBlockUpdate was not found in redis`)
+			logger.debug(`lastBlockUpdate was not found in redis`)
 		}
 
 		this.lastBlockUpdate = reply
-		debug(`lastBlockUpdate was set to ${this.lastBlockUpdate}`)
+		logger.debug(`lastBlockUpdate was set to ${this.lastBlockUpdate}`)
 
 	}
 
@@ -268,13 +269,13 @@ class Pancakeswap {
 		}
 
 		if (reply == null) {
-			debug('poolInfo was not found in redis')
+			logger.debug('poolInfo was not found in redis')
 			this.poolsInfo = {}
 			return
 		}
 
 		this.poolsInfo = JSON.parse(reply)
-		debug('poolInfo was successfully loaded')
+		logger.debug('poolInfo was successfully loaded')
 	}
 
 	async savePoolsInfo(lastBlockUpdate) {
@@ -291,7 +292,7 @@ class Pancakeswap {
 		await this.redisClient.set('lastBlockUpdate', this.lastBlockUpdate)
 		await this.redisClient.set('poolsInfo', JSON.stringify(this.poolsInfo))
 
-		console.log('pools info updated successfully')
+		logger.debug('pools info updated successfully')
 	}
 
 	async fetchAbi(addr) {
@@ -302,7 +303,7 @@ class Pancakeswap {
 
 	async getTransferEvents() {
 
-		debug('getTransferEvents ... ')
+		logger.debug('getTransferEvents ... ')
 
 		let blockNum = await this.web3.eth.getBlockNumber()
 
@@ -319,7 +320,7 @@ class Pancakeswap {
         		}
         	}
         	catch (e) {
-        		debug(`unexpected error while processing transfer events: ${e}, skipping event...`)
+        		logger.debug(`unexpected error while processing transfer events: ${e}, skipping event...`)
         	}
 		}
 
@@ -329,7 +330,7 @@ class Pancakeswap {
 
     async fetchPools() {
 
-		debug('fetchPools ... ')
+		logger.debug('fetchPools ... ')
 
 		let blockNum = await this.web3.eth.getBlockNumber()
 
@@ -339,7 +340,7 @@ class Pancakeswap {
 
         if (this.lastBlockUpdate === blockNum) {
 
-			console.log(`fetchPools: nothing to fetch, lastBlockUpdate (${this.lastBlockUpdate}) >= blockNum (${blockNum})`)
+			logger.debug(`fetchPools: nothing to fetch, lastBlockUpdate (${this.lastBlockUpdate}) >= blockNum (${blockNum})`)
 			return
 
 		} else if (this.lastBlockUpdate > blockNum) {
@@ -364,7 +365,7 @@ class Pancakeswap {
 				const bonusEndBlock = await smartChef.methods.bonusEndBlock().call()
 				const startBlock = await smartChef.methods.startBlock().call()
 
-				debug(`poolAddr=${poolAddr}, bonusEndBlock=${bonusEndBlock}, rewardToken=${rewardToken}, stakedToken=${stakedToken}, hasUserLimit=${hasUserLimit}, ${hasUserLimit === true}`)
+				logger.debug(`poolAddr=${poolAddr}, bonusEndBlock=${bonusEndBlock}, rewardToken=${rewardToken}, stakedToken=${stakedToken}, hasUserLimit=${hasUserLimit}, ${hasUserLimit === true}`)
 
 				if (stakedToken !== CAKE_ADDRESS) {
 					continue
@@ -372,7 +373,7 @@ class Pancakeswap {
 
             	const bep20 = this.getContract(BEP_20_ABI, rewardToken);
 				const symbol = await bep20.methods.symbol().call()
-				debug(poolAddr, symbol, rewardToken, stakedToken)
+				logger.debug(poolAddr, symbol, rewardToken, stakedToken)
 
 				this.poolsInfo[poolAddr] = {
 					'rewardToken': rewardToken,

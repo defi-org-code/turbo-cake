@@ -13,9 +13,10 @@ const {
     BEST_ROUTE_UPDATE_INTERVAL, DEV_BEST_ROUTE_UPDATE_INTERVAL, DEV_RAND_APY,
     REPORT_INTERVAL
 } = require("../config");
-const debug = (...messages) => console.log(...messages)
 const {TransactionFailure, FatalError, GasError, NotImplementedError} = require('../errors');
 
+const {Logger} = require('../logger')
+const logger = new Logger('strategy')
 
 function loadConfig(runningMode) {
     let config = {};
@@ -49,16 +50,16 @@ function loadConfig(runningMode) {
     return config;
 }
 
-
 class Strategy {
 
     constructor(env, runningMode, account, web3) {
+
         this.state = {
             position: null,
             terminating: false,
         }
         const config = loadConfig(runningMode);
-        debug(config);
+        logger.debug(config);
 
         this.web3 = web3;
         this.account = account;
@@ -86,7 +87,7 @@ class Strategy {
 
     async start() {
         try {
-        	debug(`[Strategy] start`)
+        	logger.debug(`[Strategy] start`)
             await this.init();
 
             this.intervalId = setInterval(() => this.run(), this.tickInterval);
@@ -99,7 +100,7 @@ class Strategy {
     }
 
 	async reportStats() {
-		debug('reportStats')
+		logger.debug('reportStats')
 		await this.reporter.send()
 	}
 
@@ -109,7 +110,7 @@ class Strategy {
         await this.setupState();
 
         const stakingAddr = await this.ps.getStakingAddr()
-        debug(`init: stakingAddr = ${stakingAddr}`)
+        logger.debug(`init: stakingAddr = ${stakingAddr}`)
 
         if (stakingAddr.length === 1) {
             this.curSyrupPoolAddr = stakingAddr[0]
@@ -131,28 +132,28 @@ class Strategy {
         });
 
         this.redisClient.on("ready", function () {
-            debug('redis ready')
+            logger.debug('redis ready')
         });
     }
 
 
     async run() {
 
-		debug('strategy run')
+		logger.debug('strategy run')
         try {
             if (this.inTransition) {
-            	debug('inTransition')
+            	logger.debug('inTransition')
                 return;
             }
 
             this.inTransition = true;
 
             await this.ps.update();
-            debug('ps udpate ended')
+            logger.debug('ps udpate ended')
             await this.setAction();
-            debug('set action ended')
+            logger.debug('set action ended')
             await this.executeAction();
-            debug('executeAction ended')
+            logger.debug('executeAction ended')
 
         } catch (e) {
 
@@ -232,7 +233,7 @@ class Strategy {
 
     async setAction() {
         const lastAction = this.nextAction;
-        // debug(`setAction: nextAction=${JSON.stringify(this.nextAction)}`)
+        // logger.debug(`setAction: nextAction=${JSON.stringify(this.nextAction)}`)
         this.nextAction = await this.policy.getAction({
             'poolsInfo': this.ps.poolsInfo,
             'curSyrupPoolAddr': this.curSyrupPoolAddr,
@@ -243,7 +244,7 @@ class Strategy {
 
     async executeAction() {
 
-		debug('executeAction')
+		logger.debug('executeAction')
 
         const action = this.nextAction; // closure
         const startTime = Date.now();
@@ -300,7 +301,7 @@ class Strategy {
 
     beforeExit(e) {
         this.notif.sendDiscord(`Terminating process: ${e}`)
-        debug(e.stack)
+        logger.debug(e.stack)
         process.exit()
     }
 

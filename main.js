@@ -11,6 +11,8 @@ const {CAKE_ABI} = require("./abis");
 const { hideBin } = require('yargs/helpers');
 const argv = yargs(hideBin(process.argv)).argv;
 
+const {Logger} = require('./logger')
+const logger = new Logger('main')
 
 async function main() {
 
@@ -39,7 +41,7 @@ async function main() {
 
     web3.eth.defaultAccount = account.address;
 
-    console.debug(`[PID pid ${process.pid}] Starting Bot: address=${account.address}, mode=${runningMode}, mute-discord=${process.env.MUTE_DISCORD}`);
+    logger.debug(`[PID pid ${process.pid}] Starting Bot: address=${account.address}, mode=${runningMode}, mute-discord=${process.env.MUTE_DISCORD}`);
 
     const strategy = new Strategy(env, runningMode, account, web3);
     await strategy.start();
@@ -48,10 +50,10 @@ async function main() {
 
 main()
     .then(() => {
-		console.debug(`Bot initialized and running, mute discord notification = ${process.env.MUTE_DISCORD}`);
+		logger.debug(`Bot initialized and running, mute discord notification = ${process.env.MUTE_DISCORD}`);
 	})
 	.catch((error) => {
-        console.error(error);
+        logger.error(error);
         process.exit(1);
     });
 

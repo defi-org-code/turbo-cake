@@ -13,6 +13,9 @@ const {
 } = require('../abis')
 const {TransactionFailure, FatalError, GasError, NotImplementedError} = require('../errors');
 
+const {Logger} = require('../logger')
+const logger = new Logger('executor')
+
 
 const SyrupPoolType = {
     MANUAL_CAKE: "masterchef",
@@ -58,7 +61,7 @@ class Executor extends TxManager {
 
     async run() {
 
-        console.log("executor.run: start");
+        logger.debug("executor.run: start");
 
         try {
             this.status = "running";
@@ -92,7 +95,7 @@ class Executor extends TxManager {
             }
 
             this.status = "success";
-            console.log("executor.run: action completed successfully");
+            logger.debug("executor.run: action completed successfully");
 
 
         } catch (err) {
@@ -148,17 +151,17 @@ class Executor extends TxManager {
                 to: to,
             };
 
-            console.log("sendTransactionWait ");
-            console.log('transactionObject: ', transactionObject);
+            logger.debug("sendTransactionWait ");
+            logger.debug('transactionObject: ', transactionObject);
             const signedTx = await this.account.signTransaction(transactionObject);
-            console.log('signedTx:', signedTx)
+            logger.debug('signedTx:', signedTx)
 
             const txResponse = await this.web3.eth.sendSignedTransaction(signedTx.rawTransaction);
-            console.log('## txResponse ##');
+            logger.debug('## txResponse ##');
             console.dir(txResponse);
 
             const res = await this.pendingWait(1000, txResponse.transactionHash);
-            console.log('## txReceipt ##', res.gasUsed);
+            logger.debug('## txReceipt ##', res.gasUsed);
             console.log(res);
 
             return res;
@@ -186,30 +189,30 @@ class Executor extends TxManager {
 
 
     async enterPosition(addr) {
-        console.log(`executor.enterPosition: start pool ${addr} `);
+        logger.debug(`executor.enterPosition: start pool ${addr} `);
 
         const syrupPool = await this.setupSyrupPool(addr);
         const cakeBalance = await this.cakeContract.methods.balanceOf(this.account.address).call();
-        console.log('cakeBalance: ', cakeBalance.toString());
+        logger.debug('cakeBalance: ', cakeBalance.toString());
         await this.depositCake(syrupPool, cakeBalance);
 
-        console.log("executor.enterPosition: end");
+        logger.debug("executor.enterPosition: end");
     }
 
 
     async exitPosition(addr) {
-        console.log(`executor.exitPosition: start pool ${addr}`);
+        logger.debug(`executor.exitPosition: start pool ${addr}`);
 
         const syrupPool = await this.setupSyrupPool(addr);
         const stakedAmount = await this.getStakedAmount(syrupPool, this.account.address);
         const withdrawn = await this.withdraw(syrupPool, stakedAmount);
         await this.swapAllToCake(withdrawn.rewardTokenAddr);
 
-        console.log("executor.exitPosition: end");
+        logger.debug("executor.exitPosition: end");
     }
 
     async harvest(addr) {
-        console.log(`executor.harvest: start pool ${addr}`);
+        logger.debug(`executor.harvest: start pool ${addr}`);
 
         const syrupPool = await this.setupSyrupPool(addr);
         const withdrawn = await this.withdraw(syrupPool, 0);
@@ -217,17 +220,17 @@ class Executor extends TxManager {
         const cakeBalance = await this.cakeContract.methods.balanceOf(this.account.address).call();
         await this.depositCake(syrupPool, cakeBalance);
 
-        console.log("executor.harvest: end");
+        logger.debug("executor.harvest: end");
     }
 
 
     async switchPools(fromAddr, toAddr) {
-        console.log(`executor.switchPools: start from ${fromAddr}  to ${toAddr} `);
+        logger.debug(`executor.switchPools: start from ${fromAddr}  to ${toAddr} `);
 
         await this.exitPosition(fromAddr);
         await this.enterPosition(toAddr);
 
-        console.log("executor.switchPools: end");
+        logger.debug("executor.switchPools: end");
     }
 
     sleep = (milliseconds) => {
@@ -236,7 +239,7 @@ class Executor extends TxManager {
 
     async depositCake(syrupPool, amount) {
 
-        console.log(`executor.depositCake: syrup ${syrupPool.options.address}  amount ${amount}`);
+        logger.debug(`executor.depositCake: syrup ${syrupPool.options.address}  amount ${amount}`);
         const result = {
             step: "depositCake",
             to: syrupPool.options.address,
@@ -251,12 +254,12 @@ class Executor extends TxManager {
             let tx;
 
             if (syrupPool.syrupType === SyrupPoolType.SMARTCHEF) {
-                console.log("executor.depositCake: deposit cake to Smartchef");
+                logger.debug("executor.depositCake: deposit cake to Smartchef");
 
                 tx = await syrupPool.methods.deposit(amount).encodeABI();
 
             } else if (syrupPool.syrupType === SyrupPoolType.MANUAL_CAKE) {
-                console.log("executor.depositCake: deposit cake to ManualCake");
+                logger.debug("executor.depositCake: deposit cake to ManualCake");
                 tx = await syrupPool.methods.enterStaking(amount).encodeABI();
             }
 
@@ -268,7 +271,7 @@ class Executor extends TxManager {
     }
 
     async withdraw(syrupPool, amount) {
-        console.log(`executor.withdraw: from pool ${syrupPool.options.address} type ${SyrupPoolType.SMARTCHEF} the amount ${amount}`);
+        logger.debug(`executor.withdraw: from pool ${syrupPool.options.address} type ${SyrupPoolType.SMARTCHEF} the amount ${amount}`);
 
         const result = {
             step: "withdraw",
@@ -300,7 +303,7 @@ class Executor extends TxManager {
     }
 
     async swapAllToCake(tokenIn) {
-        console.log(`executor.swapAllToCake: token ${tokenIn} `);
+        logger.debug(`executor.swapAllToCake: token ${tokenIn} `);
 
         if (tokenIn === CAKE_ADDRESS) {
             return;
@@ -321,7 +324,7 @@ class Executor extends TxManager {
 
 
     async approve(tokenAddr, spender, amount) {
-        console.log(`executor.approve: token ${tokenAddr} spender ${spender}  amount ${amount}`);
+        logger.debug(`executor.approve: token ${tokenAddr} spender ${spender}  amount ${amount}`);
         const result = {
             step: "approve",
             tokenAddr: tokenAddr,
@@ -342,7 +345,7 @@ class Executor extends TxManager {
     }
 
     async swap(tokenIn, amountIn, route) {
-        console.log(`executor.swap: token ${tokenIn} amountIn ${amountIn}  to ${route[route.length - 1]}`);
+        logger.debug(`executor.swap: token ${tokenIn} amountIn ${amountIn}  to ${route[route.length - 1]}`);
 
         const result = {
             step: "swap",
