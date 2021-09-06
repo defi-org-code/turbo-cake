@@ -54,6 +54,7 @@ class GreedyPolicy extends Policy {
 		}
 
 		if ((this.runningMode === RunningMode.DEV) && (this.randApy === true)) {
+			logger.warning(`RANDOM mode is on, returning random pool ...`)
 			const apyArr = Object.keys(apyDict)
 			return apyDict[apyArr[this.getRandomInt(apyArr.length)]]
 		}
@@ -87,7 +88,7 @@ class GreedyPolicy extends Policy {
             return {
                 name: Action.ENTER,
                 from: null,
-                to: {address: topYielderAddr, name: args.poolsInfo[topYielderAddr].rewardSymbol, apy: args.poolsInfo[topYielderAddr].apy}
+                to: {address: topYielderAddr, name: args.poolsInfo[topYielderAddr].rewardSymbol, apy: args.poolsInfo[topYielderAddr].apy, active: args.poolsInfo[topYielderAddr].active, hasUserLimit: args.poolsInfo[topYielderAddr].hasUserLimit}
             }
         }
 
@@ -95,8 +96,8 @@ class GreedyPolicy extends Policy {
 
 			return {
 				name: Action.SWITCH,
-				from: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy},
-				to: {address: topYielderAddr, name: args.poolsInfo[topYielderAddr].rewardSymbol, apy: args.poolsInfo[topYielderAddr].apy}
+				from: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy, active: args.poolsInfo[args.curSyrupPoolAddr].active, hasUserLimit: args.poolsInfo[args.curSyrupPoolAddr].hasUserLimit},
+				to: {address: topYielderAddr, name: args.poolsInfo[topYielderAddr].rewardSymbol, apy: args.poolsInfo[topYielderAddr].apy, active: args.poolsInfo[topYielderAddr].active, hasUserLimit: args.poolsInfo[topYielderAddr].hasUserLimit}
 			};
 		}
 
@@ -104,8 +105,8 @@ class GreedyPolicy extends Policy {
 
             return {
                 name: Action.HARVEST,
-                from: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy},
-                to: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy},
+                from: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy, active: args.poolsInfo[args.curSyrupPoolAddr].active, hasUserLimit: args.poolsInfo[args.curSyrupPoolAddr].hasUserLimit},
+                to: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy, active: args.poolsInfo[args.curSyrupPoolAddr].active, hasUserLimit: args.poolsInfo[args.curSyrupPoolAddr].hasUserLimit},
             };
         }
 

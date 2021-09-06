@@ -37,11 +37,13 @@ class Pancakeswap {
 
         this.poolsInfo = {}
         this.lastBlockUpdate = null
+        this.curSyrupPoolAddr = null
+        this.balance = 0
     }
 
 	async init() {
 		this.smartchefFactoryContract = this.getContract(SMARTCHEF_FACTORY_ABI, SMARTCHEF_FACTORY_ADDRESS)
-		this.cakeContract =this.getContract(CAKE_ABI, CAKE_ADDRESS)
+		this.cakeContract = this.getContract(CAKE_ABI, CAKE_ADDRESS)
 		this.routerV2Contract = this.getContract(ROUTER_V2_ABI, ROUTER_V2_ADDRESS)
 
 		// await this.getTransferEvents()
@@ -78,7 +80,18 @@ class Pancakeswap {
 		return stakingAddr
 	}
 
-    async update() {
+	async updateBalance() {
+
+		if (this.curSyrupPoolAddr === MASTER_CHEF_ADDRESS) {
+			this.balance = await this.cakeContract.methods.userInfo(0, process.env.BOT_ADDRESS).call()
+		}
+
+		else {
+			this.balance = await this.cakeContract.methods.userInfo(process.env.BOT_ADDRESS).call()
+		}
+	}
+
+    async update(curSyrupPoolAddr) {
 
         try {
 
@@ -91,7 +104,9 @@ class Pancakeswap {
             }
 
 			this.lastUpdate = Date.now()
+			this.curSyrupPoolAddr = curSyrupPoolAddr
 
+			await this.updateBalance()
 			await this.fetchPools();
 			await this.setActivePools()
 			await this.updatePoolsApy()
@@ -160,7 +175,7 @@ class Pancakeswap {
 		logger.debug('updateBestRoute ended')
 	}
 
-	async getTokenCakeRate(poolAddr, defaultAmountIn='1000000000') {
+	async getTokenCakeRate(poolAddr) {
 
 		if (this.poolsInfo[poolAddr]['rewardToken'] === CAKE_ADDRESS) {
 			return 1
@@ -169,26 +184,13 @@ class Pancakeswap {
 		const contract = this.getContract(this.poolsInfo[poolAddr]['abi'], poolAddr)
 
 		let res;
-		if (poolAddr === MASTER_CHEF_ADDRESS) {
-			res = await contract.methods.userInfo(0, process.env.BOT_ADDRESS).call()
-		}
-		else {
-			res = await contract.methods.userInfo(process.env.BOT_ADDRESS).call()
-		}
-
-		let amountIn
-
-		if (res[0] === '0') {
-			amountIn = new BigNumber(defaultAmountIn)
-		}
-		else {
-			amountIn = new BigNumber(res[0])
-		}
+		const amountIn = new BigNumber(this.balance[0])
 
 		// TODO: check and verify calculations
 		res = await this.routerV2Contract.methods.getAmountsOut(amountIn, this.poolsInfo[poolAddr]['routeToCake']).call()
+
 		const rate = (new BigNumber(res[res.length-1]).dividedBy(amountIn)).toString()
-		logger.debug(`getTokenCakeRate: poolAddr=${poolAddr}, res=${res}, amountIn=${amountIn}, apy=${rate}`)
+		logger.debug(`getTokenCakeRate: poolAddr=${poolAddr}, res=${res}, amountIn=${amountIn}, rate=${rate}`)
 		return rate
 	}
 
@@ -325,7 +327,6 @@ class Pancakeswap {
 		}
 
 		return transfers
-
 	}
 
     async fetchPools() {

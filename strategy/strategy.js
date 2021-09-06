@@ -3,7 +3,7 @@ const Notifications = require('../notifications');
 const {GreedyPolicy, Action} = require("./policy");
 const {Executor} = require("./executor");
 const {Pancakeswap} = require("./pancakeswap");
-// const {Reporter} = require('../reporter')
+const {Reporter} = require('../reporter')
 
 const {
     RunningMode, DEV_ACCOUNT, DEV_SMARTCHEF_ADDRESS_LIST,
@@ -74,7 +74,6 @@ class Strategy {
         this.tickIndex = 0;
         this.config = config;
         this.tickInterval = config.tickInterval;
-        this.reportInterval = config.reportInterval
 
         this.runningMode = runningMode;
         this.name = "pancakeswap-strategy";
@@ -82,7 +81,8 @@ class Strategy {
         this.curSyrupPoolAddr = null;
         this.inTransition = false;
 
-		// this.reporter = new Reporter(RunningMode)
+		this.balance = null
+		this.reporter = new Reporter(RunningMode)
     }
 
     async start() {
@@ -117,7 +117,6 @@ class Strategy {
         } else if (stakingAddr.length > 1) {
             throw Error(`Bot (${process.env.BOT_ADDRESS}) has staking in more than 1 pool`)
         }
-
     }
 
     async setupState() {
@@ -136,7 +135,6 @@ class Strategy {
         });
     }
 
-
     async run() {
 
 		logger.debug('strategy run')
@@ -148,7 +146,7 @@ class Strategy {
 
             this.inTransition = true;
 
-            await this.ps.update();
+            await this.ps.update(this.curSyrupPoolAddr);
             logger.debug('ps udpate ended')
             await this.setAction();
             logger.debug('set action ended')
@@ -279,6 +277,7 @@ class Strategy {
         this.executor = null;
         this.inTransition = false;
         this.lastActionTimestamp = Date.now()
+		await this.updateBalance()
 
         if (action.name === Action.EXIT) {
             clearInterval(this.intervalId);
