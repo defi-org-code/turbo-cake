@@ -82,12 +82,14 @@ class Pancakeswap {
 
 	async updateBalance() {
 
+		const contract = this.getContract(this.poolsInfo[this.curSyrupPoolAddr]['abi'], this.curSyrupPoolAddr)
+
 		if (this.curSyrupPoolAddr === MASTER_CHEF_ADDRESS) {
-			this.balance = await this.cakeContract.methods.userInfo(0, process.env.BOT_ADDRESS).call()
+			this.balance = await contract.methods.userInfo(0, process.env.BOT_ADDRESS).call()
 		}
 
 		else {
-			this.balance = await this.cakeContract.methods.userInfo(process.env.BOT_ADDRESS).call()
+			this.balance = await contract.methods.userInfo(process.env.BOT_ADDRESS).call()
 		}
 	}
 
@@ -112,6 +114,7 @@ class Pancakeswap {
 			await this.updatePoolsApy()
 
         } catch (e) {
+        	// this.notif.sendDiscord(`pancake update error: ${e}`)
             throw new FatalError(`pancake update error: ${e}`);
         }
     }
