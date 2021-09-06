@@ -133,7 +133,7 @@ class Pancakeswap {
 
 	 calcApy(poolAddr, rewardsPerBlock, tokenCakeRate, tvl) {
 
-		tvl = new BigNumber(tvl);
+		tvl = new BigNumber(tvl).plus(this.balance[0]);
 		tokenCakeRate = new BigNumber(tokenCakeRate);
 		rewardsPerBlock = new BigNumber(rewardsPerBlock);
 
