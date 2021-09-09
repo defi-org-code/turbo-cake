@@ -37,7 +37,6 @@ class Pancakeswap {
 
         this.poolsInfo = {}
         this.lastBlockUpdate = null
-        this.curSyrupPoolAddr = null
         this.balance = 0
         this.investInfo = {}
     }
@@ -51,11 +50,13 @@ class Pancakeswap {
 		await this.getPoolsInfo()
 		await this.fetchPools()
 
-		await this.getInvestInfo()
+		const curSyrupPoolAddr = await this.getStakingAddr()
+		await this.getInvestInfo(curSyrupPoolAddr)
 
 		// await this.getTransferEvents()
 
-		logger.debug(`init ps ended successfully`)
+		logger.debug(`init ps ended successfully: curSyrupPoolAddr=${curSyrupPoolAddr}`)
+		return curSyrupPoolAddr
 	}
 
 	getContract(contractAbi, contractAddress) {
@@ -91,18 +92,21 @@ class Pancakeswap {
 		return null
 	}
 
-	async updateBalance() {
+	async updateBalance(curSyrupPoolAddr) {
 
-		if (this.curSyrupPoolAddr === null) {
-			const contract = this.getContract(CAKE_ABI, CAKE_ADDRESS)
-			this.balance = await contract.methods.balanceOf(process.env.BOT_ADDRESS).call()
+		let contract = this.getContract(CAKE_ABI, CAKE_ADDRESS)
+		let balance = await contract.methods.balanceOf(process.env.BOT_ADDRESS).call()
+
+		if (curSyrupPoolAddr === null) {
+			this.balance = balance
+			logger.info(`updateBalance: curr pool is null, getting balance from cake contract only: balance=${this.balance}`)
 			return
 		}
 
-		const contract = this.getContract(this.poolsInfo[this.curSyrupPoolAddr]['abi'], this.curSyrupPoolAddr)
+		contract = this.getContract(this.poolsInfo[curSyrupPoolAddr]['abi'], curSyrupPoolAddr)
 		let res
 
-		if (this.curSyrupPoolAddr === MASTER_CHEF_ADDRESS) {
+		if (curSyrupPoolAddr === MASTER_CHEF_ADDRESS) {
 			res = await contract.methods.userInfo(0, process.env.BOT_ADDRESS).call()
 		}
 
@@ -110,7 +114,9 @@ class Pancakeswap {
 			res = await contract.methods.userInfo(process.env.BOT_ADDRESS).call()
 		}
 
-		this.balance = res['amount']
+		balance = new BigNumber(res['amount']).plus(balance)
+		this.balance = balance.toString()
+		logger.info(`balance=${balance}`)
 	}
 
 	async getInvestApy() {
@@ -131,14 +137,12 @@ class Pancakeswap {
 		return this.BLOCKS_PER_YEAR * balanceCngPct.toString() / period
 	}
 
-	async getInvestInfo() {
-		this.curSyrupPoolAddr = await this.getStakingAddr()
-
+	async getInvestInfo(curSyrupPoolAddr) {
 		let reply = await this.redisClient.get('investInfo')
 
 		if (reply == null) {
 
-			if (this.curSyrupPoolAddr === null) {
+			if (curSyrupPoolAddr === null) {
 				logger.info('curSyrupPoolAddr is null, no active investment')
 				return
 			}
@@ -169,9 +173,8 @@ class Pancakeswap {
             }
 
 			this.lastUpdate = Date.now()
-			this.curSyrupPoolAddr = curSyrupPoolAddr
 
-			await this.updateBalance()
+			await this.updateBalance(curSyrupPoolAddr)
 			await this.fetchPools();
 			await this.setActivePools()
 			await this.updatePoolsApy()

@@ -74,11 +74,11 @@ class Strategy {
         this.tickIndex = 0;
         this.config = config;
         this.tickInterval = config.tickInterval;
+        this.reportInterval = config.reportInterval
 
         this.runningMode = runningMode;
         this.name = "pancakeswap-strategy";
         this.lastActionTimestamp = Date.now() - config.syrupSwitchInterval - 1;
-        this.curSyrupPoolAddr = null;
         this.inTransition = false;
 
 		this.balance = null
@@ -90,10 +90,10 @@ class Strategy {
         	logger.debug(`[Strategy] start`)
 			// await this.reporter.send({'apy': 0})
 
-            await this.init();
+			this.curSyrupPoolAddr = await this.ps.init();
 
             this.intervalId = setInterval(() => this.run(), this.tickInterval);
-            // setInterval(() => this.reportStats(), this.reportInterval);
+            setInterval(() => this.reportStats(), this.reportInterval);
 
         } catch (e) {
             this.notif.sendDiscord(`[ERROR] unhandled error: ${e}`);
@@ -112,19 +112,6 @@ class Strategy {
 		this.notif.sendDiscord(`apy: ${investApy}`)
 		await this.reporter.send({apy: investApy})
 	}
-
-    async init() {
-
-		const stakingAddr = await this.ps.init();
-
-        logger.debug(`init: stakingAddr = ${stakingAddr}`)
-
-        if (stakingAddr.length === 1) {
-            this.curSyrupPoolAddr = stakingAddr[0]
-        } else if (stakingAddr.length > 1) {
-            throw Error(`Bot (${process.env.BOT_ADDRESS}) has staking in more than 1 pool`)
-        }
-    }
 
     redisInit() {
         this.redisClient = asyncRedis.createClient();
@@ -155,7 +142,7 @@ class Strategy {
             logger.debug('set action ended')
             await this.executeAction();
             logger.debug('executeAction ended')
-            await this.reportStats()
+            // await this.reportStats()
 
         } catch (e) {
 
