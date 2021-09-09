@@ -31,14 +31,16 @@ async function main() {
         // account = web3.eth.accounts.create();
 	    account = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
 
-		console.info(account)
 		// process.exit()
 		await hre.network.provider.request({method: "hardhat_impersonateAccount",params: [CAKE_WHALE_ACCOUNT]});
+		await hre.network.provider.request({method: "hardhat_impersonateAccount",params: [account.address]});
         await hre.network.provider.request({method: "hardhat_setBalance", params: [account.address, "0x100000000000000000000"]});
 
         const cakeContract =  new web3.eth.Contract(CAKE_ABI, CAKE_ADDRESS);
         let amount = new BigNumber(1e18) //await cakeContract.methods.balanceOf(CAKE_WHALE_ACCOUNT).call()
         await cakeContract.methods.transfer(account.address, amount.toString()).send({ from: CAKE_WHALE_ACCOUNT});
+
+        console.log('Bot cake balance (DEV mode): ', await cakeContract.methods.balanceOf(account.address).call())
     }
 
     web3.eth.defaultAccount = account.address;

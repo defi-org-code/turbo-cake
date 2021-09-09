@@ -74,11 +74,11 @@ class Executor extends TxManager {
                     break;
 
                 case Action.ENTER:
-                    await this.enterPosition(args.to);
+                    await this.enterPosition(args.to.address);
                     break;
 
                 case Action.HARVEST:
-                    await this.harvest(args.to);
+                    await this.harvest(args.to.address);
 
                     break;
 

@@ -88,6 +88,8 @@ class Pancakeswap {
 	async updateBalance() {
 
 		if (this.curSyrupPoolAddr === null) {
+			const contract = this.getContract(CAKE_ABI, CAKE_ADDRESS)
+			this.balance = [await contract.methods.balanceOf(process.env.BOT_ADDRESS).call(), 0]
 			return
 		}
 
@@ -159,7 +161,6 @@ class Pancakeswap {
 			await this.updatePoolsApy()
 
         } catch (e) {
-        	// this.notif.sendDiscord(`pancake update error: ${e}`)
             throw new FatalError(`pancake update error: ${e}`);
         }
     }
@@ -193,7 +194,6 @@ class Pancakeswap {
 	}
 
 	async updateBestRoute(amountIn='100000000000000000000') {
-		
 		let res, amount
 		let bestRes = new BigNumber(0)
 
@@ -228,8 +228,6 @@ class Pancakeswap {
 		if (this.poolsInfo[poolAddr]['rewardToken'] === CAKE_ADDRESS) {
 			return 1
 		}
-
-		// const contract = this.getContract(this.poolsInfo[poolAddr]['abi'], poolAddr)
 
 		let res;
 		const amountIn = new BigNumber(this.balance[0])
