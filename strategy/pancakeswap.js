@@ -42,18 +42,21 @@ class Pancakeswap {
         this.investInfo = {}
     }
 
-	async init(stakingAddr) {
+	async init() {
 		this.smartchefFactoryContract = this.getContract(SMARTCHEF_FACTORY_ABI, SMARTCHEF_FACTORY_ADDRESS)
 		this.cakeContract = this.getContract(CAKE_ABI, CAKE_ADDRESS)
 		this.routerV2Contract = this.getContract(ROUTER_V2_ABI, ROUTER_V2_ADDRESS)
 
-		this.curSyrupPoolAddr = stakingAddr
+		await this.getPoolsInfo()
+		await this.fetchPools()
+
+		this.curSyrupPoolAddr = await this.getStakingAddr()
+
+		await this.getInvestInfo()
 
 		// await this.getTransferEvents()
 		await this.getLastBlockUpdate()
-		await this.getPoolsInfo()
-		await this.fetchPools()
-		await this.getInvestInfo()
+
 
 		logger.debug(`init ps ended successfully`)
 	}
@@ -77,12 +80,20 @@ class Pancakeswap {
 				res = await contract.methods.userInfo(process.env.BOT_ADDRESS).call()
 			}
 
+			logger.debug(`res: ${res}`)
+
 			if (res['amount'] !== '0') {
 				stakingAddr.push(poolAddr)
 			}
 		}
 
-		return stakingAddr
+        if (stakingAddr.length === 1) {
+            return stakingAddr[0]
+        } else if (stakingAddr.length > 1) {
+            throw Error(`Bot (${process.env.BOT_ADDRESS}) has staking in more than 1 pool: ${stakingAddr}`)
+        }
+
+		return null
 	}
 
 	async updateBalance() {
@@ -115,8 +126,8 @@ class Pancakeswap {
 		}
 
 		const balanceCngPct = this.changePct(this.investInfo['startBalance'], this.balance)
-		const blockNum = await this.web3.eth.getBlockNumber()
-		const period = blockNum - this.investInfo['startBlock']
+		const blockNum = Number(await this.web3.eth.getBlockNumber())
+		const period = Number(blockNum - this.investInfo['startBlock'])
 
 		if (period < this.BLOCKS_PER_DAY) {
 			return null

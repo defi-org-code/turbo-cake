@@ -115,7 +115,8 @@ class Strategy {
 
     async init() {
 
-        const stakingAddr = await this.ps.getStakingAddr()
+		const stakingAddr = await this.ps.init();
+
         logger.debug(`init: stakingAddr = ${stakingAddr}`)
 
         if (stakingAddr.length === 1) {
@@ -123,13 +124,6 @@ class Strategy {
         } else if (stakingAddr.length > 1) {
             throw Error(`Bot (${process.env.BOT_ADDRESS}) has staking in more than 1 pool`)
         }
-
-		await this.ps.init(this.curSyrupPoolAddr);
-        await this.setupState();
-    }
-
-    async setupState() {
-        // TODO: infer from bsc
     }
 
     redisInit() {
