@@ -277,7 +277,6 @@ class Strategy {
         this.executor = null;
         this.inTransition = false;
         this.lastActionTimestamp = Date.now()
-		await this.updateBalance()
 
         if (action.name === Action.EXIT) {
             clearInterval(this.intervalId);
