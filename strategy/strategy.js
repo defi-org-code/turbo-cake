@@ -100,14 +100,12 @@ class Strategy {
     }
 
 	async reportStats() {
-		logger.debug('reportStats')
-		await this.reporter.send()
+		const investApy = this.ps.getInvestApy()
+		logger.debug(`reportStats: investApy=${investApy}`)
+		await this.reporter.send({'apy': investApy})
 	}
 
     async init() {
-
-        await this.ps.init();
-        await this.setupState();
 
         const stakingAddr = await this.ps.getStakingAddr()
         logger.debug(`init: stakingAddr = ${stakingAddr}`)
@@ -117,6 +115,9 @@ class Strategy {
         } else if (stakingAddr.length > 1) {
             throw Error(`Bot (${process.env.BOT_ADDRESS}) has staking in more than 1 pool`)
         }
+
+		await this.ps.init(this.curSyrupPoolAddr);
+        await this.setupState();
     }
 
     async setupState() {

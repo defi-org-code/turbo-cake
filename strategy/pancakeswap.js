@@ -38,19 +38,24 @@ class Pancakeswap {
         this.poolsInfo = {}
         this.lastBlockUpdate = null
         this.curSyrupPoolAddr = null
-        this.balance = 0
+        this.balance = [0, 0]
+        this.investInfo = {}
     }
 
-	async init() {
+	async init(stakingAddr) {
 		this.smartchefFactoryContract = this.getContract(SMARTCHEF_FACTORY_ABI, SMARTCHEF_FACTORY_ADDRESS)
 		this.cakeContract = this.getContract(CAKE_ABI, CAKE_ADDRESS)
 		this.routerV2Contract = this.getContract(ROUTER_V2_ABI, ROUTER_V2_ADDRESS)
 
-		// await this.getTransferEvents()
+		this.curSyrupPoolAddr = stakingAddr
 
+		// await this.getTransferEvents()
 		await this.getLastBlockUpdate()
 		await this.getPoolsInfo()
 		await this.fetchPools()
+		await this.getInvestInfo()
+
+		logger.debug(`init ps ended successfully`)
 	}
 
 	getContract(contractAbi, contractAddress) {
@@ -82,6 +87,10 @@ class Pancakeswap {
 
 	async updateBalance() {
 
+		if (this.curSyrupPoolAddr === null) {
+			return
+		}
+
 		const contract = this.getContract(this.poolsInfo[this.curSyrupPoolAddr]['abi'], this.curSyrupPoolAddr)
 
 		if (this.curSyrupPoolAddr === MASTER_CHEF_ADDRESS) {
@@ -91,6 +100,42 @@ class Pancakeswap {
 		else {
 			this.balance = await contract.methods.userInfo(process.env.BOT_ADDRESS).call()
 		}
+	}
+
+	async getInvestApy() {
+
+		if(this.investInfo === {}) {
+			await this.getInvestInfo()
+			return
+		}
+
+		const balanceCngPct = this.changePct(this.investInfo['startBalance'], this.balance)
+		const blockNum = await this.web3.eth.getBlockNumber()
+		const period = blockNum - this.investInfo['startBlock']
+		return this.BLOCKS_PER_YEAR * balanceCngPct.toString() / period
+	}
+
+	async getInvestInfo() {
+		let reply = await this.redisClient.get('investInfo')
+
+		if (reply == null) {
+
+			if (this.curSyrupPoolAddr === null) {
+				logger.info('curSyrupPoolAddr is null, no active investment')
+				return
+			}
+
+			// throw Error(`invest info should be set`)
+			const blockNum = await this.web3.eth.getBlockNumber()
+			await this.updateBalance()
+
+			reply = JSON.stringify({startBalance: this.balance, startBlock: blockNum})
+			await this.redisClient.set('investInfo', reply)
+			logger.info(`investInfo is not set, resetting info to current block: balance=${this.balance}, startBlock=${blockNum}`)
+		}
+
+		this.investInfo = JSON.parse(reply)
+		logger.debug(`investInfo was successfully loaded: ${this.investInfo}`)
 	}
 
     async update(curSyrupPoolAddr) {
@@ -131,7 +176,7 @@ class Pancakeswap {
 		return 100 * ((1 + apr / 100 / n) ** (n*t) - 1)
 	}
 
-	 calcApy(poolAddr, rewardsPerBlock, tokenCakeRate, tvl) {
+	calcApy(poolAddr, rewardsPerBlock, tokenCakeRate, tvl) {
 
 		tvl = new BigNumber(tvl).plus(this.balance[0]);
 		tokenCakeRate = new BigNumber(tokenCakeRate);
@@ -148,7 +193,7 @@ class Pancakeswap {
 	}
 
 	async updateBestRoute(amountIn='100000000000000000000') {
-
+		
 		let res, amount
 		let bestRes = new BigNumber(0)
 
@@ -184,7 +229,7 @@ class Pancakeswap {
 			return 1
 		}
 
-		const contract = this.getContract(this.poolsInfo[poolAddr]['abi'], poolAddr)
+		// const contract = this.getContract(this.poolsInfo[poolAddr]['abi'], poolAddr)
 
 		let res;
 		const amountIn = new BigNumber(this.balance[0])
@@ -217,6 +262,8 @@ class Pancakeswap {
 
 	async setActivePools() {
 
+		logger.debug(`setActivePools started`)
+
 		const blockNum = await this.web3.eth.getBlockNumber()
 		let bonusEndBlock, startBlock, poolRewards
 
@@ -237,6 +284,8 @@ class Pancakeswap {
 			this.poolsInfo[poolAddr]['active'] = !((startBlock > blockNum) || (bonusEndBlock <= blockNum) || (poolAddr in this.EXCLUDED_POOLS) ||
 				(this.poolsInfo[poolAddr]['hasUserLimit'] === true) || (poolRewards === 0));
 		}
+
+		logger.debug('setActivePools ended')
 
 	}
 

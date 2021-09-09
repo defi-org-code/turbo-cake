@@ -31,6 +31,8 @@ async function main() {
         // account = web3.eth.accounts.create();
 	    account = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
 
+		console.info(account)
+		// process.exit()
 		await hre.network.provider.request({method: "hardhat_impersonateAccount",params: [CAKE_WHALE_ACCOUNT]});
         await hre.network.provider.request({method: "hardhat_setBalance", params: [account.address, "0x100000000000000000000"]});
 
