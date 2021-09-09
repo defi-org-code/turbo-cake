@@ -38,7 +38,7 @@ class Pancakeswap {
         this.poolsInfo = {}
         this.lastBlockUpdate = null
         this.curSyrupPoolAddr = null
-        this.balance = [0, 0]
+        this.balance = 0
         this.investInfo = {}
     }
 
@@ -89,31 +89,39 @@ class Pancakeswap {
 
 		if (this.curSyrupPoolAddr === null) {
 			const contract = this.getContract(CAKE_ABI, CAKE_ADDRESS)
-			this.balance = [await contract.methods.balanceOf(process.env.BOT_ADDRESS).call(), 0]
+			this.balance = await contract.methods.balanceOf(process.env.BOT_ADDRESS).call()
 			return
 		}
 
 		const contract = this.getContract(this.poolsInfo[this.curSyrupPoolAddr]['abi'], this.curSyrupPoolAddr)
+		let res
 
 		if (this.curSyrupPoolAddr === MASTER_CHEF_ADDRESS) {
-			this.balance = await contract.methods.userInfo(0, process.env.BOT_ADDRESS).call()
+			res = await contract.methods.userInfo(0, process.env.BOT_ADDRESS).call()
 		}
 
 		else {
-			this.balance = await contract.methods.userInfo(process.env.BOT_ADDRESS).call()
+			res = await contract.methods.userInfo(process.env.BOT_ADDRESS).call()
 		}
+
+		this.balance = res['amount']
 	}
 
 	async getInvestApy() {
 
-		if(this.investInfo === {}) {
+		if(Object.keys(this.investInfo).length === 0) {
 			await this.getInvestInfo()
-			return
+			return null
 		}
 
 		const balanceCngPct = this.changePct(this.investInfo['startBalance'], this.balance)
 		const blockNum = await this.web3.eth.getBlockNumber()
 		const period = blockNum - this.investInfo['startBlock']
+
+		if (period < this.BLOCKS_PER_DAY) {
+			return null
+		}
+
 		return this.BLOCKS_PER_YEAR * balanceCngPct.toString() / period
 	}
 
@@ -179,7 +187,7 @@ class Pancakeswap {
 
 	calcApy(poolAddr, rewardsPerBlock, tokenCakeRate, tvl) {
 
-		tvl = new BigNumber(tvl).plus(this.balance[0]);
+		tvl = new BigNumber(tvl).plus(this.balance);
 		tokenCakeRate = new BigNumber(tokenCakeRate);
 		rewardsPerBlock = new BigNumber(rewardsPerBlock);
 
@@ -230,7 +238,7 @@ class Pancakeswap {
 		}
 
 		let res;
-		const amountIn = new BigNumber(this.balance[0])
+		const amountIn = new BigNumber(this.balance)
 
 		// TODO: check and verify calculations
 		res = await this.routerV2Contract.methods.getAmountsOut(amountIn, this.poolsInfo[poolAddr]['routeToCake']).call()

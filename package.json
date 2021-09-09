@@ -19,6 +19,7 @@
     "@influxdata/influxdb-client": "^1.15.0",
     "@pancakeswap/sdk": "^2.3.2",
     "async-redis": "^2.0.0",
+    "graphite": "^0.1.4",
     "hardhat-gas-reporter": "^1.0.4",
     "lodash": "^4.17.21",
     "loglevel": "^1.7.1",

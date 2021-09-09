@@ -88,6 +88,8 @@ class Strategy {
     async start() {
         try {
         	logger.debug(`[Strategy] start`)
+			// await this.reporter.send({'apy': 0})
+
             await this.init();
 
             this.intervalId = setInterval(() => this.run(), this.tickInterval);
@@ -100,9 +102,15 @@ class Strategy {
     }
 
 	async reportStats() {
-		const investApy = this.ps.getInvestApy()
+		const investApy = await this.ps.getInvestApy()
+
+		if (investApy === null) {
+			return
+		}
+
 		logger.debug(`reportStats: investApy=${investApy}`)
-		await this.reporter.send({'apy': investApy})
+		this.notif.sendDiscord(`apy: ${investApy}`)
+		await this.reporter.send({apy: investApy})
 	}
 
     async init() {
@@ -153,6 +161,7 @@ class Strategy {
             logger.debug('set action ended')
             await this.executeAction();
             logger.debug('executeAction ended')
+            await this.reportStats()
 
         } catch (e) {
 
