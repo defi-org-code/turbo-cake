@@ -274,7 +274,7 @@ class Strategy {
 					action = ${JSON.stringify(action)}
 		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
 
-        this.curSyrupPoolAddr = action.to
+        this.curSyrupPoolAddr = action.to.address
         this.executor = null;
         this.inTransition = false;
         this.lastActionTimestamp = Date.now()
