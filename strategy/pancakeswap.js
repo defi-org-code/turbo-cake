@@ -130,11 +130,15 @@ class Pancakeswap {
 		const blockNum = Number(await this.web3.eth.getBlockNumber())
 		const period = Number(blockNum - this.investInfo['startBlock'])
 
+		const apy = this.BLOCKS_PER_YEAR * balanceCngPct.toString() / period
+		logger.info(`Investment APY: ${apy}`)
+
 		if (period < this.BLOCKS_PER_DAY) {
+			logger.info(`ignoring report for period < 1 day`)
 			return null
 		}
 
-		return this.BLOCKS_PER_YEAR * balanceCngPct.toString() / period
+		return apy
 	}
 
 	async getInvestInfo(curSyrupPoolAddr) {
