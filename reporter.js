@@ -9,8 +9,8 @@ class Reporter {
 		this.runningMode = runningMode
 	}
 
-	async send() {
-		this.influxClient.report(`${this.runningMode}.${VERSION}`, {'test': 1}, {})
+	async send(fields, tags={}) {
+		this.influxClient.report(`${this.runningMode}.${VERSION}`, fields, tags)
 	}
 }
 
