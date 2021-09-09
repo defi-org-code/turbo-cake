@@ -47,16 +47,13 @@ class Pancakeswap {
 		this.cakeContract = this.getContract(CAKE_ABI, CAKE_ADDRESS)
 		this.routerV2Contract = this.getContract(ROUTER_V2_ABI, ROUTER_V2_ADDRESS)
 
+		await this.getLastBlockUpdate()
 		await this.getPoolsInfo()
 		await this.fetchPools()
-
-		this.curSyrupPoolAddr = await this.getStakingAddr()
 
 		await this.getInvestInfo()
 
 		// await this.getTransferEvents()
-		await this.getLastBlockUpdate()
-
 
 		logger.debug(`init ps ended successfully`)
 	}
@@ -79,8 +76,6 @@ class Pancakeswap {
 			else {
 				res = await contract.methods.userInfo(process.env.BOT_ADDRESS).call()
 			}
-
-			logger.debug(`res: ${res}`)
 
 			if (res['amount'] !== '0') {
 				stakingAddr.push(poolAddr)
@@ -137,6 +132,8 @@ class Pancakeswap {
 	}
 
 	async getInvestInfo() {
+		this.curSyrupPoolAddr = await this.getStakingAddr()
+
 		let reply = await this.redisClient.get('investInfo')
 
 		if (reply == null) {
