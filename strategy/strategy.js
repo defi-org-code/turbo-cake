@@ -166,7 +166,6 @@ class Strategy {
             logger.debug('set action ended')
             await this.executeAction();
             logger.debug('executeAction ended')
-            await this.reportStats()
 
         } catch (e) {
 
