@@ -82,7 +82,6 @@ class Strategy {
         this.lastActionTimestamp = null;
         this.inTransition = false;
 
-		this.balance = null
 		this.reporter = new Reporter(RunningMode)
     }
 
