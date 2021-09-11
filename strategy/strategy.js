@@ -75,20 +75,45 @@ class Strategy {
         this.config = config;
         this.tickInterval = config.tickInterval;
         this.reportInterval = config.reportInterval
+		this.syrupSwitchInterval = config.syrupSwitchInterval
 
         this.runningMode = runningMode;
         this.name = "pancakeswap-strategy";
-        this.lastActionTimestamp = Date.now() - config.syrupSwitchInterval - 1;
+        this.lastActionTimestamp = null;
         this.inTransition = false;
 
 		this.balance = null
 		this.reporter = new Reporter(RunningMode)
     }
 
+	async getLastActionTimestamp() {
+
+		let reply = await this.redisClient.get('lastActionTimestamp')
+
+		logger.info(`get lastActionTimestamp from redis: ${reply}`)
+
+		if (reply == null) {
+			await this.setLastActionTimestamp()
+			return this.lastActionTimestamp
+		}
+
+		else {
+			return reply
+		}
+	}
+
+	async setLastActionTimestamp() {
+		const timestamp = Date.now()
+		this.lastActionTimestamp = timestamp
+		await this.redisClient.set('lastActionTimestamp', timestamp)
+		logger.info(`lastActionTimestamp was set to ${timestamp}`)
+	}
+
     async start() {
         try {
         	logger.debug(`[Strategy] start`)
 			// await this.reporter.send({'apy': 0})
+	        this.lastActionTimestamp = this.getLastActionTimestamp();
 
 			this.curSyrupPoolAddr = await this.ps.init();
 
@@ -142,7 +167,7 @@ class Strategy {
             logger.debug('set action ended')
             await this.executeAction();
             logger.debug('executeAction ended')
-            // await this.reportStats()
+            await this.reportStats()
 
         } catch (e) {
 
@@ -267,7 +292,7 @@ class Strategy {
         this.curSyrupPoolAddr = action.to.address
         this.executor = null;
         this.inTransition = false;
-        this.lastActionTimestamp = Date.now()
+		await this.setLastActionTimestamp()
 
         if (action.name === Action.EXIT) {
             clearInterval(this.intervalId);
@@ -284,7 +309,7 @@ class Strategy {
         // TODO: continue flow according to trace - executor.retry
         this.executor = null;
         this.inTransition = false;
-        this.lastActionTimestamp = Date.now()
+        await this.setLastActionTimestamp()
     }
 
 

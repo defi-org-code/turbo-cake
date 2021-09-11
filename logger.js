@@ -37,19 +37,19 @@ class Logger {
 		this.name = name.toUpperCase()
 	}
 
-	debug(message) {
+	debug(...message) {
 		console.log(`[${new Date().toISOString()}][${this.name}][DEBUG] ` + message)
 	}
 
-	info(message) {
+	info(...message) {
 		console.log(`[${new Date().toISOString()}][${this.name}][INFO] ` + message)
 	}
 
-	warning(message) {
+	warning(...message) {
 		console.log(`[${new Date().toISOString()}][${this.name}][WARNING] ` + message)
 	}
 
-	error(message) {
+	error(...message) {
 		console.log(`[${new Date().toISOString()}][${this.name}][ERROR] ` + message)
 	}
 

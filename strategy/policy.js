@@ -101,6 +101,8 @@ class GreedyPolicy extends Policy {
 			};
 		}
 
+		console.info('now,lasttimestamp,harvestInterval,eval: ', Date.now(), args.lastActionTimestamp, this.harvestInterval, Date.now() - args.lastActionTimestamp)
+
         if (Date.now() - args.lastActionTimestamp > this.harvestInterval) {
 
             return {
