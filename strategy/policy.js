@@ -81,6 +81,9 @@ class GreedyPolicy extends Policy {
 		* check move criteria
 		* return action
 		* */
+		logger.debug(`getAction args:`)
+		console.log(args)
+
 		const topYielderAddr = this.getTopYielderAddr(args.poolsInfo);
 
         if (args.curSyrupPoolAddr == null) { // enter "top" syrup pool apy estimate
@@ -101,7 +104,7 @@ class GreedyPolicy extends Policy {
 			};
 		}
 
-		logger.debug('now,lasttimestamp,harvestInterval,eval: ', Date.now(), args.lastActionTimestamp, this.harvestInterval, Date.now() - args.lastActionTimestamp)
+		logger.debug(`now=${Date.now()},lastActionTimestamp=${args.lastActionTimestamp},harvestInterval=${this.harvestInterval},eval=${Date.now() - args.lastActionTimestamp}`)
 
         if (Date.now() - args.lastActionTimestamp > this.harvestInterval) {
 

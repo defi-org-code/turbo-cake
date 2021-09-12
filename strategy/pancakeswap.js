@@ -334,7 +334,7 @@ class Pancakeswap {
 		}
 
 		this.lastBlockUpdate = reply
-		logger.debug(`lastBlockUpdate was set to ${this.lastBlockUpdate}`)
+		logger.debug(`get lastBlockUpdate from redis: ${this.lastBlockUpdate}`)
 
 	}
 
