@@ -111,8 +111,6 @@ class Strategy {
     async start() {
         try {
         	logger.debug(`[Strategy] start`)
-			// await this.reporter.send({apy: 10})
-			// process.exit()
 
 	        this.lastActionTimestamp = await this.getLastActionTimestamp();
 
