@@ -136,13 +136,17 @@ class Pancakeswap {
 			return null
 		}
 
+		await this.updateBalance(curSyrupPoolAddr)
+
 		const startBalance = (new BigNumber(this.investInfo['startBalance'].staked)).plus(this.investInfo['startBalance'].unstaked)
 		const endBalance = (new BigNumber(this.balance.staked)).plus(this.balance.unstaked)
 		const balanceCngPct = this.changePct(startBalance, endBalance)
 		const blockNum = Number(await this.web3.eth.getBlockNumber())
 		const period = Number(blockNum - this.investInfo['startBlock'])
 
-		const apy = this.BLOCKS_PER_YEAR * balanceCngPct.toString() / period
+		logger.debug(`getInvestApy: investInfo: ${this.investInfo}, startBalance=${startBalance}, endBalance=${endBalance}, balanceCngPct=${balanceCngPct}, blockNum=${blockNum}, period=${period}`)
+
+		const apy = balanceCngPct.multipliedBy(this.BLOCKS_PER_YEAR).toString() / period
 		logger.info(`Investment APY: ${apy}`)
 
 		if (period < this.BLOCKS_PER_DAY) {
