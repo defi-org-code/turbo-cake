@@ -23,12 +23,13 @@ class Pancakeswap {
 	BLOCKS_PER_DAY = this.SECONDS_PER_DAY / this.AVG_BLOCK_SEC
 	BLOCKS_PER_YEAR = this.BLOCKS_PER_DAY * 365
 
-	PAST_EVENTS_N_DAYS =  90
+	PAST_EVENTS_N_DAYS =  10
 	PAST_EVENTS_N_BLOCKS = Math.floor(this.PAST_EVENTS_N_DAYS * this.BLOCKS_PER_DAY)
 
 	EXCLUDED_POOLS = ["0xa80240Eb5d7E05d3F250cF000eEc0891d00b51CC"]
 
-    constructor(redisClient, web3, notif, pancakeUpdateInterval, bestRouteUpdateInterval) {
+    constructor(botAddress, redisClient, web3, notif, pancakeUpdateInterval, bestRouteUpdateInterval) {
+		this.botAddress = botAddress;
         this.redisClient = redisClient;
         this.pancakeUpdateInterval = pancakeUpdateInterval;
         this.bestRouteUpdateInterval = bestRouteUpdateInterval;
@@ -38,7 +39,10 @@ class Pancakeswap {
 
         this.poolsInfo = {}
         this.lastBlockUpdate = null
-        this.balance = 0
+        this.balance = {
+        	staked: 0,
+			unstaked: 0,
+		}
         this.investInfo = {}
     }
 
@@ -75,10 +79,10 @@ class Pancakeswap {
 			contract = this.getContract(this.poolsInfo[poolAddr]['abi'], poolAddr)
 
 			if (poolAddr === MASTER_CHEF_ADDRESS) {
-				res = await contract.methods.userInfo(0, process.env.BOT_ADDRESS).call()
+				res = await contract.methods.userInfo(0, this.botAddress).call()
 			}
 			else {
-				res = await contract.methods.userInfo(process.env.BOT_ADDRESS).call()
+				res = await contract.methods.userInfo(this.botAddress).call()
 			}
 
 			if (res['amount'] !== '0') {
@@ -89,7 +93,7 @@ class Pancakeswap {
         if (stakingAddr.length === 1) {
             return stakingAddr[0]
         } else if (stakingAddr.length > 1) {
-            throw Error(`Bot (${process.env.BOT_ADDRESS}) has staking in more than 1 pool: ${stakingAddr}`)
+            throw Error(`Bot (${this.botAddress}) has staking in more than 1 pool: ${stakingAddr}`)
         }
 
 		return null
@@ -98,29 +102,33 @@ class Pancakeswap {
 	async updateBalance(curSyrupPoolAddr) {
 
 		let contract = this.getContract(CAKE_ABI, CAKE_ADDRESS)
-		let balance = await contract.methods.balanceOf(process.env.BOT_ADDRESS).call()
+		let unstaked = await contract.methods.balanceOf(this.botAddress).call()
+		this.balance.unstaked = unstaked
 
 		if (curSyrupPoolAddr === null) {
-			this.balance = balance
-			logger.info(`updateBalance: curr pool is null, getting balance from cake contract only: balance=${this.balance}`)
-			return
+			logger.info(`updateBalance: curr pool is null, only unstaked cakes: ${this.balance.unstaked}`)
+			this.balance.staked = 0;
+
+		} else {
+
+			contract = this.getContract(this.poolsInfo[curSyrupPoolAddr]['abi'], curSyrupPoolAddr)
+			let res
+
+			if (curSyrupPoolAddr === MASTER_CHEF_ADDRESS) {
+				res = await contract.methods.userInfo(0, this.botAddress).call()
+			}
+
+			else {
+				res = await contract.methods.userInfo(this.botAddress).call()
+			}
+
+			this.balance.staked = res['amount']
 		}
-
-		contract = this.getContract(this.poolsInfo[curSyrupPoolAddr]['abi'], curSyrupPoolAddr)
-		let res
-
-		if (curSyrupPoolAddr === MASTER_CHEF_ADDRESS) {
-			res = await contract.methods.userInfo(0, process.env.BOT_ADDRESS).call()
-		}
-
-		else {
-			res = await contract.methods.userInfo(process.env.BOT_ADDRESS).call()
-		}
-
-		balance = new BigNumber(res['amount']).plus(balance)
-		this.balance = balance.toString()
-		logger.info(`balance=${balance}`)
+		logger.info(`balance=${JSON.stringify(this.balance)}`)
 	}
+
+
+
 
 	async getInvestApy() {
 
@@ -129,7 +137,9 @@ class Pancakeswap {
 			return null
 		}
 
-		const balanceCngPct = this.changePct(this.investInfo['startBalance'], this.balance)
+		const startBalance = (new BigNumber(this.investInfo['startBalance'].staked)).plus(this.investInfo['startBalance'].unstaked)
+		const endBalance = (new BigNumber(this.balance.staked)).plus(this.balance.unstaked)
+		const balanceCngPct = this.changePct(startBalance, endBalance)
 		const blockNum = Number(await this.web3.eth.getBlockNumber())
 		const period = Number(blockNum - this.investInfo['startBlock'])
 
@@ -160,11 +170,11 @@ class Pancakeswap {
 
 			reply = JSON.stringify({startBalance: this.balance, startBlock: blockNum})
 			await this.redisClient.set('investInfo', reply)
-			logger.info(`investInfo is not set, resetting info to current block: balance=${this.balance}, startBlock=${blockNum}`)
+			logger.info(`investInfo is not set, resetting info to current block: balance=${JSON.stringify(this.balance)}, startBlock=${blockNum}`)
 		}
 
 		this.investInfo = JSON.parse(reply)
-		logger.debug(`investInfo was successfully loaded: ${this.investInfo}`)
+		logger.debug(`investInfo was successfully loaded: ${JSON.stringify(this.investInfo)}`)
 	}
 
     async update(curSyrupPoolAddr) {
@@ -175,8 +185,9 @@ class Pancakeswap {
                 return;
             }
 
+            let shouldUpdateBestRoute;
             if (Date.now() - this.lastUpdate > this.bestRouteUpdateInterval) {
-                await this.updateBestRoute()
+				shouldUpdateBestRoute = true;
             }
 
 			this.lastUpdate = Date.now()
@@ -184,6 +195,10 @@ class Pancakeswap {
 			await this.updateBalance(curSyrupPoolAddr)
 			await this.fetchPools();
 			await this.setActivePools()
+			if (shouldUpdateBestRoute) {
+				await this.updateBestRoute()
+			}
+
 			await this.updatePoolsApy()
 
         } catch (e) {
@@ -203,33 +218,23 @@ class Pancakeswap {
 		return 100 * ((1 + apr / 100 / n) ** (n*t) - 1)
 	}
 
-	calcApy(poolAddr, rewardsPerBlock, tokenCakeRate, tvl) {
-
-		tvl = new BigNumber(tvl).plus(this.balance);
-		tokenCakeRate = new BigNumber(tokenCakeRate);
-		rewardsPerBlock = new BigNumber(rewardsPerBlock);
-
-		const rewardForPeriod = rewardsPerBlock.multipliedBy(this.BLOCKS_PER_YEAR);
-		const cakeForPeriod = rewardForPeriod.multipliedBy(tokenCakeRate);
-		const apr = (tvl.plus(cakeForPeriod).div(tvl).minus(1).multipliedBy(100));
-
-		logger.debug(`poolAddr=${poolAddr}, rewardsPerBlock=${rewardsPerBlock}, tokenCakeRate=${tokenCakeRate}, tvl=${tvl}`)
-		logger.debug(`poolAddr=${poolAddr}, rewardForPeriod=${rewardForPeriod}, cakeForPeriod=${cakeForPeriod}, apr=${apr}`)
-
-		return this.aprToApy(apr.toString())
-	}
-
-	async updateBestRoute(amountIn='100000000000000000000') {
+	async updateBestRoute() {
 		let res, amount
 		let bestRes = new BigNumber(0)
 
 		for (const poolAddr of Object.keys(this.poolsInfo)) {
+			if (this.poolsInfo[poolAddr]['active'] === false) {
+				continue
+			}
+			const rewardPerBlock = new BigNumber(this.poolsInfo[poolAddr]['rewardPerBlock'])
+			// estimate route based on daily rewards
+			const rewardForDay = rewardPerBlock.multipliedBy(this.BLOCKS_PER_DAY)
 
 			for (let route of ROUTES_TO_CAKE) {
 
 				route = [this.poolsInfo[poolAddr]['rewardToken']].concat(route)
 				try {
-					res = await this.routerV2Contract.methods.getAmountsOut(amountIn, route).call()
+					res = await this.routerV2Contract.methods.getAmountsOut(rewardForDay, route).call()
 				}
 				catch (e) {
 					logger.debug(`poolAddr ${poolAddr} skipping route ${route}: ${e}`)
@@ -249,28 +254,44 @@ class Pancakeswap {
 		logger.debug('updateBestRoute ended')
 	}
 
-	async getTokenCakeRate(poolAddr) {
+	async getTokenCakeRate(poolAddr, amountIn) {
 
 		if (this.poolsInfo[poolAddr]['rewardToken'] === CAKE_ADDRESS) {
 			return 1
 		}
 
 		let res;
-		const amountIn = new BigNumber(this.balance)
-
 		// TODO: check and verify calculations
+		// TODO: pool EMA
 		res = await this.routerV2Contract.methods.getAmountsOut(amountIn, this.poolsInfo[poolAddr]['routeToCake']).call()
 
 		const rate = (new BigNumber(res[res.length-1]).dividedBy(amountIn)).toString()
-		logger.debug(`getTokenCakeRate: poolAddr=${poolAddr}, res=${res}, amountIn=${amountIn}, rate=${rate}`)
+		logger.debug(`getTokenCakeRate: poolAddr=${poolAddr}, res=${res}, amountIn=${amountIn.toString()}, rate=${rate}`)
 		return rate
 	}
 
 	async poolApy(poolAddr) {
 
-		const poolTvl = await this.getPoolTvl(poolAddr)
-		const tokenCakeRate = await this.getTokenCakeRate(poolAddr)
-		return this.calcApy(poolAddr, this.poolsInfo[poolAddr]['rewardPerBlock'], tokenCakeRate, poolTvl)
+		let poolTvl = await this.getPoolTvl(poolAddr)
+		// account for bot staking in tvl
+		poolTvl = new BigNumber(poolTvl).plus(new BigNumber(this.balance.unstaked))
+
+		const rewardPerBlock = new BigNumber(this.poolsInfo[poolAddr]['rewardPerBlock'])
+
+		// estimate token cake rate based on daily rewards (max harvest period)
+		const rewardForDay = rewardPerBlock.multipliedBy(this.BLOCKS_PER_DAY)
+		const tokenCakeRate = await this.getTokenCakeRate(poolAddr, rewardForDay)
+		logger.debug(`poolAddr=${poolAddr}, rewardPerBlock=${rewardPerBlock.toString()}, tokenCakeRate=${tokenCakeRate}, poolTvl=${poolTvl.toString()}`)
+
+		const rewardForYear = rewardPerBlock.multipliedBy(this.BLOCKS_PER_YEAR)
+		const cakeForYear = rewardForYear.multipliedBy(tokenCakeRate);
+
+		const apr = cakeForYear.div(poolTvl).multipliedBy(100);
+		// TODO: harvest cost
+		const apy = this.aprToApy(apr.toString())
+		logger.debug(`poolAddr=${poolAddr}, rewardForPeriod=${rewardForYear.toString()}, cakeForYear=${cakeForYear.toString()}, apr=${apr.toString()}, apy=${apy}`)
+
+		return apy
 	}
 
 	async fetchPoolRewards(poolAddr) {
@@ -316,6 +337,9 @@ class Pancakeswap {
 	async updatePoolsApy() {
 
 		for (const poolAddr of Object.keys(this.poolsInfo)) {
+			if (this.poolsInfo[poolAddr]['active'] === false) {
+				continue
+			}
 			this.poolsInfo[poolAddr]['apy'] = await this.poolApy(poolAddr)
 		}
 
