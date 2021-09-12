@@ -82,7 +82,7 @@ class Strategy {
         this.lastActionTimestamp = null;
         this.inTransition = false;
 
-		this.reporter = new Reporter(RunningMode)
+		this.reporter = new Reporter(runningMode)
     }
 
 	async getLastActionTimestamp() {
@@ -111,7 +111,9 @@ class Strategy {
     async start() {
         try {
         	logger.debug(`[Strategy] start`)
-			// await this.reporter.send({'apy': 0})
+			await this.reporter.send({apy: 10})
+			process.exit()
+
 	        this.lastActionTimestamp = await this.getLastActionTimestamp();
 
 			this.curSyrupPoolAddr = await this.ps.init();
