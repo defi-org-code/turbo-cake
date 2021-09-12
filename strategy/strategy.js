@@ -117,7 +117,7 @@ class Strategy {
 			this.curSyrupPoolAddr = await this.ps.init();
 
             this.intervalId = setInterval(() => this.run(), this.tickInterval);
-            setInterval(() => this.reportStats(), this.reportInterval);
+            // setInterval(() => this.reportStats(), this.reportInterval);
 
         } catch (e) {
             this.notif.sendDiscord(`[ERROR] unhandled error: ${e}`);
@@ -295,6 +295,10 @@ class Strategy {
         if (action.name === Action.EXIT) {
             clearInterval(this.intervalId);
             this.inTransition = true;
+        }
+
+        if (action.name === Action.HARVEST) {
+        	await this.reportStats()
         }
     }
 

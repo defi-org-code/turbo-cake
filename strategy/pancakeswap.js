@@ -165,7 +165,7 @@ class Pancakeswap {
 
 			// throw Error(`invest info should be set`)
 			const blockNum = await this.web3.eth.getBlockNumber()
-			await this.updateBalance()
+			await this.updateBalance(curSyrupPoolAddr)
 
 			reply = JSON.stringify({startBalance: this.balance, startBlock: blockNum})
 			await this.redisClient.set('investInfo', reply)
