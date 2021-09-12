@@ -112,7 +112,7 @@ class Strategy {
         try {
         	logger.debug(`[Strategy] start`)
 			// await this.reporter.send({'apy': 0})
-	        this.lastActionTimestamp = this.getLastActionTimestamp();
+	        this.lastActionTimestamp = await this.getLastActionTimestamp();
 
 			this.curSyrupPoolAddr = await this.ps.init();
 
