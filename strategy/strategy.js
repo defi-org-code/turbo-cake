@@ -65,7 +65,7 @@ class Strategy {
         this.account = account;
         this.notif = new Notifications(runningMode);
         this.redisInit();
-        this.ps = new Pancakeswap(this.redisClient, web3, this.notif,
+        this.ps = new Pancakeswap(account.address, this.redisClient, web3, this.notif,
             config.pancakeUpdateInterval, config.bestRouteUpdateInterval);
         this.policy = new GreedyPolicy(config);
 

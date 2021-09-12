@@ -28,8 +28,8 @@ async function main() {
 
     } else if (runningMode === RunningMode.DEV) {
 
-        // account = web3.eth.accounts.create();
-	    account = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
+        account = web3.eth.accounts.create();
+	    // account = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
 
 		// process.exit()
 		await hre.network.provider.request({method: "hardhat_impersonateAccount",params: [CAKE_WHALE_ACCOUNT]});
