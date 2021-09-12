@@ -126,9 +126,6 @@ class Pancakeswap {
 		logger.info(`balance=${JSON.stringify(this.balance)}`)
 	}
 
-
-
-
 	async getInvestApy(curSyrupPoolAddr) {
 
 		if(Object.keys(this.investInfo).length === 0) {
