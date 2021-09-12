@@ -2,6 +2,7 @@ const {getPastEventsLoop} = require('../bscFetcher')
 const {SMARTCHEF_FACTORY_ABI, CAKE_ABI, BEP_20_ABI, SMARTCHEF_INITIALIZABLE_ABI,  ROUTER_V2_ABI} = require('../abis')
 const {MASTER_CHEF_ADDRESS, SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS, BNB_ADDRESS, ROUTER_V2_ADDRESS, ROUTES_TO_CAKE} = require('./params')
 const nodeFetch = require("node-fetch")
+const Contract = require('web3-eth-contract') // workaround for web3 leakage
 
 const {FatalError} = require('../errors');
 require('dotenv').config();
@@ -64,7 +65,9 @@ class Pancakeswap {
 	}
 
 	getContract(contractAbi, contractAddress) {
-		return new this.web3.eth.Contract(contractAbi, contractAddress)
+		const contract = new Contract(contractAbi, contractAddress)
+		contract.setProvider(this.web3.currentProvider)
+		return contract
 	}
 
 	async getStakingAddr() {
@@ -355,7 +358,7 @@ class Pancakeswap {
 		}
 
 		this.lastBlockUpdate = reply
-		logger.debug(`lastBlockUpdate was set to ${this.lastBlockUpdate}`)
+		logger.debug(`get lastBlockUpdate from redis: ${this.lastBlockUpdate}`)
 
 	}
 

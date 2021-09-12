@@ -59,7 +59,7 @@ class Strategy {
             terminating: false,
         }
         const config = loadConfig(runningMode);
-        logger.debug(config);
+        console.log(config);
 
         this.web3 = web3;
         this.account = account;
