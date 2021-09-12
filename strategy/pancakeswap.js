@@ -102,8 +102,7 @@ class Pancakeswap {
 	async updateBalance(curSyrupPoolAddr) {
 
 		let contract = this.getContract(CAKE_ABI, CAKE_ADDRESS)
-		let unstaked = await contract.methods.balanceOf(this.botAddress).call()
-		this.balance.unstaked = unstaked
+		this.balance.unstaked = await contract.methods.balanceOf(this.botAddress).call()
 
 		if (curSyrupPoolAddr === null) {
 			logger.info(`updateBalance: curr pool is null, only unstaked cakes: ${this.balance.unstaked}`)
@@ -130,10 +129,10 @@ class Pancakeswap {
 
 
 
-	async getInvestApy() {
+	async getInvestApy(curSyrupPoolAddr) {
 
 		if(Object.keys(this.investInfo).length === 0) {
-			await this.getInvestInfo()
+			await this.getInvestInfo(curSyrupPoolAddr)
 			return null
 		}
 
@@ -223,9 +222,11 @@ class Pancakeswap {
 		let bestRes = new BigNumber(0)
 
 		for (const poolAddr of Object.keys(this.poolsInfo)) {
+
 			if (this.poolsInfo[poolAddr]['active'] === false) {
 				continue
 			}
+
 			const rewardPerBlock = new BigNumber(this.poolsInfo[poolAddr]['rewardPerBlock'])
 			// estimate route based on daily rewards
 			const rewardForDay = rewardPerBlock.multipliedBy(this.BLOCKS_PER_DAY)

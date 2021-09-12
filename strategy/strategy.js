@@ -126,7 +126,7 @@ class Strategy {
     }
 
 	async reportStats() {
-		const investApy = await this.ps.getInvestApy()
+		const investApy = await this.ps.getInvestApy(this.curSyrupPoolAddr)
 
 		if (investApy === null) {
 			return
