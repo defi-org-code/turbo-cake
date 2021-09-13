@@ -99,7 +99,7 @@ class GreedyPolicy extends Policy {
 
 			return {
 				name: Action.SWITCH,
-				from: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy, active: args.poolsInfo[args.curSyrupPoolAddr].active, hasUserLimit: args.poolsInfo[args.curSyrupPoolAddr].hasUserLimit},
+				from: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy, active: args.poolsInfo[args.curSyrupPoolAddr].active, hasUserLimit: args.poolsInfo[args.curSyrupPoolAddr].hasUserLimit, routeToCake: args.poolsInfo[args.curSyrupPoolAddr].routeToCake},
 				to: {address: topYielderAddr, name: args.poolsInfo[topYielderAddr].rewardSymbol, apy: args.poolsInfo[topYielderAddr].apy, active: args.poolsInfo[topYielderAddr].active, hasUserLimit: args.poolsInfo[topYielderAddr].hasUserLimit}
 			};
 		}
@@ -110,8 +110,8 @@ class GreedyPolicy extends Policy {
 
             return {
                 name: Action.HARVEST,
-                from: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy, active: args.poolsInfo[args.curSyrupPoolAddr].active, hasUserLimit: args.poolsInfo[args.curSyrupPoolAddr].hasUserLimit},
-                to: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy, active: args.poolsInfo[args.curSyrupPoolAddr].active, hasUserLimit: args.poolsInfo[args.curSyrupPoolAddr].hasUserLimit},
+                from: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy, active: args.poolsInfo[args.curSyrupPoolAddr].active, hasUserLimit: args.poolsInfo[args.curSyrupPoolAddr].hasUserLimit, routeToCake: args.poolsInfo[args.curSyrupPoolAddr].routeToCake},
+                to: null,
             };
         }
 

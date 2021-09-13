@@ -78,7 +78,7 @@ class Executor extends TxManager {
                     break;
 
                 case Action.HARVEST:
-                    await this.harvest(args.to.address);
+                    await this.harvest(args.from.address, args.from.routeToCake);
 
                     break;
 
@@ -87,7 +87,7 @@ class Executor extends TxManager {
                     break;
 
                 case Action.EXIT:
-                    await this.exitPosition(args.from.address);
+                    await this.exitPosition(args.from.address, args.from.routeToCake);
                     break;
 
                 default:
@@ -200,23 +200,23 @@ class Executor extends TxManager {
     }
 
 
-    async exitPosition(addr) {
+    async exitPosition(addr, routeToCake) {
         logger.debug(`executor.exitPosition: start pool ${addr}`);
 
         const syrupPool = await this.setupSyrupPool(addr);
         const stakedAmount = await this.getStakedAmount(syrupPool, this.account.address);
         const withdrawn = await this.withdraw(syrupPool, stakedAmount);
-        await this.swapAllToCake(withdrawn.rewardTokenAddr);
+        await this.swapAllToCake(withdrawn.rewardTokenAddr, routeToCake);
 
         logger.debug("executor.exitPosition: end");
     }
 
-    async harvest(addr) {
+    async harvest(addr, routeToCake) {
         logger.debug(`executor.harvest: start pool ${addr}`);
 
         const syrupPool = await this.setupSyrupPool(addr);
         const withdrawn = await this.withdraw(syrupPool, 0);
-        await this.swapAllToCake(withdrawn.rewardTokenAddr);
+        await this.swapAllToCake(withdrawn.rewardTokenAddr, routeToCake);
         const cakeBalance = await this.cakeContract.methods.balanceOf(this.account.address).call();
         await this.depositCake(syrupPool, cakeBalance);
 
@@ -302,7 +302,7 @@ class Executor extends TxManager {
         return result;
     }
 
-    async swapAllToCake(tokenIn) {
+    async swapAllToCake(tokenIn, routeToCake) {
         logger.debug(`executor.swapAllToCake: token ${tokenIn} `);
 
         if (tokenIn === CAKE_ADDRESS) {
@@ -317,8 +317,7 @@ class Executor extends TxManager {
         const swapAmount = await token.methods.balanceOf(this.account.address).call();
         await this.approve(tokenIn, this.router.options.address, swapAmount);
 
-        const viaBnb = [tokenIn, WBNB_ADDRESS, CAKE_ADDRESS];
-        await this.swap(tokenIn, swapAmount, viaBnb);
+        await this.swap(tokenIn, swapAmount, routeToCake);
 
     }
 
