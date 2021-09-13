@@ -34,7 +34,7 @@ interface IWorker {
 	}
 
 	struct TransferMngParams {
-		address stakedToken;
+		address token;
 		uint16 startIndex;
 		uint16 endIndex;
 	}

@@ -65,6 +65,11 @@ contract Worker is IWorker {
 	function swap(address stakedPoolAddr, SwapParams calldata params) private {
 
 		uint256 amountIn = IERC20(ICakePools(stakedPoolAddr).rewardToken()).balanceOf(address(this));
+
+		if (amountIn == 0) {
+			return;
+		}
+
 		uint256 amountOutMin = amountIn * params.multiplier;
 
 		IERC20(ICakePools(stakedPoolAddr).rewardToken()).approve(params.swapRouter,amountIn);
@@ -94,18 +99,17 @@ contract Worker is IWorker {
 		}
 
 		emit DoHardWork(params.stakedPoolAddr);
-
 	}
 
-	function transferToManager(address stakedToken) external onlyOwner {
+	function transferToManager(address token) external onlyOwner {
 
-		uint256 amount = IERC20(stakedToken).balanceOf(address(this));
+		uint256 amount = IERC20(token).balanceOf(address(this));
 
 		if (amount == 0) {
 			return;
 		}
 
-		IERC20(stakedToken).safeTransfer(owner, amount);
+		IERC20(token).safeTransfer(owner, amount);
 	}
 
 }

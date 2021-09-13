@@ -4,7 +4,7 @@ const {GreedyPolicy, Action} = require("./policy");
 const {Executor} = require("./executor");
 const {Pancakeswap} = require("./pancakeswap");
 const {Reporter} = require('../reporter')
-
+const {ContractManager} = require('./contractManager')
 const {
     RunningMode, DEV_ACCOUNT, DEV_SMARTCHEF_ADDRESS_LIST,
     SYRUP_SWITCH_INTERVAL, HARVEST_INTERVAL,
@@ -68,6 +68,7 @@ class Strategy {
         this.ps = new Pancakeswap(account.address, this.redisClient, web3, this.notif,
             config.pancakeUpdateInterval, config.bestRouteUpdateInterval);
         this.policy = new GreedyPolicy(config);
+        this.contractManager = new ContractManager(web3, this.redisClient)
 
         this.executor = null;
         this.nextAction = {name: Action.NO_OP,};
@@ -109,12 +110,14 @@ class Strategy {
 	}
 
     async start() {
+
         try {
         	logger.debug(`[Strategy] start`)
 
 	        this.lastActionTimestamp = await this.getLastActionTimestamp();
 
-			this.curSyrupPoolAddr = await this.ps.init();
+			await this.ps.init();
+			this.curSyrupPoolAddr = await this.contractManager.init();
 
             this.intervalId = setInterval(() => this.run(), this.tickInterval);
             // setInterval(() => this.reportStats(), this.reportInterval);
@@ -164,6 +167,7 @@ class Strategy {
             logger.debug('ps udpate ended')
             await this.setAction();
             logger.debug('set action ended')
+            await this.contractManager.run(this.nextAction);
             await this.executeAction();
             logger.debug('executeAction ended')
 

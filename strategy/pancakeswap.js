@@ -10,7 +10,6 @@ require('dotenv').config();
 const BigNumber = require('bignumber.js')
 BigNumber.config({POW_PRECISION: 100, EXPONENTIAL_AT: 1e+9})
 
-// const {getLogger} = require('../logger')
 const {Logger} = require('../logger')
 const logger = new Logger('pancakeswap')
 
@@ -44,9 +43,11 @@ class Pancakeswap {
 			unstaked: 0,
 		}
         this.investInfo = {}
+        this.workersAddr = []
     }
 
 	async init() {
+		// TODO: add support to contract manager
 		this.smartchefFactoryContract = this.getContract(SMARTCHEF_FACTORY_ABI, SMARTCHEF_FACTORY_ADDRESS)
 		this.cakeContract = this.getContract(CAKE_ABI, CAKE_ADDRESS)
 		this.routerV2Contract = this.getContract(ROUTER_V2_ABI, ROUTER_V2_ADDRESS)
@@ -62,6 +63,10 @@ class Pancakeswap {
 
 		logger.debug(`init ps ended successfully: curSyrupPoolAddr=${curSyrupPoolAddr}`)
 		return curSyrupPoolAddr
+	}
+
+	updateWorkersAddr(workersAddr) {
+		this.workersAddr = workersAddr
 	}
 
 	getContract(contractAbi, contractAddress) {
@@ -101,8 +106,7 @@ class Pancakeswap {
 
 	async updateBalance(curSyrupPoolAddr) {
 
-		let contract = this.getContract(CAKE_ABI, CAKE_ADDRESS)
-		this.balance.unstaked = await contract.methods.balanceOf(this.botAddress).call()
+		this.balance.unstaked = await this.cakeContract.methods.balanceOf(this.botAddress).call()
 
 		if (curSyrupPoolAddr === null) {
 			logger.info(`updateBalance: curr pool is null, only unstaked cakes: ${this.balance.unstaked}`)
@@ -110,7 +114,7 @@ class Pancakeswap {
 
 		} else {
 
-			contract = this.getContract(this.poolsInfo[curSyrupPoolAddr]['abi'], curSyrupPoolAddr)
+			let contract = this.getContract(this.poolsInfo[curSyrupPoolAddr]['abi'], curSyrupPoolAddr)
 			let res
 
 			if (curSyrupPoolAddr === MASTER_CHEF_ADDRESS) {

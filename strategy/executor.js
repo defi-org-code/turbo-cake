@@ -157,13 +157,14 @@ class Executor extends TxManager {
             };
 
             logger.debug("sendTransactionWait ");
-            logger.debug('transactionObject: ', transactionObject);
+            console.log('transactionObject: ', transactionObject);
             const signedTx = await this.account.signTransaction(transactionObject);
-            logger.debug('signedTx:', signedTx)
+            logger.debug('signedTx:')
+            console.log(signedTx)
 
             const txResponse = await this.web3.eth.sendSignedTransaction(signedTx.rawTransaction);
             logger.debug('## txResponse ##');
-            console.dir(txResponse);
+            console.log(txResponse);
 
             const res = await this.pendingWait(1000, txResponse.transactionHash);
             logger.debug('## txReceipt ##', res.gasUsed);

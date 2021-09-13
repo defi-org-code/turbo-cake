@@ -28,7 +28,7 @@ contract Manager is ReentrancyGuard, IWorker {
 	event WorkersAdded(uint256 nWorkers);
 	event DoHardWork(uint16 startIndex, uint16 endIndex, address indexed stakedPoolAddr, address indexed newPoolAddr, uint256 indexed blockNum);
 	event TransferToWorkers(uint16 startIndex, uint16 endIndex, uint256 indexed amount, address indexed stakedToken);
-	event TransferToManager(uint16 indexed startIndex, uint16 indexed endIndex, address indexed stakedToken);
+	event TransferToManager(uint16 indexed startIndex, uint16 indexed endIndex, address indexed token);
 	event TransferToOwner(uint256 amount);
 
 	modifier restricted() {
@@ -102,10 +102,10 @@ contract Manager is ReentrancyGuard, IWorker {
 	function transferToManager(TransferMngParams calldata params) external restricted {
 
 		for (uint16 i=params.startIndex; i< params.endIndex; i++) {
-				Worker(workers[i]).transferToManager(params.stakedToken);
+				Worker(workers[i]).transferToManager(params.token);
 		}
 
-		emit TransferToManager(params.startIndex, params.endIndex, params.stakedToken);
+		emit TransferToManager(params.startIndex, params.endIndex, params.token);
 	}
 
 	function transferToOwner(address stakedToken) external restricted {
