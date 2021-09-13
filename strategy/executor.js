@@ -358,7 +358,7 @@ class Executor extends TxManager {
         if (amountIn > 0) {
             const amounts = await this.router.methods.getAmountsOut(amountIn, route).call();
             const amountBN = this.web3.utils.toBN(amounts[1]);
-            const amountOutMin = amountBN.sub(amountBN.div(this.swapSlippage));
+            const amountOutMin = amountBN.sub(amountBN.divn(this.swapSlippage));
             const recipient = this.account.address;
             const deadline = Date.now() + this.swapTimeLimit;
 
