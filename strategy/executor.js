@@ -58,10 +58,15 @@ class Executor extends TxManager {
             ROUTER_ADDRESS);
     }
 
+	async run() {
 
-    async run() {
+		console.log("executor.run: start");
+		setTimeout(async () => await this.worker(), 0)
+	}
 
-        logger.debug("executor.run: start");
+    async worker() {
+
+        logger.debug("executor.worker: start");
 
         try {
             this.status = "running";
@@ -173,7 +178,6 @@ class Executor extends TxManager {
         }
     }
 
-
     pendingWait = (milliseconds, txHash) => {
         return new Promise(resolve => setTimeout(async () => {
             const res = await this.web3.eth.getTransactionReceipt(txHash);
@@ -187,7 +191,6 @@ class Executor extends TxManager {
         }, milliseconds),)
     }
 
-
     async enterPosition(addr) {
         logger.debug(`executor.enterPosition: start pool ${addr} `);
 
@@ -198,7 +201,6 @@ class Executor extends TxManager {
 
         logger.debug("executor.enterPosition: end");
     }
-
 
     async exitPosition(addr) {
         logger.debug(`executor.exitPosition: start pool ${addr}`);
@@ -222,7 +224,6 @@ class Executor extends TxManager {
 
         logger.debug("executor.harvest: end");
     }
-
 
     async switchPools(fromAddr, toAddr) {
         logger.debug(`executor.switchPools: start from ${fromAddr}  to ${toAddr} `);
@@ -378,7 +379,6 @@ class Executor extends TxManager {
         return result;
 
     }
-
 
     async setupSyrupPool(syrupAddr) {
 

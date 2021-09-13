@@ -180,69 +180,6 @@ class Strategy {
         }
     }
 
-    runDevOverride() {
-        if (this.runningMode !== RunningMode.DEV) {
-            return;
-        }
-        this.tickIndex++;
-        let diff = 0;
-        if (this.tickTime) {
-            diff = Date.now() - this.tickTime;
-        }
-        this.tickTime = Date.now();
-
-        console.log(" tick number: ", this.tickIndex, this.inTransition, diff);
-
-        if (this.tickIndex === 1) {
-            this.nextAction =
-                {
-                    name: Action.ENTER,
-                    args: {
-                        poolAddress: this.config.devSmartchefAddressList[0],
-                    },
-                    description: "FAKE action",
-                }
-        }
-
-        if (this.tickIndex === 8) {
-            this.nextAction =
-                {
-                    name: Action.HARVEST,
-                    args: {
-                        poolAddress: this.config.devSmartchefAddressList[0],
-                    },
-                    description: "FAKE action",
-                }
-        }
-
-        if (this.tickIndex === 10) {
-            this.nextAction =
-                {
-                    name: Action.SWITCH,
-                    args: {
-                        from: this.config.devSmartchefAddressList[0],
-                        to: this.config.devSmartchefAddressList[1],
-                    },
-                    description: "FAKE action",
-                }
-        }
-
-
-        if (this.tickIndex >= 20 && this.curSyrupPoolAddr) {
-            this.nextAction =
-                {
-                    name: Action.EXIT,
-                    args: {
-                        poolAddress: this.config.devSmartchefAddressList[0],
-                    },
-                    description: "FAKE action",
-                }
-        }
-
-        console.log(" override action: ", this.nextAction);
-    }
-
-
     async setAction() {
         const lastAction = this.nextAction;
         // logger.debug(`setAction: nextAction=${JSON.stringify(this.nextAction)}`)

@@ -15,6 +15,7 @@ interface IWorker {
 		bool withdraw;
 		bool swap;
 		bool deposit;
+		bool transfer;
 		address stakedPoolAddr;
 		address newPoolAddr;
 		uint256 amount;

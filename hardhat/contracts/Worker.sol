@@ -11,7 +11,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../interfaces/IWorker.sol";
 import "../interfaces/ICakePools.sol";
 
-contract Worker is ReentrancyGuard, IWorker {
+contract Worker is IWorker {
 
 	using SafeERC20 for IERC20;
     address public immutable owner;
@@ -30,7 +30,11 @@ contract Worker is ReentrancyGuard, IWorker {
 	}
 
 	function deposit(address stakedPoolAddr, uint256 amount, uint256 pid) private {
-		require(amount > 0, "zero deposit amount");
+//		require(amount > 0, "zero deposit amount");
+
+		if (amount == 0) {
+			amount = IERC20(ICakePools(stakedPoolAddr).stakedToken()).balanceOf(address(this));
+		}
 
 		if (pid == 0) { // TODO: FIXME
 			IERC20(cake).approve(stakedPoolAddr,amount);
@@ -85,11 +89,15 @@ contract Worker is ReentrancyGuard, IWorker {
 			deposit(params.newPoolAddr, params.amount, params.pid);
 		}
 
+		if (params.transfer) {
+			this.transferToManager(ICakePools(params.stakedPoolAddr).stakedToken());
+		}
+
 		emit DoHardWork(params.stakedPoolAddr);
 
 	}
 
-	function transferToManager(address stakedToken) external onlyOwner nonReentrant {
+	function transferToManager(address stakedToken) external onlyOwner {
 
 		uint256 amount = IERC20(stakedToken).balanceOf(address(this));
 
