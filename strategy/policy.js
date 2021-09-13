@@ -111,7 +111,7 @@ class GreedyPolicy extends Policy {
             return {
                 name: Action.HARVEST,
                 from: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy, active: args.poolsInfo[args.curSyrupPoolAddr].active, hasUserLimit: args.poolsInfo[args.curSyrupPoolAddr].hasUserLimit, routeToCake: args.poolsInfo[args.curSyrupPoolAddr].routeToCake},
-                to: null,
+                to: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy, active: args.poolsInfo[args.curSyrupPoolAddr].active, hasUserLimit: args.poolsInfo[args.curSyrupPoolAddr].hasUserLimit, routeToCake: args.poolsInfo[args.curSyrupPoolAddr].routeToCake},
             };
         }
 
