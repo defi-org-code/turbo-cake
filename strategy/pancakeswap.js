@@ -141,7 +141,9 @@ class Pancakeswap {
 		const blockNum = Number(await this.web3.eth.getBlockNumber())
 		const period = Number(blockNum - this.investInfo['startBlock'])
 
-		logger.debug(`getInvestApy: investInfo: ${this.investInfo}, startBalance=${startBalance}, endBalance=${endBalance}, balanceCngPct=${balanceCngPct}, blockNum=${blockNum}, period=${period}`)
+		logger.debug(`getInvestApy: startBalance=${startBalance}, endBalance=${endBalance}, balanceCngPct=${balanceCngPct}, blockNum=${blockNum}, period=${period}`)
+		logger.debug('investInfo: ')
+		console.log(this.investInfo)
 
 		const apy = balanceCngPct.multipliedBy(this.BLOCKS_PER_YEAR).toString() / period
 		logger.info(`Investment APY: ${apy}`)
