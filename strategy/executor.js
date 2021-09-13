@@ -355,17 +355,16 @@ class Executor extends TxManager {
         };
 
         if (amountIn > 0) {
-            const viaBnb = [tokenIn, WBNB_ADDRESS, CAKE_ADDRESS];
-            const amounts = await this.router.methods.getAmountsOut(amountIn, viaBnb).call();
+            const amounts = await this.router.methods.getAmountsOut(amountIn, route).call();
             const amountBN = this.web3.utils.toBN(amounts[1]);
-            const amountOutMin = amountBN.sub(amountBN.divn(this.swapSlippage));
+            const amountOutMin = amountBN.sub(amountBN.div(this.swapSlippage));
             const recipient = this.account.address;
             const deadline = Date.now() + this.swapTimeLimit;
 
             const tx = await this.router.methods.swapExactTokensForTokens(
                 amountIn,
                 amountOutMin,
-                viaBnb,
+                route,
                 recipient,
                 deadline
             ).encodeABI();
