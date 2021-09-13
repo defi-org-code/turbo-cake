@@ -267,6 +267,7 @@ class Strategy {
             return;
         }
 
+		// TODO: move to init and pass action through executor.run()
         this.executor = new Executor({
             action: action,
             web3: this.web3,
