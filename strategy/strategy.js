@@ -1,7 +1,7 @@
 const asyncRedis = require("async-redis");
 const Notifications = require('../notifications');
 const {GreedyPolicy, Action} = require("./policy");
-const {Executor} = require("./executor");
+const {Batcher} = require("./batcher");
 const {Pancakeswap} = require("./pancakeswap");
 const {Reporter} = require('../reporter')
 const {ContractManager} = require('./contractManager')
@@ -68,9 +68,16 @@ class Strategy {
         this.ps = new Pancakeswap(account.address, this.redisClient, web3, this.notif,
             config.pancakeUpdateInterval, config.bestRouteUpdateInterval);
         this.policy = new GreedyPolicy(config);
-        this.contractManager = new ContractManager(web3, this.redisClient)
+        // this.contractManager = new ContractManager(web3, this.account, this.redisClient)
+		this.batcher = new Batcher({
+			web3: web3,
+			account: account,
+			notifClient: this.notif,
+			swapSlippage: config.swapSlippage,
+			swapTimeLimit: config.swapTimeLimit,
+			redisClient: this.redisClient
+		});
 
-        this.executor = null;
         this.nextAction = {name: Action.NO_OP,};
         this.tickIndex = 0;
         this.config = config;
@@ -116,8 +123,8 @@ class Strategy {
 
 	        this.lastActionTimestamp = await this.getLastActionTimestamp();
 
-			await this.ps.init();
-			this.curSyrupPoolAddr = await this.contractManager.init();
+			this.curSyrupPoolAddr = await this.ps.init();
+			// this.curSyrupPoolAddr = await this.contractManager.init();
 
             this.intervalId = setInterval(() => this.run(), this.tickInterval);
             // setInterval(() => this.reportStats(), this.reportInterval);
@@ -164,10 +171,10 @@ class Strategy {
             this.inTransition = true;
 
             await this.ps.update(this.curSyrupPoolAddr);
-            logger.debug('ps udpate ended')
+            logger.debug('ps update ended')
             await this.setAction();
             logger.debug('set action ended')
-            await this.contractManager.run(this.nextAction);
+            // await this.contractManager.run(this.nextAction);
             await this.executeAction();
             logger.debug('executeAction ended')
 
@@ -203,25 +210,15 @@ class Strategy {
         const startTime = Date.now();
 
         if (action.name === Action.NO_OP) {
-            this.executor = null;
+            this.batcher = null;
             this.inTransition = false;
             return;
         }
 
-		// TODO: move to init and pass action through executor.run()
-        this.executor = new Executor({
-            action: action,
-            web3: this.web3,
-            account: this.account,
-            notifClient: this.notif,
-            swapSlippage: this.config.swapSlippage,
-            swapTimeLimit: this.config.swapTimeLimit,
-        });
+        this.batcher.on("failure", async (trace) => await this.handleExecutionError(trace, action, startTime));
+        this.batcher.on("success", async (trace) => await this.handleExecutionSuccess(trace, action, startTime));
 
-        this.executor.on("failure", async (trace) => await this.handleExecutionError(trace, action, startTime));
-        this.executor.on("success", async (trace) => await this.handleExecutionSuccess(trace, action, startTime));
-
-        await this.executor.run();
+        await this.batcher.run(action);
     }
 
     async handleExecutionSuccess(trace, action, startTime) {
@@ -230,7 +227,7 @@ class Strategy {
 		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
 
         this.curSyrupPoolAddr = action.to.address
-        this.executor = null;
+        this.batcher = null;
         this.inTransition = false;
 		await this.setLastActionTimestamp()
 
@@ -250,8 +247,8 @@ class Strategy {
 		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
 
         // this.nextAction = { name: Action.NO_OP,};
-        // TODO: continue flow according to trace - executor.retry
-        this.executor = null;
+        // TODO: continue flow according to trace - batcher.retry
+        this.batcher = null;
         this.inTransition = false;
         await this.setLastActionTimestamp()
     }

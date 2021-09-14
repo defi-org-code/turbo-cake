@@ -102,7 +102,7 @@ contract Manager is ReentrancyGuard, IWorker {
 	function transferToManager(TransferMngParams calldata params) external restricted {
 
 		for (uint16 i=params.startIndex; i< params.endIndex; i++) {
-				Worker(workers[i]).transferToManager(params.token);
+				Worker(workers[i]).transferToManager(params.amount, params.token);
 		}
 
 		emit TransferToManager(params.startIndex, params.endIndex, params.token);

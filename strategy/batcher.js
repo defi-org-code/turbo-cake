@@ -14,8 +14,7 @@ const {
 const {TransactionFailure, FatalError, GasError, NotImplementedError} = require('../errors');
 
 const {Logger} = require('../logger')
-const logger = new Logger('executor')
-
+const logger = new Logger('batcher')
 
 const SyrupPoolType = {
     MANUAL_CAKE: "masterchef",
@@ -23,17 +22,18 @@ const SyrupPoolType = {
     OTHER: "unsupported",
 }
 
+const BigNumber = require('bignumber.js')
+BigNumber.config({POW_PRECISION: 100, EXPONENTIAL_AT: 1e+9})
 
-class Executor extends TxManager {
 
+class Batcher extends TxManager {
 
     constructor(args) {
-        super(args.notifClient);
+    	super(args.web3, args.account)
+        this.name = "pancakeswap-batcher";
         this.web3 = args.web3;
-        this.name = "pancakeswap-executor";
         this.notif = args.notifClient;
         this.account = args.account;
-        this.action = args.action;
         this.swapSlippage = args.swapSlippage;
         this.swapTimeLimit = args.swapTimeLimit;
         this.status = "start";
@@ -52,47 +52,44 @@ class Executor extends TxManager {
             MASTER_CHEF_ADDRESS
         );
 
-
         this.router = new this.web3.eth.Contract(
             ROUTER_V2_ABI,
             ROUTER_ADDRESS);
     }
 
-	async run() {
+	async run(action) {
 
-		console.log("executor.run: start");
-		setTimeout(async () => await this.worker(), 0)
+		console.log("batcher.run: start");
+		setTimeout(async () => await this.worker(action), 0)
 	}
 
-    async worker() {
+    async worker(action) {
 
-        logger.debug("executor.worker: start");
+        logger.debug("batcher.worker: start");
 
         try {
             this.status = "running";
-            const args = this.action;
 
-            switch (this.action.name) {
+            switch (action.name) {
 
                 case Action.NO_OP:
                     this.status = null;
                     break;
 
                 case Action.ENTER:
-                    await this.enterPosition(args.to.address);
+                    await this.enterPosition(action.to.address);
                     break;
 
                 case Action.HARVEST:
-                    await this.harvest(args.to.address);
-
+                    await this.harvest(action.to.address);
                     break;
 
                 case Action.SWITCH:
-                    await this.switchPools(args.from.address, args.to.address);
+                    await this.switchPools(action.from.address, args.to.address);
                     break;
 
                 case Action.EXIT:
-                    await this.exitPosition(args.from.address);
+                    await this.exitPosition(action.from.address);
                     break;
 
                 default:
@@ -100,8 +97,7 @@ class Executor extends TxManager {
             }
 
             this.status = "success";
-            logger.debug("executor.run: action completed successfully");
-
+            logger.debug("batcher.run: action completed successfully");
 
         } catch (err) {
             this.handleExecutionError(err);
@@ -111,111 +107,35 @@ class Executor extends TxManager {
         }
     }
 
-    async handleExecutionResult() {
-        if (this.status === "success") {
-            await this.onSuccess(this.trace);
-        }
-        if (this.status === "failure") {
-            await this.onFailure(this.trace);
-        }
-    }
-
-    async onSuccess(trace) {
-        if (this.onSuccessCallback != null) {
-            await this.onSuccessCallback(trace);
-        }
-    }
-
-    async onFailure(trace) {
-        if (this.onFailureCallback != null) {
-            await this.onFailureCallback(trace);
-        }
-    }
-
-    on(event, cb) {
-        if (event === "success") {
-            this.onSuccessCallback = cb;
-        }
-        if (event === "failure") {
-            this.onFailureCallback = cb;
-        }
-    }
-
-    async sendTransactionWait(encodedTx, to, gas = undefined) {
-
-        if (!encodedTx) {
-            return null;
-        }
-
-        try {
-
-            let transactionObject = {
-                gas: (gas ? gas : 500000),
-                data: encodedTx,
-                from: this.account.address,
-                to: to,
-            };
-
-            logger.debug("sendTransactionWait ");
-            console.log('transactionObject: ', transactionObject);
-            const signedTx = await this.account.signTransaction(transactionObject);
-            logger.debug('signedTx:')
-            console.log(signedTx)
-
-            const txResponse = await this.web3.eth.sendSignedTransaction(signedTx.rawTransaction);
-            logger.debug('## txResponse ##');
-            console.log(txResponse);
-
-            const res = await this.pendingWait(1000, txResponse.transactionHash);
-            logger.debug('## txReceipt ##', res.gasUsed);
-            console.log(res);
-
-            return res;
-
-
-        } catch (error) {
-            // this.notif.sendDiscord(`failed to send transaction: ${error}`);
-            throw new FatalError(`failed to send transaction: ${error}`);
-        }
-    }
-
-    pendingWait = (milliseconds, txHash) => {
-        return new Promise(resolve => setTimeout(async () => {
-            const res = await this.web3.eth.getTransactionReceipt(txHash);
-            if (res === null) {
-                return this.pendingWait(milliseconds, txHash)
-            }
-            if (res['status'] === true) {
-                resolve(res)
-            }
-            return null;
-        }, milliseconds),)
-    }
+	async cakeBalance() {
+		return (new BigNumber(this.balance.staked)).plus(this.balance.unstaked).toString()
+	}
 
     async enterPosition(addr) {
-        logger.debug(`executor.enterPosition: start pool ${addr} `);
+        logger.debug(`batcher.enterPosition: start pool ${addr} `);
 
         const syrupPool = await this.setupSyrupPool(addr);
+        // TODO: update balance
         const cakeBalance = await this.cakeContract.methods.balanceOf(this.account.address).call();
-        logger.debug('cakeBalance: ', cakeBalance.toString());
+        // logger.debug('cakeBalance: ', this.balance);
         await this.depositCake(syrupPool, cakeBalance);
 
-        logger.debug("executor.enterPosition: end");
+        logger.debug("batcher.enterPosition: end");
     }
 
     async exitPosition(addr) {
-        logger.debug(`executor.exitPosition: start pool ${addr}`);
+        logger.debug(`batcher.exitPosition: start pool ${addr}`);
 
         const syrupPool = await this.setupSyrupPool(addr);
         const stakedAmount = await this.getStakedAmount(syrupPool, this.account.address);
         const withdrawn = await this.withdraw(syrupPool, stakedAmount);
         await this.swapAllToCake(withdrawn.rewardTokenAddr);
 
-        logger.debug("executor.exitPosition: end");
+        logger.debug("batcher.exitPosition: end");
     }
 
     async harvest(addr) {
-        logger.debug(`executor.harvest: start pool ${addr}`);
+        logger.debug(`batcher.harvest: start pool ${addr}`);
 
         const syrupPool = await this.setupSyrupPool(addr);
         const withdrawn = await this.withdraw(syrupPool, 0);
@@ -223,16 +143,16 @@ class Executor extends TxManager {
         const cakeBalance = await this.cakeContract.methods.balanceOf(this.account.address).call();
         await this.depositCake(syrupPool, cakeBalance);
 
-        logger.debug("executor.harvest: end");
+        logger.debug("batcher.harvest: end");
     }
 
     async switchPools(fromAddr, toAddr) {
-        logger.debug(`executor.switchPools: start from ${fromAddr}  to ${toAddr} `);
+        logger.debug(`batcher.switchPools: start from ${fromAddr}  to ${toAddr} `);
 
         await this.exitPosition(fromAddr);
         await this.enterPosition(toAddr);
 
-        logger.debug("executor.switchPools: end");
+        logger.debug("batcher.switchPools: end");
     }
 
     sleep = (milliseconds) => {
@@ -241,7 +161,7 @@ class Executor extends TxManager {
 
     async depositCake(syrupPool, amount) {
 
-        logger.debug(`executor.depositCake: syrup ${syrupPool.options.address}  amount ${amount}`);
+        logger.debug(`batcher.depositCake: syrup ${syrupPool.options.address}  amount ${amount}`);
         const result = {
             step: "depositCake",
             to: syrupPool.options.address,
@@ -256,12 +176,12 @@ class Executor extends TxManager {
             let tx;
 
             if (syrupPool.syrupType === SyrupPoolType.SMARTCHEF) {
-                logger.debug("executor.depositCake: deposit cake to Smartchef");
+                logger.debug("batcher.depositCake: deposit cake to Smartchef");
 
                 tx = await syrupPool.methods.deposit(amount).encodeABI();
 
             } else if (syrupPool.syrupType === SyrupPoolType.MANUAL_CAKE) {
-                logger.debug("executor.depositCake: deposit cake to ManualCake");
+                logger.debug("batcher.depositCake: deposit cake to ManualCake");
                 tx = await syrupPool.methods.enterStaking(amount).encodeABI();
             }
 
@@ -273,7 +193,7 @@ class Executor extends TxManager {
     }
 
     async withdraw(syrupPool, amount) {
-        logger.debug(`executor.withdraw: from pool ${syrupPool.options.address} type ${SyrupPoolType.SMARTCHEF} the amount ${amount}`);
+        logger.debug(`batcher.withdraw: from pool ${syrupPool.options.address} type ${SyrupPoolType.SMARTCHEF} the amount ${amount}`);
 
         const result = {
             step: "withdraw",
@@ -305,7 +225,7 @@ class Executor extends TxManager {
     }
 
     async swapAllToCake(tokenIn) {
-        logger.debug(`executor.swapAllToCake: token ${tokenIn} `);
+        logger.debug(`batcher.swapAllToCake: token ${tokenIn} `);
 
         if (tokenIn === CAKE_ADDRESS) {
             return;
@@ -326,7 +246,7 @@ class Executor extends TxManager {
 
 
     async approve(tokenAddr, spender, amount) {
-        logger.debug(`executor.approve: token ${tokenAddr} spender ${spender}  amount ${amount}`);
+        logger.debug(`batcher.approve: token ${tokenAddr} spender ${spender}  amount ${amount}`);
         const result = {
             step: "approve",
             tokenAddr: tokenAddr,
@@ -347,7 +267,7 @@ class Executor extends TxManager {
     }
 
     async swap(tokenIn, amountIn, route) {
-        logger.debug(`executor.swap: token ${tokenIn} amountIn ${amountIn}  to ${route[route.length - 1]}`);
+        logger.debug(`batcher.swap: token ${tokenIn} amountIn ${amountIn}  to ${route[route.length - 1]}`);
 
         const result = {
             step: "swap",
@@ -401,7 +321,7 @@ class Executor extends TxManager {
                 return null;
             }
         } catch (e) {
-            throw new FatalError(`executor.getSyrupType: unsupported pool type for syrup address ${syrupAddr} `);
+            throw new FatalError(`batcher.getSyrupType: unsupported pool type for syrup address ${syrupAddr} `);
         }
 
         return syrupPool;
@@ -412,17 +332,48 @@ class Executor extends TxManager {
             await syrupPool.methods.userInfo(user).call() : await syrupPool.methods.userInfo(0, user).call()).amount;
     }
 
-    handleExecutionError(err) {
+    invalidAction() {
+        return Promise.resolve(undefined);
+    }
+
+    async onSuccess(trace) {
+        if (this.onSuccessCallback != null) {
+            await this.onSuccessCallback(trace);
+        }
+    }
+
+    async onFailure(trace) {
+        if (this.onFailureCallback != null) {
+            await this.onFailureCallback(trace);
+        }
+    }
+
+    on(event, cb) {
+        if (event === "success") {
+            this.onSuccessCallback = cb;
+        }
+        if (event === "failure") {
+            this.onFailureCallback = cb;
+        }
+    }
+
+	handleExecutionError(err) {
         this.notif.sendDiscord(err);
         this.status = "failure";
     }
 
-    invalidAction() {
-        return Promise.resolve(undefined);
+    async handleExecutionResult() {
+        if (this.status === "success") {
+            await this.onSuccess(this.trace);
+        }
+        if (this.status === "failure") {
+            await this.onFailure(this.trace);
+        }
     }
+
 }
 
 
 module.exports = {
-    Executor,
+    Batcher: Batcher,
 };

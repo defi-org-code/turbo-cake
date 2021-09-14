@@ -94,19 +94,13 @@ contract Worker is IWorker {
 			deposit(params.newPoolAddr, params.amount, params.pid);
 		}
 
-		if (params.transfer) {
-			this.transferToManager(ICakePools(params.stakedPoolAddr).stakedToken());
-		}
-
 		emit DoHardWork(params.stakedPoolAddr);
 	}
 
-	function transferToManager(address token) external onlyOwner {
-
-		uint256 amount = IERC20(token).balanceOf(address(this));
+	function transferToManager(uint256 amount, address token) external onlyOwner {
 
 		if (amount == 0) {
-			return;
+			uint256 amount = IERC20(token).balanceOf(address(this));
 		}
 
 		IERC20(token).safeTransfer(owner, amount);

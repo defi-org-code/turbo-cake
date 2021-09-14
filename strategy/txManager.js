@@ -1,74 +1,56 @@
-const GasManager = require('./gasManager');
-const Notifications = require('../notifications')
-const debug = (...messages) => console.log(...messages);
+const {Logger} = require('../logger')
+const logger = new Logger('TxManager')
 
 
 class TxManager {
-	constructor(notification) {
-		this.notif = notification;
+
+	constructor(web3, account) {
+		this.web3 = web3;
+		this.account = account;
 	}
 
-	async pendingTransactionReceipt(self, txHash) {
+    async sendTransactionWait(encodedTx, to, gas = undefined) {
 
-		let res;
-
-		try {
-			res = await this.web3.eth.getTransactionReceipt(txHash);
-		} catch (e) {
-
-			this.notif.sendDiscord(`failed to send transaction: ${e}`);
-			await self.onTxFailure();
-			return
-		}
-
-		if (res === null) {
-			console.log(`pending for transaction receipt (txHash=${txHash})`);
-			setTimeout(() => this.pendingTransactionReceipt(self, txHash), 1000);
-		}
-
-		// TODO:check return status values
-		else if (res['status'] === true) {
-			this.notif.sendDiscord(`transaction receipt was received: ${JSON.stringify(res)}`);
-			await self.onTxSuccess(res);
-		}
-
-		// TODO:check return status values
-		else if (res['status'] === false) {
-			this.notif.sendDiscord(`failed to send transaction: ${JSON.stringify(res)}`);
-			await self.onTxFailure();
-		}
-
-	}
-
-
-
-	async sendSignedTx(self, encodedTx, toAddress, maxGasUnits=500000) {
-
-		debug(`sendSignedTx: ${encodedTx}`);
+        if (!encodedTx) {
+            return null;
+        }
 
 		let transactionObject = {
-			// gasBidPrice: this.web3.utils.toWei(gasBidPrice, 'Gwei'),
-			gas: maxGasUnits,
+			gas: (gas ? gas : 500000),
 			data: encodedTx,
 			from: this.account.address,
-			to: toAddress
+			to: to,
 		};
 
-		debug('sendSignedTx');
-		// const res = await this.web3.eth.sendTransaction(transactionObject);
-
+		logger.debug("sendTransactionWait ");
+		console.log('transactionObject: ', transactionObject);
 		const signedTx = await this.account.signTransaction(transactionObject);
-		const res = await this.web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+		logger.debug('signedTx:')
+		console.log(signedTx)
 
-		// const signedTx = await this.account.signTransaction(transactionObject);
-		// const res = this.web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+		const txResponse = await this.web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+		logger.debug('## txResponse ##');
+		console.log(txResponse);
 
+		const res = await this.pendingWait(1000, txResponse.transactionHash);
+		logger.debug('## txReceipt ##', res.gasUsed);
 		console.log(res);
 
-		// TODO: use txHash pending for dynamic update of gas
-		await this.pendingTransactionReceipt(self, res['transactionHash']);
+		return res;
 	}
 
+    pendingWait = (milliseconds, txHash) => {
+        return new Promise(resolve => setTimeout(async () => {
+            const res = await this.web3.eth.getTransactionReceipt(txHash);
+            if (res === null) {
+                return this.pendingWait(milliseconds, txHash)
+            }
+            if (res['status'] === true) {
+                resolve(res)
+            }
+            return null;
+        }, milliseconds),)
+    }
 }
 
 module.exports = {

@@ -15,7 +15,6 @@ interface IWorker {
 		bool withdraw;
 		bool swap;
 		bool deposit;
-		bool transfer;
 		address stakedPoolAddr;
 		address newPoolAddr;
 		uint256 amount;
@@ -35,6 +34,7 @@ interface IWorker {
 
 	struct TransferMngParams {
 		address token;
+		uint256 amount;
 		uint16 startIndex;
 		uint16 endIndex;
 	}
