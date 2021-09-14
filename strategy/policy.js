@@ -81,8 +81,6 @@ class GreedyPolicy extends Policy {
 		* check move criteria
 		* return action
 		* */
-		logger.debug(`getAction args:`)
-		console.log(args)
 
 		const topYielderAddr = this.getTopYielderAddr(args.poolsInfo);
 
@@ -98,7 +96,7 @@ class GreedyPolicy extends Policy {
 		if (this.shouldSwitchPools(args.poolsInfo, args.curSyrupPoolAddr, topYielderAddr, args.lastActionTimestamp)) {
 
 			return {
-				name: Action.SWITCH,
+				name: Action.EXIT, // should enter on next tick
 				from: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy, active: args.poolsInfo[args.curSyrupPoolAddr].active, hasUserLimit: args.poolsInfo[args.curSyrupPoolAddr].hasUserLimit},
 				to: {address: null}
 			};

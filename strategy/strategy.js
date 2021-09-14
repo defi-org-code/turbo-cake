@@ -11,7 +11,7 @@ const {
     PANCAKE_UPDATE_INTERVAL, TICK_INTERVAL, SWAP_SLIPPAGE, SWAP_TIME_LIMIT, APY_SWITCH_TH,
     DEV_TICK_INTERVAL, DEV_PANCAKE_UPDATE_INTERVAL, DEV_SYRUP_SWITCH_INTERVAL, DEV_HARVEST_INTERVAL,
     BEST_ROUTE_UPDATE_INTERVAL, DEV_BEST_ROUTE_UPDATE_INTERVAL, DEV_RAND_APY,
-    REPORT_INTERVAL
+    REPORT_INTERVAL, DEV_APY_SWITCH_TH
 } = require("../config");
 const {TransactionFailure, FatalError, GasError, NotImplementedError} = require('../errors');
 
@@ -29,6 +29,7 @@ function loadConfig(runningMode) {
         config.tickInterval = DEV_TICK_INTERVAL
         config.bestRouteUpdateInterval = DEV_BEST_ROUTE_UPDATE_INTERVAL
         config.randApy = DEV_RAND_APY
+		config.apySwitchTh = DEV_APY_SWITCH_TH;
 
     } else {
 
@@ -38,6 +39,7 @@ function loadConfig(runningMode) {
         config.tickInterval = TICK_INTERVAL;
         config.bestRouteUpdateInterval = BEST_ROUTE_UPDATE_INTERVAL
         config.randApy = false
+		config.apySwitchTh = APY_SWITCH_TH;
     }
 
     config.runningMode = runningMode;
@@ -45,7 +47,6 @@ function loadConfig(runningMode) {
     config.swapTimeLimit = SWAP_TIME_LIMIT;
     config.devSmartchefAddressList = DEV_SMARTCHEF_ADDRESS_LIST;
     config.devAccount = DEV_ACCOUNT;
-    config.apySwitchTh = APY_SWITCH_TH;
     config.reportInterval = REPORT_INTERVAL
     return config;
 }
@@ -228,11 +229,6 @@ class Strategy {
         this.curSyrupPoolAddr = action.to.address
         this.inTransition = false;
 		await this.setLastActionTimestamp()
-
-        if (action.name === Action.EXIT) {
-            clearInterval(this.intervalId);
-            this.inTransition = true;
-        }
 
         if (action.name === Action.HARVEST) {
         	await this.reportStats()
