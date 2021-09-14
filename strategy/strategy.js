@@ -210,7 +210,6 @@ class Strategy {
         const startTime = Date.now();
 
         if (action.name === Action.NO_OP) {
-            this.batcher = null;
             this.inTransition = false;
             return;
         }
@@ -227,7 +226,6 @@ class Strategy {
 		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
 
         this.curSyrupPoolAddr = action.to.address
-        this.batcher = null;
         this.inTransition = false;
 		await this.setLastActionTimestamp()
 
@@ -248,7 +246,6 @@ class Strategy {
 
         // this.nextAction = { name: Action.NO_OP,};
         // TODO: continue flow according to trace - batcher.retry
-        this.batcher = null;
         this.inTransition = false;
         await this.setLastActionTimestamp()
     }

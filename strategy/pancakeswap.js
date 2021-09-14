@@ -145,7 +145,9 @@ class Pancakeswap {
 		const blockNum = Number(await this.web3.eth.getBlockNumber())
 		const period = Number(blockNum - this.investInfo['startBlock'])
 
-		logger.debug(`getInvestApy: investInfo: ${this.investInfo}, startBalance=${startBalance}, endBalance=${endBalance}, balanceCngPct=${balanceCngPct}, blockNum=${blockNum}, period=${period}`)
+		logger.debug(`getInvestApy: startBalance=${startBalance}, endBalance=${endBalance}, balanceCngPct=${balanceCngPct}, blockNum=${blockNum}, period=${period}`)
+		logger.debug('investInfo')
+		console.log(this.investInfo)
 
 		const apy = balanceCngPct.multipliedBy(this.BLOCKS_PER_YEAR).toString() / period
 		logger.info(`Investment APY: ${apy}`)
@@ -321,10 +323,12 @@ class Pancakeswap {
 		for (const poolAddr of Object.keys(this.poolsInfo)) {
 
 			if (!('bonusEndBlock' in this.poolsInfo) || !('startBlock' in this.poolsInfo)) {
+				logger.info(`updating bonus info for ${poolAddr}`)
 				await this.fetchUpdateBonusInfo(poolAddr)
 			}
 
 			if (!('poolRewards' in Object.keys(this.poolsInfo[poolAddr]))) {
+				logger.info(`updating pool rewards for ${poolAddr}`)
 				this.poolsInfo[poolAddr]['poolRewards'] = await this.fetchPoolRewards(poolAddr)
 			}
 
@@ -337,6 +341,7 @@ class Pancakeswap {
 		}
 
 		logger.debug('setActivePools ended')
+		await this.savePoolsInfo(blockNum)
 
 	}
 
