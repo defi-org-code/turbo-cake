@@ -87,7 +87,7 @@ class Executor extends TxManager {
                     break;
 
                 case Action.SWITCH:
-                    await this.switchPools(args.from.address, args.to.address);
+                    await this.switchPools(args.from.address, args.to.address, args.from.routeToCake);
                     break;
 
                 case Action.EXIT:
@@ -229,10 +229,10 @@ class Executor extends TxManager {
     }
 
 
-    async switchPools(fromAddr, toAddr) {
+    async switchPools(fromAddr, toAddr, routeToCake) {
         logger.debug(`executor.switchPools: start from ${fromAddr}  to ${toAddr} `);
 
-        await this.exitPosition(fromAddr);
+        await this.exitPosition(fromAddr, routeToCake);
         await this.enterPosition(toAddr);
 
         logger.debug("executor.switchPools: end");
@@ -251,6 +251,7 @@ class Executor extends TxManager {
             amount: amount,
             receipt: null,
         };
+        // TODO: push trace here - add status and update\ success or error
 
         if (amount > 0) {
 
@@ -293,15 +294,15 @@ class Executor extends TxManager {
         if (syrupPool.syrupType === SyrupPoolType.SMARTCHEF) {
             result.rewardTokenAddr = await syrupPool.methods.rewardToken().call();
             tx = await syrupPool.methods.withdraw(amount).encodeABI();
-            gas = await syrupPool.methods.withdraw(amount).estimateGas();
+            // gas = await syrupPool.methods.withdraw(amount).estimateGas();
 
         } else if (syrupPool.syrupType === SyrupPoolType.MANUAL_CAKE) {
             result.rewardTokenAddr = CAKE_ADDRESS;
             tx = await syrupPool.methods.leaveStaking(amount).encodeABI();
-            gas = await syrupPool.methods.leaveStaking(amount).estimateGas();
+            // gas = await syrupPool.methods.leaveStaking(amount).estimateGas();
         }
 
-        result.receipt = await this.sendTransactionWait(tx, syrupPool.options.address, gas);
+        result.receipt = await this.sendTransactionWait(tx, syrupPool.options.address);
         this.trace.push(result);
 
         return result;
@@ -361,8 +362,11 @@ class Executor extends TxManager {
 
         if (amountIn > 0) {
             const amounts = await this.router.methods.getAmountsOut(amountIn, route).call();
-            const amountBN = this.web3.utils.toBN(amounts[1]);
+
+
+            const amountBN = this.web3.utils.toBN(amounts[amounts.length-1]);
             const amountOutMin = amountBN.sub(amountBN.divn(this.swapSlippage));
+
             const recipient = this.account.address;
             const deadline = Date.now() + this.swapTimeLimit;
 
