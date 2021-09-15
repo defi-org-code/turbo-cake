@@ -26,6 +26,9 @@ describe("DepositWithdrawTest", function () {
 	const _nWorkers = await managerContract.methods.getNWorkers().call({from: admin})
 	expect(_nWorkers).to.equal(N_WORKERS.toString())
 
+	const workersAddr = await managerContract.methods.getWorkers(0, _nWorkers).call({from: admin})
+	console.log(workersAddr)
+
 	let WorkersAddr = [];
 	for (let i=0; i<_nWorkers; i++) {
 		WorkersAddr.push(await managerContract.methods.workers(i).call({from: admin}));

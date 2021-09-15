@@ -69,7 +69,7 @@ class Strategy {
         this.ps = new Pancakeswap(account.address, this.redisClient, web3, this.notif,
             config.pancakeUpdateInterval, config.bestRouteUpdateInterval);
         this.policy = new GreedyPolicy(config);
-        // this.contractManager = new ContractManager(web3, this.account, this.redisClient)
+        this.contractManager = new ContractManager(web3, this.account, this.redisClient)
 		this.batcher = new Batcher({
 			web3: web3,
 			account: account,
@@ -125,7 +125,7 @@ class Strategy {
 	        this.lastActionTimestamp = await this.getLastActionTimestamp();
 
 			this.curSyrupPoolAddr = await this.ps.init();
-			// this.curSyrupPoolAddr = await this.contractManager.init();
+			this.curSyrupPoolAddr = await this.contractManager.init(this.ps.poolsInfo);
 
             this.intervalId = setInterval(() => this.run(), this.tickInterval);
             // setInterval(() => this.reportStats(), this.reportInterval);
@@ -175,7 +175,7 @@ class Strategy {
             logger.debug('ps update ended')
             await this.setAction();
             logger.debug('set action ended')
-            // await this.contractManager.run(this.nextAction);
+            await this.contractManager.run(this.nextAction);
             await this.executeAction();
             logger.debug('executeAction ended')
 

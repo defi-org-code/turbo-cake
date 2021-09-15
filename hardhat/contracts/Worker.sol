@@ -100,7 +100,7 @@ contract Worker is IWorker {
 	function transferToManager(uint256 amount, address token) external onlyOwner {
 
 		if (amount == 0) {
-			uint256 amount = IERC20(token).balanceOf(address(this));
+			amount = IERC20(token).balanceOf(address(this));
 		}
 
 		IERC20(token).safeTransfer(owner, amount);
