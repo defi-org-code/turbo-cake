@@ -11,7 +11,8 @@ const {
     PANCAKE_UPDATE_INTERVAL, TICK_INTERVAL, SWAP_SLIPPAGE, SWAP_TIME_LIMIT, APY_SWITCH_TH,
     DEV_TICK_INTERVAL, DEV_PANCAKE_UPDATE_INTERVAL, DEV_SYRUP_SWITCH_INTERVAL, DEV_HARVEST_INTERVAL,
     BEST_ROUTE_UPDATE_INTERVAL, DEV_BEST_ROUTE_UPDATE_INTERVAL, DEV_RAND_APY,
-    REPORT_INTERVAL, DEV_APY_SWITCH_TH
+    REPORT_INTERVAL, DEV_APY_SWITCH_TH, WORKERS_VALIDATE_INTERVAL, DEV_WORKERS_VALIDATE_INTERVAL
+
 } = require("../config");
 const {TransactionFailure, FatalError, GasError, NotImplementedError} = require('../errors');
 
@@ -29,7 +30,8 @@ function loadConfig(runningMode) {
         config.tickInterval = DEV_TICK_INTERVAL
         config.bestRouteUpdateInterval = DEV_BEST_ROUTE_UPDATE_INTERVAL
         config.randApy = DEV_RAND_APY
-		config.apySwitchTh = DEV_APY_SWITCH_TH;
+		config.apySwitchTh = DEV_APY_SWITCH_TH
+		config.workersValidateInterval = DEV_WORKERS_VALIDATE_INTERVAL
 
     } else {
 
@@ -40,6 +42,8 @@ function loadConfig(runningMode) {
         config.bestRouteUpdateInterval = BEST_ROUTE_UPDATE_INTERVAL
         config.randApy = false
 		config.apySwitchTh = APY_SWITCH_TH;
+		config.workersValidateInterval = WORKERS_VALIDATE_INTERVAL;
+
     }
 
     config.runningMode = runningMode;
@@ -175,7 +179,7 @@ class Strategy {
             logger.debug('ps update ended')
             await this.setAction();
             logger.debug('set action ended')
-            await this.contractManager.run(this.nextAction);
+            await this.contractManager.run(this.nextAction, this.ps.poolsInfo);
             await this.executeAction();
             logger.debug('executeAction ended')
 
