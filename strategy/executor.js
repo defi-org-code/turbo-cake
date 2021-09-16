@@ -23,11 +23,6 @@ const SyrupPoolType = {
     OTHER: "unsupported",
 }
 
-// TODO:
-// Fail with error 'PancakeRouter: INSUFFICIENT_OUTPUT_AMOUNT': https://bscscan.com/tx/0x2dc0db182b5952bc5179ea52e6737a8d5ff514ea40615a1068e3221a2eb64c5f
-// FatalError: failed to send transaction: Error: Returned error: replacement transaction underpriced
-
-
 class Executor extends TxManager {
 
 
