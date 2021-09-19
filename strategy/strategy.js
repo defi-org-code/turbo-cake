@@ -112,6 +112,7 @@ class Strategy {
     async start() {
         try {
         	logger.debug(`[Strategy] start`)
+			// await this.reporter.send('profitStats', {apy: 100})
 
 	        this.lastActionTimestamp = await this.getLastActionTimestamp();
 
@@ -135,7 +136,7 @@ class Strategy {
 
 		logger.debug(`reportStats: investApy=${investApy}`)
 		this.notif.sendDiscord(`apy: ${investApy}`)
-		await this.reporter.send({apy: investApy})
+		await this.reporter.send('profitStats', {apy: investApy})
 	}
 
     redisInit() {

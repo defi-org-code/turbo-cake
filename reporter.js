@@ -1,36 +1,46 @@
-const Influx = require('./influx');
-const graphite = require('graphite');
+const {InfluxDB} = require('@influxdata/influxdb-client')
+const os = require("os");
+const hostname = os.hostname();
+const org = 'xorbs'
+
+const {Point} = require('@influxdata/influxdb-client')
+require('dotenv').config();
+
 const {VERSION, GRAPHITE_IP} = require('./strategy/params')
 
 class Reporter {
 
 	constructor(runningMode) {
-		// this.influxClient = new Influx('TurboCake', VERSION);
-		this.graphiteClient = graphite.createClient(`plaintext://${GRAPHITE_IP}:2003`)
-		this.runningMode = runningMode
-		this.prefix = `turbo-cake.${this.runningMode}.${VERSION}`
+		this.client = new InfluxDB({url: process.env.INFLUX_URL, token: process.env.INFLUX_TOKEN})
+		this.bucket = 'turbo-cake'
+		this.version = VERSION
 	}
 
-	addPrefix(_metrics, prefix) {
+	send(measurementName, fields, tags= {}) {
 
-		let metrics = {}
+		const writeApi = this.client.getWriteApi(org, this.bucket);
+		writeApi.useDefaultTags({hostname: hostname, version: this.version, botId: process.env.BOT_ID});
 
-		for (const key of Object.keys(_metrics)) {
-			metrics[`${prefix}.${key}`] = _metrics[key]
+		const point = new Point(measurementName);
+
+		for (const [field, value] of Object.entries(fields)) {
+			console.log(field, value);
+			point.floatField(field, value);
 		}
 
-		return metrics
+		for (const [tag, value] of Object.entries(tags)) {
+			console.log(tag, value);
+			point.tag(tag, value);
+		}
+
+		writeApi.writePoint(point);
+		writeApi.close()
+			.then(() => {
+				console.log('WRITE FINISHED')
+			})
+
 	}
 
-	send(metrics) {
-
-		console.log(this.addPrefix(metrics, this.prefix))
-
-		this.graphiteClient.write(this.addPrefix(metrics, this.prefix), function(err) {
-		  // if err is null, your data was sent to graphite!
-		  console.log(err)
-		});
-	}
 }
 
 
