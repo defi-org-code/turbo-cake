@@ -6,7 +6,6 @@ const Action = {
     NO_OP: "no-op",
     ENTER: "enter-syrup-pool",
     HARVEST: "harvest",
-    SWITCH: "switch-syrup-pool",
     EXIT: "exit-syrup-pool",
 }
 

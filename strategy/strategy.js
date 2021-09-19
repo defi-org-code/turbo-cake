@@ -167,6 +167,8 @@ class Strategy {
     async run() {
 
 		logger.debug('strategy run')
+		let nextAction
+
         try {
             if (this.inTransition) {
             	logger.debug('inTransition')
@@ -177,10 +179,10 @@ class Strategy {
 
             await this.ps.update(this.curSyrupPoolAddr);
             logger.debug('ps update ended')
-            await this.setAction();
+            nextAction = await this.getAction();
             logger.debug('set action ended')
-            await this.contractManager.run(this.nextAction, this.ps.poolsInfo);
-            await this.executeAction();
+            nextAction = await this.contractManager.run(nextAction, this.ps.poolsInfo);
+            await this.executeAction(nextAction);
             logger.debug('executeAction ended')
 
         } catch (e) {
@@ -196,7 +198,7 @@ class Strategy {
         }
     }
 
-    async setAction() {
+    async getAction() {
         const lastAction = this.nextAction;
         // logger.debug(`setAction: nextAction=${JSON.stringify(this.nextAction)}`)
         this.nextAction = await this.policy.getAction({
@@ -205,24 +207,25 @@ class Strategy {
             'lastActionTimestamp': this.lastActionTimestamp,
             'lastAction': lastAction,
         });
+
+        return this.nextAction
     }
 
-    async executeAction() {
+    async executeAction(nextAction) {
 
-		logger.debug('executeAction')
+		logger.debug('executeAction: ', nextAction)
 
-        const action = this.nextAction; // closure
         const startTime = Date.now();
 
-        if (action.name === Action.NO_OP) {
+        if (nextAction.name === Action.NO_OP) {
             this.inTransition = false;
             return;
         }
 
-        this.batcher.on("failure", async (trace) => await this.handleExecutionError(trace, action, startTime));
-        this.batcher.on("success", async (trace) => await this.handleExecutionSuccess(trace, action, startTime));
+        this.batcher.on("failure", async (trace) => await this.handleExecutionError(trace, nextAction, startTime));
+        this.batcher.on("success", async (trace) => await this.handleExecutionSuccess(trace, nextAction, startTime));
 
-        await this.batcher.run(action);
+        await this.batcher.run(nextAction);
     }
 
     async handleExecutionSuccess(trace, action, startTime) {

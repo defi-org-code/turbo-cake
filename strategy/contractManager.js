@@ -26,7 +26,7 @@ class ContractManager extends TxManager {
 
 		this.nWorkers = 0 // how many workers were created
 		this.balance = null
-		this.nActiveWorkers = 0
+		this.nActiveWorkers = null
 		this.workersAddr = []
 		this.workersBalanceInfo = null
 		this.stakedAddr = null
@@ -51,6 +51,8 @@ class ContractManager extends TxManager {
 	}
 
 	async initWorkers(poolsInfo) {
+
+		await this.getNActiveWorkers()
 		await this.getNWorkers()
 		await this.fetchWorkersAddr()
 		await this.setWorkersBalanceInfo(poolsInfo)
@@ -65,7 +67,7 @@ class ContractManager extends TxManager {
 	}
 
 	async fetchWorkersAddr() {
-
+		// TODO: save in redis and fetch only missing
 		if (this.nWorkers === 0) {
 			this.workersAddr = []
 			return
@@ -92,8 +94,21 @@ class ContractManager extends TxManager {
 		return workersStakingAddr
 	}
 
-	async setWorkersBalanceInfo(poolsInfo) {
+	async getNActiveWorkers() {
 
+		let reply = await this.redisClient.get('nActiveWorkers')
+
+		if (reply == null) {
+
+			logger.info('nActiveWorkers is null, setting nActiveWorkers to 0')
+			this.nActiveWorkers = 0
+		}
+
+		this.nActiveWorkers = Number(reply)
+	}
+
+	async setWorkersBalanceInfo(poolsInfo) {
+		// workersBalanceInfo[index]: {WORKER_ADDRESS: worker_address, CAKE_ADDRESS: cake_Balance, STAKE_ADDR0: stake_balance0, STAKE_ADDR1: stake_balance_1} - expect to have only 1 staking address
 		let res, contract
 		let workersBalanceInfo = {}
 		let cakeBalance
@@ -143,10 +158,13 @@ class ContractManager extends TxManager {
 
 	async setWorkersBalance() {
 
+		// updates workersBalance
 		let workersBalance = {}
+		let workerInfo;
 
-		for (let [workerIndex, workerInfo] of Object.entries(this.workersBalanceInfo)) {
+		for (let workerIndex=0; workerIndex<this.workersAddr.length; workerIndex++) {
 
+			workerInfo = this.workersBalanceInfo[workerIndex]
 			workersBalance[workerIndex] = {}
 
 			for (const [key, value] of Object.entries(workerInfo)) {
@@ -170,24 +188,48 @@ class ContractManager extends TxManager {
 
 	initStakedAddr() {
 
+		// validate all workers have the same staking addr and return this addr
 		if (Object.keys(this.workersBalanceInfo).length === 0) {
+
+			if(this.nActiveWorkers !== 0) {
+				// TODO: sync workers and call init
+				throw Error(`workers are out of sync: nActiveWorkers=${this.nActiveWorkers} while there is no active workersBalanceInfo`)
+			}
+
 			this.stakedAddr = null
 			return
 		}
 
-		const expectedKeys = Object.keys(this.workersBalanceInfo[0])
+		let expectedKeys = Object.keys(this.workersBalanceInfo[0])
 
 		if (expectedKeys.length > 3) {
 			// WORKER_ADDRESS, CAKE_ADDRESS ->2 and we might have additional 1 staked addr (or not)
+			// TODO: sync workers and call init
 			throw Error(`workers are out of sync: ${this.workersBalanceInfo}`)
 		}
 
-		for (const [workerIndex, workerInfo] of Object.entries(this.workersBalanceInfo)) {
+		let workerInfo
+		for (let workerIndex=0; workerIndex<this.workersAddr.length; workerIndex++) {
+
+			if (workerIndex === this.nActiveWorkers) {
+				expectedKeys = Object.keys(this.workersBalanceInfo[this.nActiveWorkers])
+
+				if (expectedKeys.length !== 2) {
+					// WORKER_ADDRESS, CAKE_ADDRESS ->2 and we might have additional 1 staked addr (or not)
+					// TODO: sync workers and call init
+					throw Error(`workers are out of sync: ${this.workersBalanceInfo}`)
+				}
+			}
+
+			workerInfo = this.workersBalanceInfo[workerIndex]
 
 			if (Object.keys(workerInfo) !== expectedKeys) {
-				throw Error(`workers are out of sync (workerIndex=${workerIndex}): ${this.workersBalanceInfo}`)
+				// TODO: sync workers and call init
+				throw Error(`workers are out of sync (workerIndex=${workerIndex}, nActiveWorkers=${this.nActiveWorkers}): ${this.workersBalanceInfo}`)
 			}
 		}
+
+		expectedKeys = Object.keys(this.workersBalanceInfo[0])
 
 		if (expectedKeys.length === 2) {
 			this.stakedAddr = null
@@ -202,11 +244,13 @@ class ContractManager extends TxManager {
 				return
 			}
 		}
+
+		throw Error('could not find staking addr')
 	}
 
 	async setTotalBalance() {
 		await this.setManagerBalance()
-		let totalBalance = {staked: new BigNumber(this.managerBalance), unstaked: new BigNumber(0)}
+		let totalBalance = {unstaked: new BigNumber(this.managerBalance), staked: new BigNumber(0)}
 
 		for (let [workerIndex, workerBalance] of Object.entries(this.workersBalance)) {
 			totalBalance.staked = totalBalance.staked.plus(workerBalance.staked)
@@ -218,7 +262,7 @@ class ContractManager extends TxManager {
 
 	async syncWorkers() {
 		// check if workers are synced if not:
-		// swap all digens to cakes, transfer all to manager and transfer cakes to workers
+		// swap all digens to cakes, transfer all to manager
 	}
 
 	async addWorkers() {
@@ -263,36 +307,52 @@ class ContractManager extends TxManager {
 	async run(nextAction, poolsInfo) {
 
 		if (Date.now() - this.lastWorkersValidate > this.workersValidateInterval) {
-			// await this.initWorkers(poolsInfo) // TODO: improve, move call from below and uncomment this line
+			// await this.initWorkers(poolsInfo) // TODO: periodic updates
 			this.lastWorkersValidate = Date.now()
 		}
 
 		if (nextAction === Action.ENTER) {
 
-			await this.initWorkers(poolsInfo) // TODO: improve
-
 			if (nextAction.to.hasUserLimit === true) {
+
+				if (this.nActiveWorkers === 0) {
+					// transfer all funds back to manager and then transfer to all (nWorkers) workers
+					await this.addWorkers()
+					this.nActiveWorkers = this.nWorkers
+					this.redisClient.set('nActiveWorkers', this.nActiveWorkers)
+					await this.transferToWorkers(0, this.nActiveWorkers)
+				}
 
 				if (this.nActiveWorkers === 1) {
 					// transfer all funds back to manager and then transfer to all (nWorkers) workers
 					await this.transferToManager(0, 0, this.nActiveWorkers)
 					await this.addWorkers()
 					this.nActiveWorkers = this.nWorkers
+					this.redisClient.set('nActiveWorkers', this.nActiveWorkers)
 					await this.transferToWorkers(0, this.nActiveWorkers)
 				}
 
 			} else {
 
-				if (this.nActiveWorkers > 1) {
+				if (this.nActiveWorkers === 0) {
+					this.nActiveWorkers = 1
+					this.redisClient.set('nActiveWorkers', this.nActiveWorkers)
+					await this.transferToWorkers(0,  this.nActiveWorkers)
+				}
+
+				else if (this.nActiveWorkers > 1) {
 					// transfer all funds back to manager and then transfer to all worker 0
 					await this.transferToManager(0, 0, this.nActiveWorkers)
 					this.nActiveWorkers = 1
+					this.redisClient.set('nActiveWorkers', this.nActiveWorkers)
 					await this.transferToWorkers(0,  this.nActiveWorkers)
 				}
 			}
 		}
 
-		return {startIndex: 0, endIndex: this.nActiveWorkers}
+		nextAction.startIndex = 0
+		nextAction.endIndex = this.nActiveWorkers
+		return nextAction
 	}
 
 }

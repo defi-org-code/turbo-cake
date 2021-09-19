@@ -84,10 +84,6 @@ class Batcher extends TxManager {
                     await this.harvest(action.to.address);
                     break;
 
-                case Action.SWITCH:
-                    await this.switchPools(action.from.address, args.to.address);
-                    break;
-
                 case Action.EXIT:
                     await this.exitPosition(action.from.address);
                     break;
