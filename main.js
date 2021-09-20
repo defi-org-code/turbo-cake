@@ -5,7 +5,7 @@ const BigNumber = require('bignumber.js')
 const KeyEncryption = require('./keyEncryption');
 const env = require('dotenv').config();
 const { Strategy } = require('./strategy/strategy');
-const { RunningMode, CAKE_WHALE_ACCOUNT, CAKE_ADDRESS} = require('./config');
+const { RunningMode, CAKE_WHALE_ACCOUNT, CAKE_ADDRESS, OWNER_ADDRESS} = require('./config');
 const yargs = require('yargs/yargs');
 const {CAKE_ABI} = require("./abis");
 const { hideBin } = require('yargs/helpers');
@@ -14,11 +14,16 @@ const argv = yargs(hideBin(process.argv)).argv;
 const {Logger} = require('./logger')
 const logger = new Logger('main')
 
+const managerAbi = require('./hardhat/artifacts/contracts/Manager.sol/Manager.json').abi
+const managerBytecode = require('./hardhat/artifacts/contracts/Manager.sol/Manager.json').bytecode
+
+
 async function main() {
 
     const runningMode = (argv.prod==="true"? RunningMode.PRODUCTION: RunningMode.DEV);
 
     let account
+    let managerContract
 	// let web3
 
     if (runningMode === RunningMode.PRODUCTION) {
@@ -28,7 +33,8 @@ async function main() {
 
     } else if (runningMode === RunningMode.DEV) {
 
-        account = web3.eth.accounts.create();
+        account = web3.eth.accounts.create(); // account is admin
+
 	    // account = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
 
 		// process.exit()
@@ -41,13 +47,20 @@ async function main() {
         await cakeContract.methods.transfer(account.address, amount.toString()).send({ from: CAKE_WHALE_ACCOUNT});
 
         console.log('Bot cake balance (DEV mode): ', await cakeContract.methods.balanceOf(account.address).call())
+
+        managerContract =  new web3.eth.Contract(managerAbi);
+        const res = await managerContract.deploy({data: managerBytecode, arguments: [OWNER_ADDRESS, account.address]}).send({from: account.address})
+
+		managerContract = new web3.eth.Contract(managerAbi, res.options.address);
+
+		console.log(`manager contract deployed at address: ${managerContract.options.address}`)
     }
 
     web3.eth.defaultAccount = account.address;
 
     logger.debug(`[PID pid ${process.pid}] Starting Bot: address=${account.address}, mode=${runningMode}, mute-discord=${process.env.MUTE_DISCORD}`);
 
-    const strategy = new Strategy(env, runningMode, account, web3);
+    const strategy = new Strategy(env, runningMode, account, web3, managerContract);
     await strategy.start();
 }
 

@@ -1,7 +1,6 @@
-const {MANAGER_ADDRESS, WORKER_START_BALANCE, WORKER_REBALANCE_TH} = require("../config");
+const {WORKER_START_BALANCE, WORKER_REBALANCE_TH} = require("../config");
 const Contract = require('web3-eth-contract') // workaround for web3 leakage
 const {CAKE_ABI} = require('../abis')
-const {MANAGER_ABI} = require('../abis')
 const {Action} = require("./policy");
 const {MASTER_CHEF_ADDRESS, SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS} = require('./params')
 const {FatalError, NotImplementedError} = require('../errors');
@@ -16,12 +15,12 @@ BigNumber.config({POW_PRECISION: 100, EXPONENTIAL_AT: 1e+9})
 
 class ContractManager extends TxManager {
 
-	constructor(web3, account, redisClient, workersValidateInterval) {
+	constructor(web3, account, manager, redisClient, workersValidateInterval) {
 		super(web3, account)
 		this.web3 = web3
 		this.redisClient = redisClient
 
-		this.managerContract = this.getContract(MANAGER_ABI, MANAGER_ADDRESS)
+		this.manager = manager
 		this.cakeContract = this.getContract(CAKE_ABI, CAKE_ADDRESS)
 
 		this.nWorkers = 0 // how many workers were created
@@ -63,7 +62,7 @@ class ContractManager extends TxManager {
 	}
 
 	async getNWorkers() {
-		this.nWorkers = await this.managerContract.methods.getNWorkers().call()
+		this.nWorkers = await this.manager.methods.getNWorkers().call({from: this.account.address})
 	}
 
 	async fetchWorkersAddr() {
@@ -73,7 +72,7 @@ class ContractManager extends TxManager {
 			return
 		}
 
-		this.workersAddr = await this.managerContract.methods.getWorkers(0, this.nWorkers).call()
+		this.workersAddr = await this.manager.methods.getWorkers(0, this.nWorkers).call({from: this.account.address})
 	}
 
 	async getWorkersStakingAddr() {
@@ -119,7 +118,7 @@ class ContractManager extends TxManager {
 		}
 
 		for (let i=0; i<this.workersAddr.length; i++) {
-			cakeBalance = await this.cakeContract.methods.balanceOf(this.workersAddr[i]).call();
+			cakeBalance = await this.cakeContract.methods.balanceOf(this.workersAddr[i]).call({from: this.account.address});
 			workersBalanceInfo[i] = {WORKER_ADDRESS: this.workersAddr[i], CAKE_ADDRESS: cakeBalance}
 		}
 
@@ -129,7 +128,7 @@ class ContractManager extends TxManager {
 			if (poolAddr === MASTER_CHEF_ADDRESS) {
 
 				for (let i=0; i<this.workersAddr.length; i++) {
-					res = await contract.methods.userInfo(0, this.workersAddr[i]).call()
+					res = await contract.methods.userInfo(0, this.workersAddr[i]).call({from: this.account.address})
 
 					if (res['amount'] !== '0') {
 						workersBalanceInfo[i][poolAddr] = res['amount']
@@ -140,7 +139,7 @@ class ContractManager extends TxManager {
 			else {
 
 				for (let i=0; i<this.workersAddr.length; i++) {
-					res = await contract.methods.userInfo(this.workersAddr[i]).call()
+					res = await contract.methods.userInfo(this.workersAddr[i]).call({from: this.account.address})
 
 					if (res['amount'] !== '0') {
 						workersBalanceInfo[i][poolAddr] = res['amount']
@@ -153,7 +152,7 @@ class ContractManager extends TxManager {
 	}
 
 	async setManagerBalance() {
-		this.managerBalance = await this.cakeContract.methods.balanceOf(MANAGER_ADDRESS).call();
+		this.managerBalance = await this.cakeContract.methods.balanceOf(this.manager.options.address).call({from: this.account.address});
 	}
 
 	async setWorkersBalance() {
@@ -270,8 +269,8 @@ class ContractManager extends TxManager {
 		const nExpectedWorkers = this.calcNWorkers(this.managerBalance)
 
 		if (nExpectedWorkers < this.nWorkers) {
-			const tx = await this.managerContract.methods.addWorkers(nExpectedWorkers-this.nWorkers).encodeABI()
-			const res = await this.sendTransactionWait(tx, MANAGER_ADDRESS)
+			const tx = await this.manager.methods.addWorkers(nExpectedWorkers-this.nWorkers).encodeABI()
+			const res = await this.sendTransactionWait(tx, this.manager.options.address)
 
 			logger.info(`addWorkers: `)
 			console.log(res)
@@ -289,16 +288,16 @@ class ContractManager extends TxManager {
 
 	async transferToWorkers(startIndex, endIndex) {
 		const amount = (new BigNumber(this.managerBalance).dividedBy(endIndex-startIndex)).toString()
-		const tx = await this.managerContract.methods.transferToWorkers([CAKE_ADDRESS, amount, startIndex, endIndex]).encodeABI()
-		const res = await this.sendTransactionWait(tx, MANAGER_ADDRESS)
+		const tx = await this.manager.methods.transferToWorkers([CAKE_ADDRESS, amount, startIndex, endIndex]).encodeABI()
+		const res = await this.sendTransactionWait(tx, this.manager.options.address)
 
 		logger.info(`transferToWorkers: `)
 		console.log(res)
 	}
 
 	async transferToManager(amount, startIndex, endIndex) {
-		const tx = await this.managerContract.methods.transferToManager([CAKE_ADDRESS, amount, startIndex, endIndex]).encodeABI()
-		const res = await this.sendTransactionWait(tx, MANAGER_ADDRESS)
+		const tx = await this.manager.methods.transferToManager([CAKE_ADDRESS, amount, startIndex, endIndex]).encodeABI()
+		const res = await this.sendTransactionWait(tx, this.manager.options.address)
 
 		logger.info(`transferToManager: `)
 		console.log(res)

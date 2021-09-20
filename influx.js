@@ -9,6 +9,7 @@ require('dotenv').config();
 
 class Influx {
 
+	// TODO: fixme add bot addr
 	constructor(bucket, version) {
 
 		this.client = new InfluxDB({url: process.env.INFLUX_URL, token: process.env.INFLUX_TOKEN})
