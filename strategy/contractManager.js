@@ -19,6 +19,7 @@ class ContractManager extends TxManager {
 		super(web3, account)
 		this.web3 = web3
 		this.redisClient = redisClient
+		this.admin = account
 
 		this.manager = manager
 		this.cakeContract = this.getContract(CAKE_ABI, CAKE_ADDRESS)
@@ -51,6 +52,7 @@ class ContractManager extends TxManager {
 
 	async initWorkers(poolsInfo) {
 
+		await this.restrictValidate()
 		await this.getNActiveWorkers()
 		await this.getNWorkers()
 		await this.fetchWorkersAddr()
@@ -61,8 +63,17 @@ class ContractManager extends TxManager {
 		// await this.syncWorkers()
 	}
 
+	async restrictValidate() {
+		const admin = await this.manager.methods.admin().call()
+		const owner = await this.manager.methods.owner().call()
+
+		if (admin !== this.admin.address) {
+			throw Error(`unexpected admin address contract admin address ${admin}, init admin address ${this.admin.address}`)
+		}
+	}
+
 	async getNWorkers() {
-		this.nWorkers = await this.manager.methods.getNWorkers().call({from: this.account.address})
+		this.nWorkers = await this.manager.methods.getNWorkers().call()
 	}
 
 	async fetchWorkersAddr() {
@@ -72,7 +83,7 @@ class ContractManager extends TxManager {
 			return
 		}
 
-		this.workersAddr = await this.manager.methods.getWorkers(0, this.nWorkers).call({from: this.account.address})
+		this.workersAddr = await this.manager.methods.getWorkers(0, this.nWorkers).call()
 	}
 
 	async getWorkersStakingAddr() {
@@ -101,6 +112,7 @@ class ContractManager extends TxManager {
 
 			logger.info('nActiveWorkers is null, setting nActiveWorkers to 0')
 			this.nActiveWorkers = 0
+			return
 		}
 
 		this.nActiveWorkers = Number(reply)
@@ -118,7 +130,7 @@ class ContractManager extends TxManager {
 		}
 
 		for (let i=0; i<this.workersAddr.length; i++) {
-			cakeBalance = await this.cakeContract.methods.balanceOf(this.workersAddr[i]).call({from: this.account.address});
+			cakeBalance = await this.cakeContract.methods.balanceOf(this.workersAddr[i]).call();
 			workersBalanceInfo[i] = {WORKER_ADDRESS: this.workersAddr[i], CAKE_ADDRESS: cakeBalance}
 		}
 
@@ -128,7 +140,7 @@ class ContractManager extends TxManager {
 			if (poolAddr === MASTER_CHEF_ADDRESS) {
 
 				for (let i=0; i<this.workersAddr.length; i++) {
-					res = await contract.methods.userInfo(0, this.workersAddr[i]).call({from: this.account.address})
+					res = await contract.methods.userInfo(0, this.workersAddr[i]).call()
 
 					if (res['amount'] !== '0') {
 						workersBalanceInfo[i][poolAddr] = res['amount']
@@ -139,7 +151,7 @@ class ContractManager extends TxManager {
 			else {
 
 				for (let i=0; i<this.workersAddr.length; i++) {
-					res = await contract.methods.userInfo(this.workersAddr[i]).call({from: this.account.address})
+					res = await contract.methods.userInfo(this.workersAddr[i]).call()
 
 					if (res['amount'] !== '0') {
 						workersBalanceInfo[i][poolAddr] = res['amount']
@@ -152,7 +164,7 @@ class ContractManager extends TxManager {
 	}
 
 	async setManagerBalance() {
-		this.managerBalance = await this.cakeContract.methods.balanceOf(this.manager.options.address).call({from: this.account.address});
+		this.managerBalance = await this.cakeContract.methods.balanceOf(this.manager.options.address).call();
 	}
 
 	async setWorkersBalance() {
@@ -265,12 +277,20 @@ class ContractManager extends TxManager {
 	}
 
 	async addWorkers() {
+		logger.debug(`checking if need to add workers...`)
+
 		await this.setManagerBalance()
+		logger.info(`manager balance: ${this.managerBalance}`)
+
 		const nExpectedWorkers = this.calcNWorkers(this.managerBalance)
 
+		logger.info(`nExpectedWorkers=${nExpectedWorkers}`)
+
 		if (nExpectedWorkers < this.nWorkers) {
+			logger.info(`adding workers: nWorkers(${this.nWorkers})<nExpectedWorkers`)
+
 			const tx = await this.manager.methods.addWorkers(nExpectedWorkers-this.nWorkers).encodeABI()
-			const res = await this.sendTransactionWait(tx, this.manager.options.address)
+			const res = await this.sendTransactionWait(tx, this.manager.options.address, undefined, this.admin.address)
 
 			logger.info(`addWorkers: `)
 			console.log(res)
@@ -288,8 +308,9 @@ class ContractManager extends TxManager {
 
 	async transferToWorkers(startIndex, endIndex) {
 		const amount = (new BigNumber(this.managerBalance).dividedBy(endIndex-startIndex)).toString()
+		logger.info(`transferToWorkers: amount=${amount}, startIndex=${startIndex}, endIndex=${endIndex}`)
 		const tx = await this.manager.methods.transferToWorkers([CAKE_ADDRESS, amount, startIndex, endIndex]).encodeABI()
-		const res = await this.sendTransactionWait(tx, this.manager.options.address)
+		const res = await this.sendTransactionWait(tx, this.manager.options.address, undefined, this.admin.address)
 
 		logger.info(`transferToWorkers: `)
 		console.log(res)
@@ -297,7 +318,7 @@ class ContractManager extends TxManager {
 
 	async transferToManager(amount, startIndex, endIndex) {
 		const tx = await this.manager.methods.transferToManager([CAKE_ADDRESS, amount, startIndex, endIndex]).encodeABI()
-		const res = await this.sendTransactionWait(tx, this.manager.options.address)
+		const res = await this.sendTransactionWait(tx, this.manager.options.address, undefined, this.admin.address)
 
 		logger.info(`transferToManager: `)
 		console.log(res)
@@ -310,16 +331,20 @@ class ContractManager extends TxManager {
 			this.lastWorkersValidate = Date.now()
 		}
 
-		if (nextAction === Action.ENTER) {
+		if (nextAction.name === Action.ENTER) {
+
+			logger.info(`enter pool, nActiveWorkers=${this.nActiveWorkers}, nextAction:`)
+			console.log(nextAction)
 
 			if (nextAction.to.hasUserLimit === true) {
 
 				if (this.nActiveWorkers === 0) {
+					logger.info(`nActiveWorkers=0`)
 					// transfer all funds back to manager and then transfer to all (nWorkers) workers
 					await this.addWorkers()
 					this.nActiveWorkers = this.nWorkers
-					this.redisClient.set('nActiveWorkers', this.nActiveWorkers)
 					await this.transferToWorkers(0, this.nActiveWorkers)
+					this.redisClient.set('nActiveWorkers', this.nActiveWorkers)
 				}
 
 				if (this.nActiveWorkers === 1) {
@@ -327,24 +352,24 @@ class ContractManager extends TxManager {
 					await this.transferToManager(0, 0, this.nActiveWorkers)
 					await this.addWorkers()
 					this.nActiveWorkers = this.nWorkers
-					this.redisClient.set('nActiveWorkers', this.nActiveWorkers)
 					await this.transferToWorkers(0, this.nActiveWorkers)
+					this.redisClient.set('nActiveWorkers', this.nActiveWorkers)
 				}
 
 			} else {
 
 				if (this.nActiveWorkers === 0) {
 					this.nActiveWorkers = 1
-					this.redisClient.set('nActiveWorkers', this.nActiveWorkers)
 					await this.transferToWorkers(0,  this.nActiveWorkers)
+					this.redisClient.set('nActiveWorkers', this.nActiveWorkers)
 				}
 
 				else if (this.nActiveWorkers > 1) {
 					// transfer all funds back to manager and then transfer to all worker 0
 					await this.transferToManager(0, 0, this.nActiveWorkers)
 					this.nActiveWorkers = 1
-					this.redisClient.set('nActiveWorkers', this.nActiveWorkers)
 					await this.transferToWorkers(0,  this.nActiveWorkers)
+					this.redisClient.set('nActiveWorkers', this.nActiveWorkers)
 				}
 			}
 		}

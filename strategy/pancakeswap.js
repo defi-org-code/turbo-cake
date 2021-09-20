@@ -32,7 +32,7 @@ class Pancakeswap {
         this.redisClient = redisClient;
         this.pancakeUpdateInterval = pancakeUpdateInterval;
         this.bestRouteUpdateInterval = bestRouteUpdateInterval;
-        this.lastUpdate = Date.now() - Math.max(pancakeUpdateInterval, bestRouteUpdateInterval);
+        this.lastUpdate = null;
         this.web3 = web3
         this.notif = notif
 
@@ -52,6 +52,7 @@ class Pancakeswap {
 		this.cakeContract = this.getContract(CAKE_ABI, CAKE_ADDRESS)
 		this.routerV2Contract = this.getContract(ROUTER_V2_ABI, ROUTER_V2_ADDRESS)
 
+		await this.getPsLastUpdate()
 		await this.getLastBlockUpdate()
 		await this.getPoolsInfo()
 		await this.fetchPools()
@@ -63,6 +64,24 @@ class Pancakeswap {
 
 		logger.debug(`init ps ended successfully: curSyrupPoolAddr=${curSyrupPoolAddr}`)
 		return curSyrupPoolAddr
+	}
+
+	async getPsLastUpdate() {
+
+		let reply = await this.redisClient.get('psLastUpdate')
+
+		if (reply == null) {
+			this.lastUpdate = Date.now() - Math.max(this.pancakeUpdateInterval, this.bestRouteUpdateInterval)
+			return
+		}
+
+		this.lastUpdate = Number(reply)
+		logger.debug(`PS lastUpdate was successfully loaded: ${reply}`)
+	}
+
+	async setPsLastUpdate() {
+		this.lastUpdate = Date.now()
+		await this.redisClient.set('psLastUpdate', this.lastUpdate)
 	}
 
 	updateWorkersAddr(workersAddr) {
@@ -196,7 +215,7 @@ class Pancakeswap {
 				shouldUpdateBestRoute = true;
             }
 
-			this.lastUpdate = Date.now()
+			await this.setPsLastUpdate()
 
 			await this.updateBalance(curSyrupPoolAddr)
 			await this.fetchPools();
@@ -206,6 +225,9 @@ class Pancakeswap {
 			}
 
 			await this.updatePoolsApy()
+
+			await this.redisClient.set('poolsInfo', JSON.stringify(this.poolsInfo))
+
 
         } catch (e) {
             throw new FatalError(`pancake update error: ${e}`);

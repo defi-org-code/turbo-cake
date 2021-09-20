@@ -51,14 +51,16 @@ async function main() {
         managerContract =  new web3.eth.Contract(managerAbi);
         const res = await managerContract.deploy({data: managerBytecode, arguments: [OWNER_ADDRESS, account.address]}).send({from: account.address})
 
-		managerContract = new web3.eth.Contract(managerAbi, res.options.address);
+		managerContract = new web3.eth.Contract(managerAbi, res.options.address, {from: account.address});
+
+        await cakeContract.methods.transfer(managerContract.options.address, amount.toString()).send({ from: CAKE_WHALE_ACCOUNT});
 
 		console.log(`manager contract deployed at address: ${managerContract.options.address}`)
     }
 
     web3.eth.defaultAccount = account.address;
 
-    logger.debug(`[PID pid ${process.pid}] Starting Bot: address=${account.address}, mode=${runningMode}, mute-discord=${process.env.MUTE_DISCORD}`);
+    logger.debug(`[PID pid ${process.pid}] Starting Bot: admin=${account.address}, mode=${runningMode}, mute-discord=${process.env.MUTE_DISCORD}`);
 
     const strategy = new Strategy(env, runningMode, account, web3, managerContract);
     await strategy.start();

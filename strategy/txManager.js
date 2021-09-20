@@ -9,7 +9,7 @@ class TxManager {
 		this.account = account;
 	}
 
-    async sendTransactionWait(encodedTx, to, gas = undefined) {
+    async sendTransactionWait(encodedTx, to, gas = undefined, from=this.account.address) {
 
         if (!encodedTx) {
             return null;
@@ -18,7 +18,7 @@ class TxManager {
 		let transactionObject = {
 			gas: (gas ? gas : 500000),
 			data: encodedTx,
-			from: this.account.address,
+			from: from,
 			to: to,
 		};
 
