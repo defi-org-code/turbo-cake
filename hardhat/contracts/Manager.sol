@@ -53,6 +53,7 @@ contract Manager is ReentrancyGuard, IWorker {
 	function addWorkers(uint16 numWorkersToAdd) external restricted {
 
 		uint256 n = workers.length + numWorkersToAdd;
+
 		for (uint256 i=workers.length; i < n; i++) {
 			Worker worker = new Worker();
 			workers.push(address(worker));
@@ -91,11 +92,12 @@ contract Manager is ReentrancyGuard, IWorker {
 		uint256 amount;
 		uint256 balance = IERC20(params.stakedToken).balanceOf(address(this));
 
+		require(workers.length >= params.endIndex - params.startIndex, "invalid workers indices");
 		require(params.amount * (params.endIndex - params.startIndex) <= balance, "Insufficient funds for all workers");
 
 		for (uint16 i=params.startIndex; i< params.endIndex; i++) {
 
-			require (params.amount > IERC20(params.stakedToken).balanceOf(workers[i]));
+			require (params.amount > IERC20(params.stakedToken).balanceOf(workers[i]), 'unexpected worker amount');
 
 			amount = params.amount - IERC20(params.stakedToken).balanceOf(workers[i]);
 

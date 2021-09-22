@@ -1,4 +1,4 @@
-const {WORKER_START_BALANCE, WORKER_REBALANCE_TH} = require("../config");
+const {WORKER_START_BALANCE, WORKER_REBALANCE_TH, OWNER_ADDRESS} = require("../config");
 const Contract = require('web3-eth-contract') // workaround for web3 leakage
 const {CAKE_ABI} = require('../abis')
 const {Action} = require("./policy");
@@ -15,11 +15,11 @@ BigNumber.config({POW_PRECISION: 100, EXPONENTIAL_AT: 1e+9})
 
 class ContractManager extends TxManager {
 
-	constructor(web3, account, manager, redisClient, workersValidateInterval) {
-		super(web3, account)
+	constructor(web3, admin	, manager, redisClient, workersValidateInterval) {
+		super(web3, admin)
 		this.web3 = web3
 		this.redisClient = redisClient
-		this.admin = account
+		this.admin = admin
 
 		this.manager = manager
 		this.cakeContract = this.getContract(CAKE_ABI, CAKE_ADDRESS)
@@ -68,7 +68,11 @@ class ContractManager extends TxManager {
 		const owner = await this.manager.methods.owner().call()
 
 		if (admin !== this.admin.address) {
-			throw Error(`unexpected admin address contract admin address ${admin}, init admin address ${this.admin.address}`)
+			throw Error(`unexpected admin address: contract admin address ${admin}, admin.address ${this.admin.address}`)
+		}
+
+		if (owner !== OWNER_ADDRESS) {
+			throw Error(`unexpected owner address: contract owner address ${owner}, OWNER_ADDRESS ${OWNER_ADDRESS}`)
 		}
 	}
 
@@ -261,6 +265,7 @@ class ContractManager extends TxManager {
 
 	async setTotalBalance() {
 		await this.setManagerBalance()
+		logger.info(`manager total balance: ${this.managerBalance}`)
 		let totalBalance = {unstaked: new BigNumber(this.managerBalance), staked: new BigNumber(0)}
 
 		for (let [workerIndex, workerBalance] of Object.entries(this.workersBalance)) {
@@ -269,6 +274,8 @@ class ContractManager extends TxManager {
 		}
 
 		this.balance = totalBalance
+		logger.info(`total balance: `)
+		console.log(this.balance)
 	}
 
 	async syncWorkers() {
@@ -276,21 +283,27 @@ class ContractManager extends TxManager {
 		// swap all digens to cakes, transfer all to manager
 	}
 
-	async addWorkers() {
+	async addWorkers(nExpectedWorkers=null) {
 		logger.debug(`checking if need to add workers...`)
 
-		await this.setManagerBalance()
-		logger.info(`manager balance: ${this.managerBalance}`)
+		if (nExpectedWorkers === null) {
 
-		const nExpectedWorkers = this.calcNWorkers(this.managerBalance)
+			await this.setManagerBalance()
+			logger.info(`manager balance: ${this.managerBalance}`)
 
-		logger.info(`nExpectedWorkers=${nExpectedWorkers}`)
+			nExpectedWorkers = this.calcNWorkers(this.managerBalance)
+		}
 
-		if (nExpectedWorkers < this.nWorkers) {
-			logger.info(`adding workers: nWorkers(${this.nWorkers})<nExpectedWorkers`)
+		logger.info(`nExpectedWorkers=${nExpectedWorkers}, nWorkers=${this.nWorkers}`)
+
+		if (nExpectedWorkers > this.nWorkers) {
+			logger.info(`adding ${nExpectedWorkers-this.nWorkers} workers`)
+
+			let estimatedGas = 2 * (await this.manager.methods.addWorkers(nExpectedWorkers-this.nWorkers).estimateGas())
+			console.log(`estimatedGas: ${estimatedGas}`)
 
 			const tx = await this.manager.methods.addWorkers(nExpectedWorkers-this.nWorkers).encodeABI()
-			const res = await this.sendTransactionWait(tx, this.manager.options.address, undefined, this.admin.address)
+			const res = await this.sendTransactionWait(tx, this.manager.options.address, estimatedGas)
 
 			logger.info(`addWorkers: `)
 			console.log(res)
@@ -310,7 +323,7 @@ class ContractManager extends TxManager {
 		const amount = (new BigNumber(this.managerBalance).dividedBy(endIndex-startIndex)).toString()
 		logger.info(`transferToWorkers: amount=${amount}, startIndex=${startIndex}, endIndex=${endIndex}`)
 		const tx = await this.manager.methods.transferToWorkers([CAKE_ADDRESS, amount, startIndex, endIndex]).encodeABI()
-		const res = await this.sendTransactionWait(tx, this.manager.options.address, undefined, this.admin.address)
+		const res = await this.sendTransactionWait(tx, this.manager.options.address)
 
 		logger.info(`transferToWorkers: `)
 		console.log(res)
@@ -318,7 +331,7 @@ class ContractManager extends TxManager {
 
 	async transferToManager(amount, startIndex, endIndex) {
 		const tx = await this.manager.methods.transferToManager([CAKE_ADDRESS, amount, startIndex, endIndex]).encodeABI()
-		const res = await this.sendTransactionWait(tx, this.manager.options.address, undefined, this.admin.address)
+		const res = await this.sendTransactionWait(tx, this.manager.options.address)
 
 		logger.info(`transferToManager: `)
 		console.log(res)
@@ -360,6 +373,7 @@ class ContractManager extends TxManager {
 
 				if (this.nActiveWorkers === 0) {
 					this.nActiveWorkers = 1
+					await this.addWorkers(1)
 					await this.transferToWorkers(0,  this.nActiveWorkers)
 					this.redisClient.set('nActiveWorkers', this.nActiveWorkers)
 				}
@@ -368,6 +382,7 @@ class ContractManager extends TxManager {
 					// transfer all funds back to manager and then transfer to all worker 0
 					await this.transferToManager(0, 0, this.nActiveWorkers)
 					this.nActiveWorkers = 1
+					await this.addWorkers(1)
 					await this.transferToWorkers(0,  this.nActiveWorkers)
 					this.redisClient.set('nActiveWorkers', this.nActiveWorkers)
 				}

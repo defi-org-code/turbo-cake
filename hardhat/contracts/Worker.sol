@@ -30,7 +30,6 @@ contract Worker is IWorker {
 	}
 
 	function deposit(address stakedPoolAddr, uint256 amount, uint256 pid) private {
-//		require(amount > 0, "zero deposit amount");
 
 		if (amount == 0) {
 			amount = IERC20(ICakePools(stakedPoolAddr).stakedToken()).balanceOf(address(this));
@@ -47,12 +46,6 @@ contract Worker is IWorker {
 	}
 
 	function withdraw(address stakedPoolAddr, uint256 amount, uint256 pid) private {
-
-//		if (amount == 0) {
-//			UserInfo memory userInfo;
-//			userInfo = ICakePools(stakedPoolAddr).userInfo(address(this));
-//			amount = userInfo.amount;
-//		}
 
 		if (pid == 0) {
 			ICakePools(stakedPoolAddr).leaveStaking(amount);

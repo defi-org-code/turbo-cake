@@ -22,47 +22,47 @@ async function main() {
 
     const runningMode = (argv.prod==="true"? RunningMode.PRODUCTION: RunningMode.DEV);
 
-    let account
+    let admin
     let managerContract
 	// let web3
 
     if (runningMode === RunningMode.PRODUCTION) {
     	const Web3 = require("web3");
 		web3 = new Web3(process.env.ENDPOINT_HTTPS);
-	    account = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
+	    admin = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
 
     } else if (runningMode === RunningMode.DEV) {
 
-        account = web3.eth.accounts.create(); // account is admin
+        admin = web3.eth.accounts.create();
 
-	    // account = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
+	    // admin = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
 
 		// process.exit()
 		await hre.network.provider.request({method: "hardhat_impersonateAccount",params: [CAKE_WHALE_ACCOUNT]});
-		await hre.network.provider.request({method: "hardhat_impersonateAccount",params: [account.address]});
-        await hre.network.provider.request({method: "hardhat_setBalance", params: [account.address, "0x100000000000000000000"]});
+		await hre.network.provider.request({method: "hardhat_impersonateAccount",params: [admin.address]});
+        await hre.network.provider.request({method: "hardhat_setBalance", params: [admin.address, "0x100000000000000000000"]});
 
         const cakeContract =  new web3.eth.Contract(CAKE_ABI, CAKE_ADDRESS);
         let amount = new BigNumber(1e18) //await cakeContract.methods.balanceOf(CAKE_WHALE_ACCOUNT).call()
-        await cakeContract.methods.transfer(account.address, amount.toString()).send({ from: CAKE_WHALE_ACCOUNT});
+        await cakeContract.methods.transfer(admin.address, amount.toString()).send({ from: CAKE_WHALE_ACCOUNT});
 
-        console.log('Bot cake balance (DEV mode): ', await cakeContract.methods.balanceOf(account.address).call())
+        console.log('Bot cake balance (DEV mode): ', await cakeContract.methods.balanceOf(admin.address).call())
 
         managerContract =  new web3.eth.Contract(managerAbi);
-        const res = await managerContract.deploy({data: managerBytecode, arguments: [OWNER_ADDRESS, account.address]}).send({from: account.address})
+        const res = await managerContract.deploy({data: managerBytecode, arguments: [OWNER_ADDRESS, admin.address]}).send({from: admin.address})
 
-		managerContract = new web3.eth.Contract(managerAbi, res.options.address, {from: account.address});
+		managerContract = new web3.eth.Contract(managerAbi, res.options.address, {from: admin.address});
 
         await cakeContract.methods.transfer(managerContract.options.address, amount.toString()).send({ from: CAKE_WHALE_ACCOUNT});
 
 		console.log(`manager contract deployed at address: ${managerContract.options.address}`)
     }
 
-    web3.eth.defaultAccount = account.address;
+    web3.eth.defaultAccount = admin.address;
 
-    logger.debug(`[PID pid ${process.pid}] Starting Bot: admin=${account.address}, mode=${runningMode}, mute-discord=${process.env.MUTE_DISCORD}`);
+    logger.debug(`[PID pid ${process.pid}] Starting Bot: admin=${admin.address}, mode=${runningMode}, mute-discord=${process.env.MUTE_DISCORD}`);
 
-    const strategy = new Strategy(env, runningMode, account, web3, managerContract);
+    const strategy = new Strategy(env, runningMode, admin, web3, managerContract);
     await strategy.start();
 }
 

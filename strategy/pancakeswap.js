@@ -215,8 +215,6 @@ class Pancakeswap {
 				shouldUpdateBestRoute = true;
             }
 
-			await this.setPsLastUpdate()
-
 			await this.updateBalance(curSyrupPoolAddr)
 			await this.fetchPools();
 			await this.setActivePools()
@@ -227,7 +225,7 @@ class Pancakeswap {
 			await this.updatePoolsApy()
 
 			await this.redisClient.set('poolsInfo', JSON.stringify(this.poolsInfo))
-
+			await this.setPsLastUpdate()
 
         } catch (e) {
             throw new FatalError(`pancake update error: ${e}`);
