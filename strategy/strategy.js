@@ -100,6 +100,15 @@ class Strategy {
 		this.reporter = new Reporter(runningMode)
     }
 
+	async devModeSetup() {
+
+		if (this.runningMode !== RunningMode.DEV) {
+			return
+		}
+
+		await this.redisClient.del('nActiveWorkers')
+	}
+
 	async getLastActionTimestamp() {
 
 		let reply = await this.redisClient.get('lastActionTimestamp')
@@ -128,6 +137,7 @@ class Strategy {
         try {
         	logger.debug(`[Strategy] start`)
 	        this.lastActionTimestamp = await this.getLastActionTimestamp();
+	        await this.devModeSetup()
 
 			this.curSyrupPoolAddr = await this.ps.init();
 			this.curSyrupPoolAddr = await this.contractManager.init(this.ps.poolsInfo);

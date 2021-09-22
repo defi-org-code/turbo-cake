@@ -80,8 +80,8 @@ class GreedyPolicy extends Policy {
 		* check move criteria
 		* return action
 		* */
-		logger.debug(`getAction args:`)
-		console.log(args)
+		// logger.debug(`getAction args:`)
+		// console.log(args)
 
 		const topYielderAddr = this.getTopYielderAddr(args.poolsInfo);
 
