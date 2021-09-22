@@ -48,10 +48,24 @@ contract Worker is IWorker {
 
 	function withdraw(address stakedPoolAddr, uint256 amount) private {
 
+		UserInfo memory userInfo;
+
 		if (stakedPoolAddr == masterChefAddress) {
+
+			if (amount != 0) {
+				userInfo = IMasterchef(stakedPoolAddr).userInfo(0, address(this));
+				amount = userInfo.amount;
+			}
+
 			ICakePools(stakedPoolAddr).leaveStaking(amount);
 		}
 		else {
+
+			if (amount != 0) {
+				userInfo = ICakePools(stakedPoolAddr).userInfo(address(this));
+				amount = userInfo.amount;
+			}
+
 			ICakePools(stakedPoolAddr).withdraw(amount);
 		}
 	}

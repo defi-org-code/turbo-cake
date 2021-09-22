@@ -34,6 +34,7 @@ class Batcher extends TxManager {
         this.web3 = args.web3;
         this.notif = args.notifClient;
         this.account = args.account;
+        this.contractManager = args.contractManager;
         this.swapSlippage = args.swapSlippage;
         this.swapTimeLimit = args.swapTimeLimit;
         this.status = "start";
@@ -107,20 +108,38 @@ class Batcher extends TxManager {
 		return (new BigNumber(this.balance.staked)).plus(this.balance.unstaked).toString()
 	}
 
-    async enterPosition(addr) {
+    async enterPosition(addr, startIndex, endIndex) {
         logger.debug(`batcher.enterPosition: start pool ${addr} `);
 
-        const syrupPool = await this.setupSyrupPool(addr);
-        // TODO: update balance
-        const cakeBalance = await this.cakeContract.methods.balanceOf(this.account.address).call();
-        // logger.debug('cakeBalance: ', this.balance);
-        await this.depositCake(syrupPool, cakeBalance);
+		let withdraw=false, swap=false, deposit=true, stakedPoolAddr=null, newPoolAddr=addr, amount=0;
+		let swapRouter=null, multiplier=0, path=null, deadline=0; // Date.now() + this.swapTimeLimit;
+		let swapParams = [swapRouter, multiplier, path, deadline];
+
+		const tx = this.contractManager.methods.doHardWork([withdraw, swap, deposit, stakedPoolAddr, newPoolAddr, amount, startIndex, endIndex, swapParams]).encodeABI();
+		const res = await this.sendTransactionWait(tx, this.manager.options.address)
+
+		logger.info(`enterPosition: `)
+		console.log(res)
 
         logger.debug("batcher.enterPosition: end");
     }
 
     async exitPosition(addr) {
         logger.debug(`batcher.exitPosition: start pool ${addr}`);
+
+
+		let withdraw=true, swap=true, deposit=false, stakedPoolAddr=addr, newPoolAddr=null, amount;
+		let swapRouter=null, multiplier=0, path=null, deadline=0; // Date.now() + this.swapTimeLimit;
+		let swapParams = [swapRouter, multiplier, path, deadline];
+
+        amount = await this.getStakedAmount(syrupPool, this.account.address);
+
+		const tx = this.contractManager.methods.doHardWork([withdraw, swap, deposit, stakedPoolAddr, newPoolAddr, amount, startIndex, endIndex, swapParams]).encodeABI();
+		const res = await this.sendTransactionWait(tx, this.manager.options.address)
+
+		logger.info(`exitPosition: `)
+		console.log(res)
+
 
         const syrupPool = await this.setupSyrupPool(addr);
         const stakedAmount = await this.getStakedAmount(syrupPool, this.account.address);

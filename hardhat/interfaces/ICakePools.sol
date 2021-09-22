@@ -23,3 +23,9 @@ interface ICakePools {
 
     function userInfo(address) external view returns (IWorker.UserInfo memory);
 }
+
+
+interface IMasterchef {
+
+    function userInfo(uint256,address) external view returns (IWorker.UserInfo memory);
+}

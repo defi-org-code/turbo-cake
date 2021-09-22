@@ -80,7 +80,8 @@ class Strategy {
 			notifClient: this.notif,
 			swapSlippage: config.swapSlippage,
 			swapTimeLimit: config.swapTimeLimit,
-			redisClient: this.redisClient
+			redisClient: this.redisClient,
+			contractManager: manager
 		});
 
         this.nextAction = {name: Action.NO_OP,};
@@ -212,7 +213,8 @@ class Strategy {
 
     async executeAction(nextAction) {
 
-		logger.debug('executeAction: ', nextAction)
+		logger.debug('executeAction: nextAction:')
+		console.log(nextAction)
 
         const startTime = Date.now();
 
