@@ -45,12 +45,18 @@ class GreedyPolicy extends Policy {
     	let apyDict = {}
 		for (const poolAddr of Object.keys(poolsInfo)) {
 
-			if (poolsInfo[poolAddr]['active'] === false) {
+			if ((poolsInfo[poolAddr]['active'] === false) || (poolsInfo[poolAddr]['apy'] === null)) {
 				continue
 			}
 
 			apyDict[poolsInfo[poolAddr]['apy']] = poolAddr
 		}
+
+		if (Object.keys(apyDict).length === 0) {
+			throw Error(`Could not find any active pool while searching for best pool address`)
+		}
+
+		console.info(apyDict)
 
 		if ((this.runningMode === RunningMode.DEV) && (this.randApy === true)) {
 			logger.warning(`RANDOM mode is on, returning random pool ...`)

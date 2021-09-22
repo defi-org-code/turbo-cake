@@ -107,6 +107,7 @@ class Strategy {
 		}
 
 		await this.redisClient.del('nActiveWorkers')
+		await this.redisClient.del('investInfo')
 	}
 
 	async getLastActionTimestamp() {
@@ -139,7 +140,7 @@ class Strategy {
 	        this.lastActionTimestamp = await this.getLastActionTimestamp();
 	        await this.devModeSetup()
 
-			this.curSyrupPoolAddr = await this.ps.init();
+			await this.ps.init();
 			this.curSyrupPoolAddr = await this.contractManager.init(this.ps.poolsInfo);
 
             this.intervalId = setInterval(() => this.run(), this.tickInterval);

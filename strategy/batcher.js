@@ -37,12 +37,14 @@ class Batcher extends TxManager {
         this.contractManager = args.contractManager;
         this.swapSlippage = args.swapSlippage;
         this.swapTimeLimit = args.swapTimeLimit;
-        this.status = "start";
         this.execCache = {};
         this.trace = [];
         this.result = null;
         this.onSuccessCallback = null;
         this.onFailureCallback = null;
+        this.successCnt = 0;
+        this.workersCnt = 0;
+        this.totalWorkers = 0;
 
         this.cakeContract = new this.web3.eth.Contract(
             CAKE_ABI,
@@ -61,21 +63,29 @@ class Batcher extends TxManager {
 	async run(action) {
 
 		console.log("batcher.run: start");
-		setTimeout(async () => await this.worker(action), 0)
+
+        this.workersCnt = 0
+        this.totalWorkers = action.endIndex - action.startIndex
+        this.successCnt = 0
+
+		for (let i=action.startIndex; i < action.endIndex; i++) {
+			console.log(`batcher.run: start worker ${i}`);
+			// setTimeout(async () => await this.worker(action), 0)
+			await this.worker(i, action)
+		}
+
 	}
 
-    async worker(action) {
+    async worker(workerIndex, action) {
 
-        logger.debug("batcher.worker: action: ");
+        logger.debug(`batcher.worker[${workerIndex}]: action: `);
         console.log(action)
 
         try {
-            this.status = "running";
 
             switch (action.name) {
 
                 case Action.NO_OP:
-                    this.status = null;
                     break;
 
                 case Action.ENTER:
@@ -94,14 +104,14 @@ class Batcher extends TxManager {
                     return this.invalidAction();
             }
 
-            this.status = "success";
+            this.successCnt += 1;
             logger.debug("batcher.run: action completed successfully");
 
         } catch (err) {
             this.handleExecutionError(err);
 
         } finally {
-            await this.handleExecutionResult();
+            await this.handleExecutionResult(workerIndex);
         }
     }
 
@@ -378,16 +388,23 @@ class Batcher extends TxManager {
 
 	handleExecutionError(err) {
         this.notif.sendDiscord(err);
-        this.status = "failure";
     }
 
-    async handleExecutionResult() {
-        if (this.status === "success") {
-            await this.onSuccess(this.trace);
-        }
-        if (this.status === "failure") {
-            await this.onFailure(this.trace);
-        }
+    async handleExecutionResult(workerIndex) {
+		this.workersCnt += 1
+		logger.info(`handleExecutionResult: workerIndex ${workerIndex}, totalWorkers=${this.totalWorkers}`)
+
+		if (this.workersCnt === this.totalWorkers) {
+
+			if (this.successCnt === this.totalWorkers) {
+				await this.onSuccess(this.trace);
+			}
+			else {
+				await this.onFailure(this.trace);
+			}
+
+		}
+
     }
 
 }

@@ -32,7 +32,7 @@ class Pancakeswap {
         this.redisClient = redisClient;
         this.pancakeUpdateInterval = pancakeUpdateInterval;
         this.bestRouteUpdateInterval = bestRouteUpdateInterval;
-        this.lastUpdate = null;
+        this.psLastUpdate = null;
         this.web3 = web3
         this.notif = notif
 
@@ -57,13 +57,12 @@ class Pancakeswap {
 		await this.getPoolsInfo()
 		await this.fetchPools()
 
-		const curSyrupPoolAddr = await this.getStakingAddr()
-		await this.getInvestInfo(curSyrupPoolAddr)
+		// const curSyrupPoolAddr = await this.getStakingAddr()
+		await this.getInvestInfo(null) // TODO: FIXME !!!
 
 		// await this.getTransferEvents()
 
-		logger.debug(`init ps ended successfully: curSyrupPoolAddr=${curSyrupPoolAddr}`)
-		return curSyrupPoolAddr
+		logger.debug(`init ps ended successfully`)
 	}
 
 	async getPsLastUpdate() {
@@ -71,17 +70,17 @@ class Pancakeswap {
 		let reply = await this.redisClient.get('psLastUpdate')
 
 		if (reply == null) {
-			this.lastUpdate = Date.now() - Math.max(this.pancakeUpdateInterval, this.bestRouteUpdateInterval)
+			this.psLastUpdate = Date.now() - Math.max(this.pancakeUpdateInterval, this.bestRouteUpdateInterval)
 			return
 		}
 
-		this.lastUpdate = Number(reply)
+		this.psLastUpdate = Number(reply)
 		logger.debug(`PS lastUpdate was successfully loaded: ${reply}`)
 	}
 
 	async setPsLastUpdate() {
-		this.lastUpdate = Date.now()
-		await this.redisClient.set('psLastUpdate', this.lastUpdate)
+		this.psLastUpdate = Date.now()
+		await this.redisClient.set('psLastUpdate', this.psLastUpdate)
 	}
 
 	updateWorkersAddr(workersAddr) {
@@ -206,12 +205,12 @@ class Pancakeswap {
 
         try {
 
-            if (Date.now() - this.lastUpdate < this.pancakeUpdateInterval) {
+            if (Date.now() - this.psLastUpdate < this.pancakeUpdateInterval) {
                 return;
             }
 
             let shouldUpdateBestRoute;
-            if (Date.now() - this.lastUpdate > this.bestRouteUpdateInterval) {
+            if (Date.now() - this.psLastUpdate > this.bestRouteUpdateInterval) {
 				shouldUpdateBestRoute = true;
             }
 
@@ -356,8 +355,7 @@ class Pancakeswap {
 			startBlock = Number(this.poolsInfo[poolAddr]['startBlock'])
 			poolRewards = Number(this.poolsInfo[poolAddr]['poolRewards'])
 
-			this.poolsInfo[poolAddr]['active'] = !((startBlock > blockNum) || (bonusEndBlock <= blockNum) || (poolAddr in this.EXCLUDED_POOLS) ||
-				(this.poolsInfo[poolAddr]['hasUserLimit'] === true) || (poolRewards === 0));
+			this.poolsInfo[poolAddr]['active'] = !((startBlock > blockNum) || (bonusEndBlock <= blockNum) || (poolAddr in this.EXCLUDED_POOLS) || (poolRewards === 0) || (this.poolsInfo[poolAddr]['hasUserLimit'] === false));
 		}
 
 		logger.debug('setActivePools ended')

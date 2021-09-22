@@ -25,16 +25,16 @@ class TxManager {
 		logger.debug("sendTransactionWait ");
 		console.log('transactionObject: ', transactionObject);
 		const signedTx = await this.account.signTransaction(transactionObject);
-		logger.debug('signedTx:')
-		console.log(signedTx)
+		// logger.debug('signedTx:')
+		// console.log(signedTx)
 
 		const txResponse = await this.web3.eth.sendSignedTransaction(signedTx.rawTransaction);
-		logger.debug('## txResponse ##');
-		console.log(txResponse);
+		// logger.debug('## txResponse ##');
+		// console.log(txResponse);
 
 		const res = await this.pendingWait(1000, txResponse.transactionHash);
-		logger.debug('## txReceipt ##', res.gasUsed);
-		console.log(res);
+		// logger.debug('## txReceipt ##', res.gasUsed);
+		// console.log(res);
 
 		return res;
 	}

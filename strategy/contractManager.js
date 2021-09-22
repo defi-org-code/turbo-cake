@@ -1,4 +1,4 @@
-const {WORKER_START_BALANCE, WORKER_REBALANCE_TH, OWNER_ADDRESS} = require("../config");
+const {WORKER_START_BALANCE, OWNER_ADDRESS} = require("../config");
 const Contract = require('web3-eth-contract') // workaround for web3 leakage
 const {CAKE_ABI} = require('../abis')
 const {Action} = require("./policy");
@@ -88,6 +88,7 @@ class ContractManager extends TxManager {
 		}
 
 		this.workersAddr = await this.manager.methods.getWorkers(0, this.nWorkers).call()
+		logger.info(`workersAddr: ${this.workersAddr}`)
 	}
 
 	async getWorkersStakingAddr() {
@@ -123,10 +124,11 @@ class ContractManager extends TxManager {
 	}
 
 	async setWorkersBalanceInfo(poolsInfo) {
-		// workersBalanceInfo[index]: {WORKER_ADDRESS: worker_address, CAKE_ADDRESS: cake_Balance, STAKE_ADDR0: stake_balance0, STAKE_ADDR1: stake_balance_1} - expect to have only 1 staking address
 		let res, contract
 		let workersBalanceInfo = {}
 		let cakeBalance
+
+		await this.fetchWorkersAddr()
 
 		if (this.workersAddr.length === 0) {
 			this.workersBalanceInfo = {}
@@ -135,7 +137,8 @@ class ContractManager extends TxManager {
 
 		for (let i=0; i<this.workersAddr.length; i++) {
 			cakeBalance = await this.cakeContract.methods.balanceOf(this.workersAddr[i]).call();
-			workersBalanceInfo[i] = {WORKER_ADDRESS: this.workersAddr[i], CAKE_ADDRESS: cakeBalance}
+			workersBalanceInfo[i] = {}
+			workersBalanceInfo[i][CAKE_ADDRESS] = cakeBalance
 		}
 
 		for (const poolAddr of Object.keys(poolsInfo)) {
@@ -160,11 +163,17 @@ class ContractManager extends TxManager {
 					if (res['amount'] !== '0') {
 						workersBalanceInfo[i][poolAddr] = res['amount']
 					}
+
+					if (res['rewardDebt'] !== '0') {
+						logger.info(`setWorkersBalanceInfo: workerAddr=${this.workersAddr[i]}, res=${res}`)
+					}
 				}
 			}
 		}
 
 		this.workersBalanceInfo = workersBalanceInfo
+		logger.info('workersBalanceInfo: ')
+		console.log(this.workersBalanceInfo)
 	}
 
 	async setManagerBalance() {
@@ -184,11 +193,7 @@ class ContractManager extends TxManager {
 
 			for (const [key, value] of Object.entries(workerInfo)) {
 
-				if (key === 'WORKER_ADDRESS') {
-					logger.debug(`processing worker ${value} ...`)
-				}
-
-				else if (key === 'CAKE_ADDRESS') {
+				if (key === CAKE_ADDRESS) {
 					workersBalance[workerIndex].unstaked = value
 				}
 
@@ -218,7 +223,6 @@ class ContractManager extends TxManager {
 		let expectedKeys = Object.keys(this.workersBalanceInfo[0])
 
 		if (expectedKeys.length > 3) {
-			// WORKER_ADDRESS, CAKE_ADDRESS ->2 and we might have additional 1 staked addr (or not)
 			// TODO: sync workers and call init
 			throw Error(`workers are out of sync: ${this.workersBalanceInfo}`)
 		}
@@ -230,7 +234,6 @@ class ContractManager extends TxManager {
 				expectedKeys = Object.keys(this.workersBalanceInfo[this.nActiveWorkers])
 
 				if (expectedKeys.length !== 2) {
-					// WORKER_ADDRESS, CAKE_ADDRESS ->2 and we might have additional 1 staked addr (or not)
 					// TODO: sync workers and call init
 					throw Error(`workers are out of sync: ${this.workersBalanceInfo}`)
 				}
@@ -254,7 +257,7 @@ class ContractManager extends TxManager {
 
 		for (let key of expectedKeys) {
 
-			if ((key !== 'WORKER_ADDR') && (key !== 'CAKE_ADDRESS')) {
+			if ((key !== 'WORKER_ADDR') && (key !== CAKE_ADDRESS)) {
 				this.stakedAddr = expectedKeys
 				return
 			}
@@ -295,32 +298,31 @@ class ContractManager extends TxManager {
 		}
 
 		logger.info(`nExpectedWorkers=${nExpectedWorkers}, nWorkers=${this.nWorkers}`)
+		logger.info(`adding ${nExpectedWorkers-this.nWorkers} workers`)
 
-		if (nExpectedWorkers > this.nWorkers) {
-			logger.info(`adding ${nExpectedWorkers-this.nWorkers} workers`)
+		for (let i=0; i < nExpectedWorkers - this.nWorkers; i++) {
 
-			let estimatedGas = 2 * (await this.manager.methods.addWorkers(nExpectedWorkers-this.nWorkers).estimateGas())
+			logger.info(`adding worker ${i}`)
+
+			let estimatedGas = 2 * (await this.manager.methods.addWorkers(1).estimateGas())
 			console.log(`estimatedGas: ${estimatedGas}`)
 
-			const tx = await this.manager.methods.addWorkers(nExpectedWorkers-this.nWorkers).encodeABI()
+			const tx = await this.manager.methods.addWorkers(1).encodeABI()
 			const res = await this.sendTransactionWait(tx, this.manager.options.address, estimatedGas)
 
 			logger.info(`addWorkers: `)
 			console.log(res)
-
-			this.nWorkers = nExpectedWorkers
-			return true
 		}
 
-		return false
+		this.nWorkers = nExpectedWorkers
 	}
 
 	calcNWorkers(balance) {
-		return (new BigNumber(balance).dividedBy(WORKER_START_BALANCE)).toString()
+		return Math.ceil(Number((new BigNumber(balance).dividedBy(WORKER_START_BALANCE)).toString()))
 	}
 
 	async transferToWorkers(startIndex, endIndex) {
-		const amount = (new BigNumber(this.managerBalance).dividedBy(endIndex-startIndex)).toString()
+		const amount = String(Math.floor(Number((new BigNumber(this.managerBalance).dividedBy(endIndex-startIndex)).toString())))
 		logger.info(`transferToWorkers: amount=${amount}, startIndex=${startIndex}, endIndex=${endIndex}`)
 		const tx = await this.manager.methods.transferToWorkers([CAKE_ADDRESS, amount, startIndex, endIndex]).encodeABI()
 		const res = await this.sendTransactionWait(tx, this.manager.options.address)
@@ -348,6 +350,8 @@ class ContractManager extends TxManager {
 
 			logger.info(`enter pool, nActiveWorkers=${this.nActiveWorkers}, nextAction:`)
 			console.log(nextAction)
+
+			await this.setWorkersBalanceInfo(poolsInfo)
 
 			if (nextAction.to.hasUserLimit === true) {
 
