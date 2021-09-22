@@ -80,6 +80,8 @@ class GreedyPolicy extends Policy {
 		* check move criteria
 		* return action
 		* */
+		logger.debug(`getAction args:`)
+		console.log(args)
 
 		const topYielderAddr = this.getTopYielderAddr(args.poolsInfo);
 
@@ -96,7 +98,7 @@ class GreedyPolicy extends Policy {
 
 			return {
 				name: Action.EXIT, // should enter on next tick
-				from: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy, active: args.poolsInfo[args.curSyrupPoolAddr].active, hasUserLimit: args.poolsInfo[args.curSyrupPoolAddr].hasUserLimit},
+				from: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy, active: args.poolsInfo[args.curSyrupPoolAddr].active, hasUserLimit: args.poolsInfo[args.curSyrupPoolAddr].hasUserLimit, routeToCake: args.poolsInfo[args.curSyrupPoolAddr].routeToCake},
 				to: {address: null}
 			};
 		}
@@ -107,8 +109,8 @@ class GreedyPolicy extends Policy {
 
             return {
                 name: Action.HARVEST,
-                from: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy, active: args.poolsInfo[args.curSyrupPoolAddr].active, hasUserLimit: args.poolsInfo[args.curSyrupPoolAddr].hasUserLimit},
-                to: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy, active: args.poolsInfo[args.curSyrupPoolAddr].active, hasUserLimit: args.poolsInfo[args.curSyrupPoolAddr].hasUserLimit},
+                from: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy, active: args.poolsInfo[args.curSyrupPoolAddr].active, hasUserLimit: args.poolsInfo[args.curSyrupPoolAddr].hasUserLimit, routeToCake: args.poolsInfo[args.curSyrupPoolAddr].routeToCake},
+                to: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy, active: args.poolsInfo[args.curSyrupPoolAddr].active, hasUserLimit: args.poolsInfo[args.curSyrupPoolAddr].hasUserLimit, routeToCake: args.poolsInfo[args.curSyrupPoolAddr].routeToCake},
             };
         }
 

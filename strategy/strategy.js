@@ -64,6 +64,7 @@ class Strategy {
             terminating: false,
         }
         const config = loadConfig(runningMode);
+        logger.info('config: ')
         console.log(config);
 
         this.web3 = web3;
@@ -149,7 +150,7 @@ class Strategy {
 
 		logger.debug(`reportStats: investApy=${investApy}`)
 		this.notif.sendDiscord(`apy: ${investApy}`)
-		await this.reporter.send({apy: investApy})
+		await this.reporter.send('profitStats', {apy: investApy})
 	}
 
     redisInit() {
