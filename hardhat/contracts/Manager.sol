@@ -26,7 +26,7 @@ contract Manager is ReentrancyGuard, IWorker {
 	// TODO: improve events params
 	event SetAdmin(address newAdmin);
 	event WorkersAdded(uint256 nWorkers);
-	event DoHardWork(uint16 startIndex, uint16 endIndex, address indexed stakedPoolAddr, address indexed newPoolAddr, uint256 indexed blockNum);
+	event DoHardWork(uint16 startIndex, uint16 endIndex, address indexed stakedPoolAddr, address indexed newPoolAddr);
 	event TransferToWorkers(uint16 startIndex, uint16 endIndex, uint256 indexed amount, address indexed stakedToken);
 	event TransferToManager(uint16 indexed startIndex, uint16 indexed endIndex, address indexed token);
 	event TransferToOwner(uint256 amount);
@@ -84,7 +84,7 @@ contract Manager is ReentrancyGuard, IWorker {
 			Worker(workers[i]).doHardWork(params);
 		}
 
-		emit DoHardWork(params.startIndex, params.endIndex, params.stakedPoolAddr, params.newPoolAddr, params.blockNum);
+		emit DoHardWork(params.startIndex, params.endIndex, params.stakedPoolAddr, params.newPoolAddr);
 	}
 
 	function transferToWorkers(TransferWorkersParams calldata params) external restricted {

@@ -18,10 +18,8 @@ interface IWorker {
 		address stakedPoolAddr;
 		address newPoolAddr;
 		uint256 amount;
-		uint256 pid;
 		uint16 startIndex;
 		uint16 endIndex;
-		uint256 blockNum;
 		SwapParams swapParams;
 	}
 

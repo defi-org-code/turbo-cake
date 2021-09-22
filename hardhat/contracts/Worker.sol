@@ -17,6 +17,7 @@ contract Worker is IWorker {
     address public immutable owner;
 
 	address cake = address(0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82);
+	address masterChefAddress = address(0x73feaa1eE314F8c655E354234017bE2193C9E24E);
 
 	event DoHardWork(address stakedPoolAddr);
 
@@ -29,13 +30,13 @@ contract Worker is IWorker {
 		owner = msg.sender;
 	}
 
-	function deposit(address stakedPoolAddr, uint256 amount, uint256 pid) private {
+	function deposit(address stakedPoolAddr, uint256 amount) private {
 
 		if (amount == 0) {
 			amount = IERC20(ICakePools(stakedPoolAddr).stakedToken()).balanceOf(address(this));
 		}
 
-		if (pid == 0) { // TODO: FIXME
+		if (stakedPoolAddr == masterChefAddress) {
 			IERC20(cake).approve(stakedPoolAddr,amount);
 			ICakePools(stakedPoolAddr).enterStaking(amount);
 		}
@@ -45,9 +46,9 @@ contract Worker is IWorker {
 		}
 	}
 
-	function withdraw(address stakedPoolAddr, uint256 amount, uint256 pid) private {
+	function withdraw(address stakedPoolAddr, uint256 amount) private {
 
-		if (pid == 0) {
+		if (stakedPoolAddr == masterChefAddress) {
 			ICakePools(stakedPoolAddr).leaveStaking(amount);
 		}
 		else {
@@ -74,7 +75,7 @@ contract Worker is IWorker {
 		// here we have only cakes (rewards + staked)
 		if (params.withdraw) {  // newStakedPoolAddr != stakedPoolAddr
 			// unstake all cakes
-			withdraw(params.stakedPoolAddr, params.amount, params.pid);
+			withdraw(params.stakedPoolAddr, params.amount);
 		}
 
 		// our reward token might be cake, in this case no need to swap
@@ -84,7 +85,7 @@ contract Worker is IWorker {
 
 		if (params.deposit) {
 			// stake all cakes in staking pool
-			deposit(params.newPoolAddr, params.amount, params.pid);
+			deposit(params.newPoolAddr, params.amount);
 		}
 
 		emit DoHardWork(params.stakedPoolAddr);
