@@ -128,11 +128,9 @@ class Batcher extends TxManager {
         logger.debug(`batcher.exitPosition: start pool ${addr}`);
 
 
-		let withdraw=true, swap=true, deposit=false, stakedPoolAddr=addr, newPoolAddr=null, amount;
-		let swapRouter=null, multiplier=0, path=null, deadline=0; // Date.now() + this.swapTimeLimit;
+		let withdraw=true, swap=true, deposit=false, stakedPoolAddr=addr, newPoolAddr=null, amount=null;
+		let swapRouter=null, multiplier=0, path=., deadline=Date.now() + this.swapTimeLimit;
 		let swapParams = [swapRouter, multiplier, path, deadline];
-
-        amount = await this.getStakedAmount(syrupPool, this.account.address);
 
 		const tx = this.contractManager.methods.doHardWork([withdraw, swap, deposit, stakedPoolAddr, newPoolAddr, amount, startIndex, endIndex, swapParams]).encodeABI();
 		const res = await this.sendTransactionWait(tx, this.manager.options.address)
