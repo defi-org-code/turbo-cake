@@ -351,7 +351,7 @@ class ContractManager extends TxManager {
 			logger.info(`enter pool, nActiveWorkers=${this.nActiveWorkers}, nextAction:`)
 			console.log(nextAction)
 
-			await this.setWorkersBalanceInfo(poolsInfo)
+			await this.setWorkersBalanceInfo(poolsInfo) // TODO: improve
 
 			if (nextAction.to.hasUserLimit === true) {
 

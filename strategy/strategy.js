@@ -247,12 +247,14 @@ class Strategy {
 		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
 
         this.curSyrupPoolAddr = action.to.address
-        this.inTransition = false;
 		await this.setLastActionTimestamp()
 
         if (action.name === Action.HARVEST) {
         	await this.reportStats()
         }
+
+		this.inTransition = false;
+
     }
 
     async handleExecutionError(err, action, startTime) {
@@ -262,8 +264,8 @@ class Strategy {
 
         // this.nextAction = { name: Action.NO_OP,};
         // TODO: continue flow according to trace - batcher.retry
-        this.inTransition = false;
         await this.setLastActionTimestamp()
+        this.inTransition = false;
     }
 
 

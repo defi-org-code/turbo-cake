@@ -139,11 +139,10 @@ class Batcher extends TxManager {
     }
 
     async exitPosition(startIndex, endIndex, addr, routeToCake) {
-        logger.debug(`batcher.exitPosition: start pool ${addr}`);
-
+        logger.debug(`batcher.exitPosition: exit pool ${addr}`);
 
 		let withdraw=true, swap=true, deposit=false, stakedPoolAddr=addr, newPoolAddr=addr, amount=1; // amount - any value which is not 0 to withdraw all, 0 to take rewards only
-		let multiplier = 0, deadline = Date.now() + this.swapTimeLimit;
+		let multiplier = 1, deadline = Date.now() + this.swapTimeLimit;
 		let swapParams = [ROUTER_ADDRESS, multiplier, routeToCake, deadline];
 
 		let estimatedGas = 2 * (await this.contractManager.methods.doHardWork([withdraw, swap, deposit, stakedPoolAddr, newPoolAddr, amount, startIndex, endIndex, swapParams]).estimateGas())
