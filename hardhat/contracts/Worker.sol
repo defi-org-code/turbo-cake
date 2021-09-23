@@ -49,7 +49,6 @@ contract Worker is IWorker {
 	function withdraw(address stakedPoolAddr, uint256 amount) private {
 
 		UserInfo memory userInfo;
-
 		if (stakedPoolAddr == masterChefAddress) {
 
 			if (amount != 0) {

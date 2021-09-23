@@ -82,7 +82,7 @@ class Strategy {
 			swapSlippage: config.swapSlippage,
 			swapTimeLimit: config.swapTimeLimit,
 			redisClient: this.redisClient,
-			contractManager: manager
+			contractManager: manager,
 		});
 
         this.nextAction = {name: Action.NO_OP,};
