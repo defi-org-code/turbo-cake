@@ -35,9 +35,9 @@ async function main() {
 
         admin = web3.eth.accounts.create();
 
-	    // admin = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
-
+		// console.log(admin)
 		// process.exit()
+
 		await hre.network.provider.request({method: "hardhat_impersonateAccount",params: [CAKE_WHALE_ACCOUNT]});
 		await hre.network.provider.request({method: "hardhat_impersonateAccount",params: [admin.address]});
         await hre.network.provider.request({method: "hardhat_setBalance", params: [admin.address, "0x1000000000000000000000"]});
@@ -49,9 +49,8 @@ async function main() {
         console.log('Bot cake balance (DEV mode): ', await cakeContract.methods.balanceOf(admin.address).call())
 
         managerContract =  new web3.eth.Contract(managerAbi);
-        const res = await managerContract.deploy({data: managerBytecode, arguments: [OWNER_ADDRESS, admin.address]}).send({from: admin.address})
-		logger.info(`deploy: `)
-		console.log(res)
+        let res = await managerContract.deploy({data: managerBytecode, arguments: [OWNER_ADDRESS, admin.address]}).send({from: admin.address})
+		logger.info(`deployed at address ${res.options.address}`)
 
 		managerContract = new web3.eth.Contract(managerAbi, res.options.address, {from: admin.address});
 

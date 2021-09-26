@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const prompts = require('prompts');
+require('dotenv').config();
 
 const outputEncoding = "utf8";
 const algorithm = "aes-256-ctr";

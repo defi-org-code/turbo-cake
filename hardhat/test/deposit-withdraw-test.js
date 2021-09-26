@@ -17,7 +17,6 @@ describe("DepositWithdrawTest", function () {
 	const manager = await Manager.deploy(owner, admin);
 	await manager.deployed();
 	const managerContract = new web3.eth.Contract(managerAbi, manager.address);
-	// return
 	// console.log(`owner=${owner}, admin=${admin}, manager=${manager.address}`);
     // ################################################################################
     // add workers
@@ -27,7 +26,7 @@ describe("DepositWithdrawTest", function () {
 	expect(_nWorkers).to.equal(N_WORKERS.toString())
 
 	const workersAddr = await managerContract.methods.getWorkers(0, _nWorkers).call({from: admin})
-	console.log(workersAddr)
+	// console.log(workersAddr)
 
 	let WorkersAddr = [];
 	for (let i=0; i<_nWorkers; i++) {
@@ -65,7 +64,7 @@ describe("DepositWithdrawTest", function () {
 	// workers doHardWork - deposit cakes in revv pool
 	// ################################################################################
 	let withdraw=false, swap=false, deposit=true;
-  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 10, 0, N_WORKERS, 0, [swapRouter, 0, revvSwapPath, deadline]]).send({from: admin});
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 0, N_WORKERS, [swapRouter, 0, revvSwapPath, deadline]]).send({from: admin});
 
 	let res;
 	for (const worker of WorkersAddr) {
@@ -84,7 +83,7 @@ describe("DepositWithdrawTest", function () {
 	// workers doHardWork - withdraw cakes from revv pool
 	// ################################################################################
 	withdraw=true; swap=false; deposit=false;
-  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, 0, 10, 0, N_WORKERS, 0, [swapRouter, 0, revvSwapPath, deadline]]).send({from: admin});
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 0, N_WORKERS, [swapRouter, 0, revvSwapPath, deadline]]).send({from: admin});
 
 	for (const worker of WorkersAddr) {
 		res = await revvPoolContract.methods.userInfo(worker).call();
@@ -102,7 +101,7 @@ describe("DepositWithdrawTest", function () {
 	// transfer all cakes from workers back to manager
 	// ################################################################################
 	expect(await cake.methods.balanceOf(manager.address).call()).to.equal('0');
-  	await managerContract.methods.transferToManager([cakeToken, 0, N_WORKERS]).send({from: admin});
+  	await managerContract.methods.transferToManager([cakeToken, TRANSFER_BALANCE, 0, N_WORKERS]).send({from: admin});
 	expect(await cake.methods.balanceOf(manager.address).call()).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
 
 	// ################################################################################
