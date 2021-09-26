@@ -17,7 +17,7 @@ const {
 const {TransactionFailure, FatalError, GasError, NotImplementedError} = require('../errors');
 
 const {Logger} = require('../logger')
-const logger = new Logger('strategy')
+const logger = new Logger('controller')
 
 function loadConfig(runningMode) {
     let config = {};
@@ -55,7 +55,7 @@ function loadConfig(runningMode) {
     return config;
 }
 
-class Strategy {
+class Controller {
 
     constructor(env, runningMode, account, web3, manager) {
 
@@ -71,7 +71,7 @@ class Strategy {
         this.account = account;
         this.notif = new Notifications(runningMode);
         this.redisInit();
-        this.ps = new Pancakeswap(account.address, this.redisClient, web3, this.notif,
+        this.ps = new Pancakeswap(this.redisClient, web3, this.notif,
             config.pancakeUpdateInterval, config.bestRouteUpdateInterval);
         this.policy = new GreedyPolicy(config);
         this.contractManager = new ContractManager(web3, account, manager, this.redisClient, config.workersValidateInterval)
@@ -93,7 +93,7 @@ class Strategy {
 		this.syrupSwitchInterval = config.syrupSwitchInterval
 
         this.runningMode = runningMode;
-        this.name = "pancakeswap-strategy";
+        this.name = "pancakeswap-controller";
         this.lastActionTimestamp = null;
         this.inTransition = false;
 
@@ -136,7 +136,7 @@ class Strategy {
     async start() {
 
         try {
-        	logger.debug(`[Strategy] start`)
+        	logger.debug(`[Controller] start`)
 	        this.lastActionTimestamp = await this.getLastActionTimestamp();
 	        await this.devModeSetup()
 
@@ -178,7 +178,7 @@ class Strategy {
 
     async run() {
 
-		logger.debug('strategy run')
+		logger.debug('controller run')
 		let nextAction
 
         try {
@@ -242,7 +242,7 @@ class Strategy {
     }
 
     async handleExecutionSuccess(trace, action, startTime) {
-        this.notif.sendDiscord(`strategy.handleExecutionSuccess:
+        this.notif.sendDiscord(`controller.handleExecutionSuccess:
 					action = ${JSON.stringify(action)}
 		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
 
@@ -258,7 +258,7 @@ class Strategy {
     }
 
     async handleExecutionError(err, action, startTime) {
-        this.notif.sendDiscord(`strategy.handleExecutionError:
+        this.notif.sendDiscord(`controller.handleExecutionError:
 					action = ${JSON.stringify(action)}
 		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
 
@@ -279,5 +279,5 @@ class Strategy {
 }
 
 module.exports = {
-    Strategy,
+    Controller,
 }

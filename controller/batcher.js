@@ -94,7 +94,7 @@ class Batcher extends TxManager {
                     break;
 
                 case Action.HARVEST:
-                    await this.harvest(action.startIndex, action.endIndex, action.to.address);
+                    await this.harvest(action.startIndex, action.endIndex, action.to.address, action.from.routeToCake);
                     break;
 
                 case Action.EXIT:

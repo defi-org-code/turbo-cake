@@ -27,8 +27,7 @@ class Pancakeswap {
 
 	EXCLUDED_POOLS = ["0xa80240Eb5d7E05d3F250cF000eEc0891d00b51CC"]
 
-    constructor(botAddress, redisClient, web3, notif, pancakeUpdateInterval, bestRouteUpdateInterval) {
-		this.botAddress = botAddress;
+    constructor(redisClient, web3, notif, pancakeUpdateInterval, bestRouteUpdateInterval) {
         this.redisClient = redisClient;
         this.pancakeUpdateInterval = pancakeUpdateInterval;
         this.bestRouteUpdateInterval = bestRouteUpdateInterval;
@@ -38,10 +37,7 @@ class Pancakeswap {
 
         this.poolsInfo = {}
         this.lastBlockUpdate = null
-        this.balance = {
-        	staked: 0,
-			unstaked: 0,
-		}
+
         this.investInfo = {}
         this.workersAddr = []
     }
@@ -93,69 +89,12 @@ class Pancakeswap {
 		return contract
 	}
 
-	async getStakingAddr() {
-
-		let res, contract
-		let stakingAddr = []
-
-		for (const poolAddr of Object.keys(this.poolsInfo)) {
-			contract = this.getContract(this.poolsInfo[poolAddr]['abi'], poolAddr)
-
-			if (poolAddr === MASTER_CHEF_ADDRESS) {
-				res = await contract.methods.userInfo(0, this.botAddress).call()
-			}
-			else {
-				res = await contract.methods.userInfo(this.botAddress).call()
-			}
-
-			if (res['amount'] !== '0') {
-				stakingAddr.push(poolAddr)
-			}
-		}
-
-        if (stakingAddr.length === 1) {
-            return stakingAddr[0]
-        } else if (stakingAddr.length > 1) {
-            throw Error(`Bot (${this.botAddress}) has staking in more than 1 pool: ${stakingAddr}`)
-        }
-
-		return null
-	}
-
-	async updateBalance(curSyrupPoolAddr) {
-
-		this.balance.unstaked = await this.cakeContract.methods.balanceOf(this.botAddress).call()
-
-		if (curSyrupPoolAddr === null) {
-			logger.info(`updateBalance: curr pool is null, only unstaked cakes: ${this.balance.unstaked}`)
-			this.balance.staked = 0;
-
-		} else {
-
-			let contract = this.getContract(this.poolsInfo[curSyrupPoolAddr]['abi'], curSyrupPoolAddr)
-			let res
-
-			if (curSyrupPoolAddr === MASTER_CHEF_ADDRESS) {
-				res = await contract.methods.userInfo(0, this.botAddress).call()
-			}
-
-			else {
-				res = await contract.methods.userInfo(this.botAddress).call()
-			}
-
-			this.balance.staked = res['amount']
-		}
-		logger.info(`balance=${JSON.stringify(this.balance)}`)
-	}
-
 	async getInvestApy(curSyrupPoolAddr) {
 
 		if(Object.keys(this.investInfo).length === 0) {
 			await this.getInvestInfo(curSyrupPoolAddr)
 			return null
 		}
-
-		await this.updateBalance(curSyrupPoolAddr)
 
 		const startBalance = (new BigNumber(this.investInfo['startBalance'].staked)).plus(this.investInfo['startBalance'].unstaked)
 		const endBalance = (new BigNumber(this.balance.staked)).plus(this.balance.unstaked)
@@ -190,7 +129,6 @@ class Pancakeswap {
 
 			// throw Error(`invest info should be set`)
 			const blockNum = await this.web3.eth.getBlockNumber()
-			await this.updateBalance(curSyrupPoolAddr)
 
 			reply = JSON.stringify({startBalance: this.balance, startBlock: blockNum})
 			await this.redisClient.set('investInfo', reply)
@@ -214,7 +152,6 @@ class Pancakeswap {
 				shouldUpdateBestRoute = true;
             }
 
-			await this.updateBalance(curSyrupPoolAddr)
 			await this.fetchPools();
 			await this.setActivePools()
 			if (shouldUpdateBestRoute) {
@@ -300,8 +237,9 @@ class Pancakeswap {
 	async poolApy(poolAddr) {
 
 		let poolTvl = await this.getPoolTvl(poolAddr)
+		logger.info(`poolTvl before: ${poolTvl}`)
 		// account for bot staking in tvl
-		poolTvl = new BigNumber(poolTvl).plus(new BigNumber(this.balance.unstaked))
+		poolTvl = new BigNumber(poolTvl).plus(new BigNumber(this.balance.unstaked)) // TODO: FIXME this.balance get from contract manager
 
 		const rewardPerBlock = new BigNumber(this.poolsInfo[poolAddr]['rewardPerBlock'])
 
@@ -309,6 +247,7 @@ class Pancakeswap {
 		const rewardForDay = rewardPerBlock.multipliedBy(this.BLOCKS_PER_DAY)
 		const tokenCakeRate = await this.getTokenCakeRate(poolAddr, rewardForDay)
 		logger.debug(`poolAddr=${poolAddr}, rewardPerBlock=${rewardPerBlock.toString()}, tokenCakeRate=${tokenCakeRate}, poolTvl=${poolTvl.toString()}`)
+		console.log(this.balance)
 
 		const rewardForYear = rewardPerBlock.multipliedBy(this.BLOCKS_PER_YEAR)
 		const cakeForYear = rewardForYear.multipliedBy(tokenCakeRate);
@@ -355,7 +294,7 @@ class Pancakeswap {
 			startBlock = Number(this.poolsInfo[poolAddr]['startBlock'])
 			poolRewards = Number(this.poolsInfo[poolAddr]['poolRewards'])
 
-			this.poolsInfo[poolAddr]['active'] = !((startBlock > blockNum) || (bonusEndBlock <= blockNum) || (poolAddr in this.EXCLUDED_POOLS) || (poolRewards === 0) || (this.poolsInfo[poolAddr]['hasUserLimit'] === false));
+			this.poolsInfo[poolAddr]['active'] = !((startBlock > blockNum) || (bonusEndBlock <= blockNum) || (poolAddr in this.EXCLUDED_POOLS) || (poolRewards <= this.poolsInfo[poolAddr]['rewardPerBlock']));
 		}
 
 		logger.debug('setActivePools ended')

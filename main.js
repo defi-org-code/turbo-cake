@@ -4,7 +4,7 @@ const BigNumber = require('bignumber.js')
 
 const KeyEncryption = require('./keyEncryption');
 const env = require('dotenv').config();
-const { Strategy } = require('./strategy/strategy');
+const { Controller } = require('./controller/main');
 const { RunningMode, CAKE_WHALE_ACCOUNT, CAKE_ADDRESS, OWNER_ADDRESS} = require('./config');
 const yargs = require('yargs/yargs');
 const {CAKE_ABI} = require("./abis");
@@ -43,7 +43,7 @@ async function main() {
         await hre.network.provider.request({method: "hardhat_setBalance", params: [admin.address, "0x1000000000000000000000"]});
 
         const cakeContract =  new web3.eth.Contract(CAKE_ABI, CAKE_ADDRESS);
-        let amount = new BigNumber(10e18)
+        let amount = new BigNumber(100e18)  // TODO: check with 10 cakes
         await cakeContract.methods.transfer(admin.address, amount.toString()).send({ from: CAKE_WHALE_ACCOUNT});
 
         console.log('Bot cake balance (DEV mode): ', await cakeContract.methods.balanceOf(admin.address).call())
@@ -61,9 +61,8 @@ async function main() {
     web3.eth.defaultAccount = admin.address;
 
     logger.debug(`[PID pid ${process.pid}] Starting Bot: admin=${admin.address}, mode=${runningMode}, mute-discord=${process.env.MUTE_DISCORD}`);
-
-    const strategy = new Strategy(env, runningMode, admin, web3, managerContract);
-    await strategy.start();
+    const controller = new Controller(env, runningMode, admin, web3, managerContract);
+    await controller.start();
 }
 
 
