@@ -13,6 +13,7 @@ const argv = yargs(hideBin(process.argv)).argv;
 
 const {Logger} = require('./logger')
 const logger = new Logger('main')
+const Notifications = require('./notifications');
 
 const managerAbi = require('./hardhat/artifacts/contracts/Manager.sol/Manager.json').abi
 const managerBytecode = require('./hardhat/artifacts/contracts/Manager.sol/Manager.json').bytecode
@@ -63,8 +64,12 @@ async function main() {
 
     web3.eth.defaultAccount = admin.address;
 
-    logger.debug(`[PID pid ${process.pid}] Starting Bot: admin=${admin.address}, mode=${runningMode}, mute-discord=${process.env.MUTE_DISCORD}`);
-    const controller = new Controller(env, runningMode, admin, web3, managerContract);
+	const msg = `[PID pid ${process.pid}] Starting Bot: admin=${admin.address}, mode=${runningMode}, mute-discord=${process.env.MUTE_DISCORD}`
+    logger.debug(msg);
+	const notif = new Notifications(runningMode);
+	notif.sendDiscord(msg)
+
+    const controller = new Controller(env, runningMode, admin, web3, managerContract, notif);
     await controller.start();
 }
 

@@ -57,7 +57,7 @@ function loadConfig(runningMode) {
 
 class Controller {
 
-    constructor(env, runningMode, account, web3, manager) {
+    constructor(env, runningMode, account, web3, manager, notif) {
 
         this.state = {
             position: null,
@@ -69,7 +69,7 @@ class Controller {
 
         this.web3 = web3;
         this.account = account;
-        this.notif = new Notifications(runningMode);
+        this.notif = notif;
         this.redisInit();
         this.ps = new Pancakeswap(this.redisClient, web3, this.notif,
             config.pancakeUpdateInterval, config.bestRouteUpdateInterval);
