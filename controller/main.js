@@ -96,6 +96,7 @@ class Controller {
         this.name = "pancakeswap-controller";
         this.lastActionTimestamp = null;
         this.inTransition = false;
+        this.totalBalance = null
 
 		this.reporter = new Reporter(runningMode)
     }
@@ -142,6 +143,8 @@ class Controller {
 
 			await this.ps.init();
 			this.curSyrupPoolAddr = await this.contractManager.init(this.ps.poolsInfo);
+			this.totalBalance = this.contractManager.balance // TODO: improve
+			this.ps.setTotalBalance(this.totalBalance)
 
             this.intervalId = setInterval(() => this.run(), this.tickInterval);
             // setInterval(() => this.reportStats(), this.reportInterval);
@@ -152,8 +155,13 @@ class Controller {
         }
     }
 
-	async reportStats() {
-		const investApy = await this.ps.getInvestApy(this.curSyrupPoolAddr)
+	async reportStats(harvestBlockNum) {
+		logger.info(`reportStats: harvestBlockNum=${harvestBlockNum}`)
+
+		this.totalBalance = await this.contractManager.setTotalBalance()
+		logger.info(`reportStats: totalBalance=${this.totalBalance}`)
+
+		const investApy = await this.ps.getInvestApy(this.totalBalance, this.curSyrupPoolAddr, harvestBlockNum)
 
 		if (investApy === null) {
 			return
@@ -189,7 +197,7 @@ class Controller {
 
             this.inTransition = true;
 
-            await this.ps.update(this.curSyrupPoolAddr);
+            await this.ps.update(this.totalBalance);
             logger.debug('ps update ended')
             nextAction = await this.getAction();
             logger.debug('set action ended')
@@ -250,7 +258,8 @@ class Controller {
 		await this.setLastActionTimestamp()
 
         if (action.name === Action.HARVEST) {
-        	await this.reportStats()
+        	const harvestBlockNum = Number(await this.web3.eth.getBlockNumber()) // TODO: FIXME better estimation
+        	await this.reportStats(harvestBlockNum)
         }
 
 		this.inTransition = false;

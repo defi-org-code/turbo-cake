@@ -40,6 +40,7 @@ class Pancakeswap {
 
         this.investInfo = {}
         this.workersAddr = []
+        this.totalBalance = {'staked': 0, 'unstaked': 0}
     }
 
 	async init() {
@@ -89,17 +90,22 @@ class Pancakeswap {
 		return contract
 	}
 
-	async getInvestApy(curSyrupPoolAddr) {
+	async getInvestApy(totalBalance, curSyrupPoolAddr, blockNum) {
+
+		this.totalBalance = totalBalance
 
 		if(Object.keys(this.investInfo).length === 0) {
-			await this.getInvestInfo(curSyrupPoolAddr)
+			await this.getInvestInfo(curSyrupPoolAddr, blockNum)
+			return null
+		}
+
+		if (blockNum === null) {
 			return null
 		}
 
 		const startBalance = (new BigNumber(this.investInfo['startBalance'].staked)).plus(this.investInfo['startBalance'].unstaked)
-		const endBalance = (new BigNumber(this.balance.staked)).plus(this.balance.unstaked)
+		const endBalance = (new BigNumber(this.totalBalance.staked)).plus(this.totalBalance.unstaked)
 		const balanceCngPct = this.changePct(startBalance, endBalance)
-		const blockNum = Number(await this.web3.eth.getBlockNumber())
 		const period = Number(blockNum - this.investInfo['startBlock'])
 
 		logger.debug(`getInvestApy: startBalance=${startBalance}, endBalance=${endBalance}, balanceCngPct=${balanceCngPct}, blockNum=${blockNum}, period=${period}`)
@@ -117,7 +123,7 @@ class Pancakeswap {
 		return apy
 	}
 
-	async getInvestInfo(curSyrupPoolAddr) {
+	async getInvestInfo(curSyrupPoolAddr, blockNum) {
 		let reply = await this.redisClient.get('investInfo')
 
 		if (reply == null) {
@@ -127,21 +133,24 @@ class Pancakeswap {
 				return
 			}
 
-			// throw Error(`invest info should be set`)
-			const blockNum = await this.web3.eth.getBlockNumber()
-
-			reply = JSON.stringify({startBalance: this.balance, startBlock: blockNum})
+			reply = JSON.stringify({startBalance: this.totalBalance, startBlock: blockNum})
 			await this.redisClient.set('investInfo', reply)
-			logger.info(`investInfo is not set, resetting info to current block: balance=${JSON.stringify(this.balance)}, startBlock=${blockNum}`)
+			logger.info(`investInfo is not set, resetting info to current block: balance=${JSON.stringify(this.totalBalance)}, startBlock=${blockNum}`)
 		}
 
 		this.investInfo = JSON.parse(reply)
 		logger.debug(`investInfo was successfully loaded: ${JSON.stringify(this.investInfo)}`)
 	}
 
-    async update(curSyrupPoolAddr) {
+	setTotalBalance(totalBalance) {
+		this.totalBalance = totalBalance
+	}
+
+    async update(totalBalance) {
 
         try {
+
+			this.totalBalance = totalBalance
 
             if (Date.now() - this.psLastUpdate < this.pancakeUpdateInterval) {
                 return;
@@ -164,6 +173,7 @@ class Pancakeswap {
 			await this.setPsLastUpdate()
 
         } catch (e) {
+			logger.debug(e.stack)
             throw new FatalError(`pancake update error: ${e}`);
         }
     }
@@ -239,7 +249,7 @@ class Pancakeswap {
 		let poolTvl = await this.getPoolTvl(poolAddr)
 		logger.info(`poolTvl before: ${poolTvl}`)
 		// account for bot staking in tvl
-		poolTvl = new BigNumber(poolTvl).plus(new BigNumber(this.balance.unstaked)) // TODO: FIXME this.balance get from contract manager
+		poolTvl = new BigNumber(poolTvl).plus(new BigNumber(this.totalBalance.unstaked))
 
 		const rewardPerBlock = new BigNumber(this.poolsInfo[poolAddr]['rewardPerBlock'])
 
@@ -247,7 +257,7 @@ class Pancakeswap {
 		const rewardForDay = rewardPerBlock.multipliedBy(this.BLOCKS_PER_DAY)
 		const tokenCakeRate = await this.getTokenCakeRate(poolAddr, rewardForDay)
 		logger.debug(`poolAddr=${poolAddr}, rewardPerBlock=${rewardPerBlock.toString()}, tokenCakeRate=${tokenCakeRate}, poolTvl=${poolTvl.toString()}`)
-		console.log(this.balance)
+		console.log(this.totalBalance)
 
 		const rewardForYear = rewardPerBlock.multipliedBy(this.BLOCKS_PER_YEAR)
 		const cakeForYear = rewardForYear.multipliedBy(tokenCakeRate);
@@ -276,7 +286,7 @@ class Pancakeswap {
 		logger.debug(`setActivePools started`)
 
 		const blockNum = await this.web3.eth.getBlockNumber()
-		let bonusEndBlock, startBlock, poolRewards
+		let bonusEndBlock, startBlock, poolRewards, poolRewardsEnd
 
 		for (const poolAddr of Object.keys(this.poolsInfo)) {
 
@@ -292,9 +302,11 @@ class Pancakeswap {
 
 			bonusEndBlock = Number(this.poolsInfo[poolAddr]['bonusEndBlock'])
 			startBlock = Number(this.poolsInfo[poolAddr]['startBlock'])
-			poolRewards = Number(this.poolsInfo[poolAddr]['poolRewards'])
+			poolRewards = new BigNumber(this.poolsInfo[poolAddr]['poolRewards'])
 
-			this.poolsInfo[poolAddr]['active'] = !((startBlock > blockNum) || (bonusEndBlock <= blockNum) || (poolAddr in this.EXCLUDED_POOLS) || (poolRewards <= this.poolsInfo[poolAddr]['rewardPerBlock']));
+			poolRewardsEnd = (new BigNumber(this.poolsInfo[poolAddr]['rewardPerBlock'])).multipliedBy(10)
+
+			this.poolsInfo[poolAddr]['active'] = !((startBlock > blockNum) || (bonusEndBlock <= blockNum) || (poolAddr in this.EXCLUDED_POOLS) || (poolRewards.lt(poolRewardsEnd)));
 		}
 
 		logger.debug('setActivePools ended')

@@ -50,6 +50,8 @@ async function main() {
 
         managerContract =  new web3.eth.Contract(managerAbi);
         const res = await managerContract.deploy({data: managerBytecode, arguments: [OWNER_ADDRESS, admin.address]}).send({from: admin.address})
+		logger.info(`deploy: `)
+		console.log(res)
 
 		managerContract = new web3.eth.Contract(managerAbi, res.options.address, {from: admin.address});
 

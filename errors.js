@@ -82,6 +82,7 @@ class FatalError extends Error {
 		this.name = 'FatalError'
 		this.message = msg
 		this.date = new Date()
+
 	}
 }
 

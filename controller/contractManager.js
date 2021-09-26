@@ -128,12 +128,15 @@ class ContractManager extends TxManager {
 		let workersBalanceInfo = {}
 		let cakeBalance
 
+		logger.info(`setWorkersBalanceInfo started ...`)
 		await this.fetchWorkersAddr()
 
 		if (this.workersAddr.length === 0) {
 			this.workersBalanceInfo = {}
 			return
 		}
+
+		logger.info(`fetching workers cake balance ...`)
 
 		for (let i=0; i<this.workersAddr.length; i++) {
 			cakeBalance = await this.cakeContract.methods.balanceOf(this.workersAddr[i]).call();
@@ -143,6 +146,8 @@ class ContractManager extends TxManager {
 
 		for (const poolAddr of Object.keys(poolsInfo)) {
 			contract = this.getContract(poolsInfo[poolAddr]['abi'], poolAddr)
+
+			logger.info(`fetching workers ${contract.symbol} balance ...`)
 
 			if (poolAddr === MASTER_CHEF_ADDRESS) {
 
@@ -279,6 +284,7 @@ class ContractManager extends TxManager {
 		this.balance = totalBalance
 		logger.info(`total balance: `)
 		console.log(this.balance)
+		return this.balance
 	}
 
 	async syncWorkers() {
