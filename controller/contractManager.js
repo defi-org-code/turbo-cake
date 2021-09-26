@@ -93,7 +93,7 @@ class ContractManager extends TxManager {
 
 	async getWorkersStakingAddr() {
 
-		let reply = await this.redisClient.get('WorkersStakingAddr')
+		let reply = await this.redisClient.get(`WorkersStakingAddr.${process.env.BOT_ID}`)
 
 		if (reply == null) {
 
@@ -111,7 +111,7 @@ class ContractManager extends TxManager {
 
 	async getNActiveWorkers() {
 
-		let reply = await this.redisClient.get('nActiveWorkers')
+		let reply = await this.redisClient.get(`nActiveWorkers.${process.env.BOT_ID}`)
 
 		if (reply == null) {
 
@@ -367,7 +367,7 @@ class ContractManager extends TxManager {
 					await this.addWorkers()
 					this.nActiveWorkers = this.nWorkers
 					await this.transferToWorkers(0, this.nActiveWorkers)
-					this.redisClient.set('nActiveWorkers', this.nActiveWorkers)
+					this.redisClient.set(`nActiveWorkers.${process.env.BOT_ID}`, this.nActiveWorkers)
 				}
 
 				if (this.nActiveWorkers === 1) {
@@ -376,7 +376,7 @@ class ContractManager extends TxManager {
 					await this.addWorkers()
 					this.nActiveWorkers = this.nWorkers
 					await this.transferToWorkers(0, this.nActiveWorkers)
-					this.redisClient.set('nActiveWorkers', this.nActiveWorkers)
+					this.redisClient.set(`nActiveWorkers.${process.env.BOT_ID}`, this.nActiveWorkers)
 				}
 
 			} else {
@@ -385,7 +385,7 @@ class ContractManager extends TxManager {
 					this.nActiveWorkers = 1
 					await this.addWorkers(1)
 					await this.transferToWorkers(0,  this.nActiveWorkers)
-					this.redisClient.set('nActiveWorkers', this.nActiveWorkers)
+					this.redisClient.set(`nActiveWorkers.${process.env.BOT_ID}`, this.nActiveWorkers)
 				}
 
 				else if (this.nActiveWorkers > 1) {
@@ -394,7 +394,7 @@ class ContractManager extends TxManager {
 					this.nActiveWorkers = 1
 					await this.addWorkers(1)
 					await this.transferToWorkers(0,  this.nActiveWorkers)
-					this.redisClient.set('nActiveWorkers', this.nActiveWorkers)
+					this.redisClient.set(`nActiveWorkers.${process.env.BOT_ID}`, this.nActiveWorkers)
 				}
 			}
 		}

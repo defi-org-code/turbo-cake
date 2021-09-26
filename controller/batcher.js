@@ -159,7 +159,7 @@ class Batcher extends TxManager {
 		let multiplier = 0, deadline = Date.now() + this.swapTimeLimit; // TODO: multiplier
 		let swapParams = [ROUTER_ADDRESS, multiplier, routeToCake, deadline];
 
-		let estimatedGas = await this.getGasEstimation('DoHardWorkExitGas', this.contractManager.methods.doHardWork([withdraw, swap, deposit, stakedPoolAddr, newPoolAddr, amount, startIndex, endIndex, swapParams]))
+		let estimatedGas = await this.getGasEstimation(`DoHardWorkExitGas.${process.env.BOT_ID}`, this.contractManager.methods.doHardWork([withdraw, swap, deposit, stakedPoolAddr, newPoolAddr, amount, startIndex, endIndex, swapParams]))
 		console.log(`estimatedGas: ${estimatedGas}`)
 
 		const tx = this.contractManager.methods.doHardWork([withdraw, swap, deposit, stakedPoolAddr, newPoolAddr, amount, startIndex, endIndex, swapParams]).encodeABI();

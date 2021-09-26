@@ -64,7 +64,7 @@ class Pancakeswap {
 
 	async getPsLastUpdate() {
 
-		let reply = await this.redisClient.get('psLastUpdate')
+		let reply = await this.redisClient.get(`psLastUpdate.${process.env.BOT_ID}`)
 
 		if (reply == null) {
 			this.psLastUpdate = Date.now() - Math.max(this.pancakeUpdateInterval, this.bestRouteUpdateInterval)
@@ -77,7 +77,7 @@ class Pancakeswap {
 
 	async setPsLastUpdate() {
 		this.psLastUpdate = Date.now()
-		await this.redisClient.set('psLastUpdate', this.psLastUpdate)
+		await this.redisClient.set(`psLastUpdate.${process.env.BOT_ID}`, this.psLastUpdate)
 	}
 
 	updateWorkersAddr(workersAddr) {
@@ -124,7 +124,7 @@ class Pancakeswap {
 	}
 
 	async getInvestInfo(curSyrupPoolAddr, blockNum) {
-		let reply = await this.redisClient.get('investInfo')
+		let reply = await this.redisClient.get(`investInfo.${process.env.BOT_ID}`)
 
 		if (reply == null) {
 
@@ -134,7 +134,7 @@ class Pancakeswap {
 			}
 
 			reply = JSON.stringify({startBalance: this.totalBalance, startBlock: blockNum})
-			await this.redisClient.set('investInfo', reply)
+			await this.redisClient.set(`investInfo.${process.env.BOT_ID}`, reply)
 			logger.info(`investInfo is not set, resetting info to current block: balance=${JSON.stringify(this.totalBalance)}, startBlock=${blockNum}`)
 		}
 
@@ -169,7 +169,7 @@ class Pancakeswap {
 
 			await this.updatePoolsApy()
 
-			await this.redisClient.set('poolsInfo', JSON.stringify(this.poolsInfo))
+			await this.redisClient.set(`poolsInfo.${process.env.BOT_ID}`, JSON.stringify(this.poolsInfo))
 			await this.setPsLastUpdate()
 
         } catch (e) {
@@ -330,7 +330,7 @@ class Pancakeswap {
 	async getLastBlockUpdate() {
 
 		const blockNum = await this.web3.eth.getBlockNumber()
-		let reply = await this.redisClient.get('lastBlockUpdate')
+		let reply = await this.redisClient.get(`lastBlockUpdate.${process.env.BOT_ID}`)
 
 		if (reply == null) {
 			reply = blockNum - this.PAST_EVENTS_N_BLOCKS
@@ -344,7 +344,7 @@ class Pancakeswap {
 
 	async getPoolsInfo() {
 
-		let reply = await this.redisClient.get('poolsInfo')
+		let reply = await this.redisClient.get(`poolsInfo.${process.env.BOT_ID}`)
 
 		if (this.lastBlockUpdate == null) {
 			throw Error(`lastBlockUpdate should be != null`)
@@ -371,8 +371,8 @@ class Pancakeswap {
 		}
 
 		this.lastBlockUpdate = lastBlockUpdate
-		await this.redisClient.set('lastBlockUpdate', this.lastBlockUpdate)
-		await this.redisClient.set('poolsInfo', JSON.stringify(this.poolsInfo))
+		await this.redisClient.set(`lastBlockUpdate.${process.env.BOT_ID}`, this.lastBlockUpdate)
+		await this.redisClient.set(`poolsInfo.${process.env.BOT_ID}`, JSON.stringify(this.poolsInfo))
 
 		logger.debug('pools info updated successfully')
 	}

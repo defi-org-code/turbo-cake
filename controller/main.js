@@ -113,7 +113,7 @@ class Controller {
 
 	async getLastActionTimestamp() {
 
-		let reply = await this.redisClient.get('lastActionTimestamp')
+		let reply = await this.redisClient.get(`lastActionTimestamp.${process.env.BOT_ID}`)
 
 		logger.info(`get lastActionTimestamp from redis: ${reply}`)
 
@@ -130,7 +130,7 @@ class Controller {
 	async setLastActionTimestamp() {
 		const timestamp = Date.now()
 		this.lastActionTimestamp = timestamp
-		await this.redisClient.set('lastActionTimestamp', timestamp)
+		await this.redisClient.set(`lastActionTimestamp.${process.env.BOT_ID}`, timestamp)
 		logger.info(`lastActionTimestamp was set to ${timestamp}`)
 	}
 
