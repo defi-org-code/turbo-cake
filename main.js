@@ -5,7 +5,7 @@ const BigNumber = require('bignumber.js')
 const KeyEncryption = require('./keyEncryption');
 const env = require('dotenv').config();
 const { Controller } = require('./controller/main');
-const { RunningMode, CAKE_WHALE_ACCOUNT, CAKE_ADDRESS, OWNER_ADDRESS} = require('./config');
+const { RunningMode, CAKE_WHALE_ACCOUNT, CAKE_ADDRESS, OWNER_ADDRESS, MANAGER_ADDRESS} = require('./config');
 const yargs = require('yargs/yargs');
 const {CAKE_ABI} = require("./abis");
 const { hideBin } = require('yargs/helpers');
@@ -30,6 +30,8 @@ async function main() {
     	const Web3 = require("web3");
 		web3 = new Web3(process.env.ENDPOINT_HTTPS);
 	    admin = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
+
+		managerContract = new web3.eth.Contract(managerAbi, MANAGER_ADDRESS, {from: admin.address});
 
     } else if (runningMode === RunningMode.DEV) {
 
