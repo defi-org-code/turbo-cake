@@ -17,7 +17,7 @@ describe("DepositWithdrawTest", function () {
 	const manager = await Manager.deploy(owner, admin);
 	await manager.deployed();
 	const managerContract = new web3.eth.Contract(managerAbi, manager.address);
-
+	// return
 	// console.log(`owner=${owner}, admin=${admin}, manager=${manager.address}`);
     // ################################################################################
     // add workers

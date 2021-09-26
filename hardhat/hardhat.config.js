@@ -1,5 +1,6 @@
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-web3");
+require("hardhat-gas-reporter");
 
 // const { mnemonic } = require('./secrets.json');
 
@@ -22,7 +23,9 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 module.exports = {
     solidity: "0.8.0",
 	defaultNetwork: "hardhat",
-
+	gasReporter: {
+		enabled: true
+    },
 	networks: {
 
 		hardhat: {
