@@ -213,9 +213,6 @@ class ContractManager extends TxManager {
 
 	initStakedAddr() {
 
-		logger.info(`workersBalanceInfo: `)
-		console.log(this.workersBalanceInfo)
-		
 		// validate all workers have the same staking addr and return this addr
 		if (Object.keys(this.workersBalanceInfo).length === 0) {
 
@@ -230,7 +227,7 @@ class ContractManager extends TxManager {
 
 		let expectedKeys = Object.keys(this.workersBalanceInfo[0])
 
-		if (expectedKeys.length > 3) {
+		if (expectedKeys.length > 2) {
 			// TODO: sync workers and call init
 			throw Error(`workers are out of sync: ${this.workersBalanceInfo}`)
 		}
@@ -238,10 +235,11 @@ class ContractManager extends TxManager {
 		let workerInfo
 		for (let workerIndex=0; workerIndex<this.workersAddr.length; workerIndex++) {
 
+			// consider case where nActiveWorkers < nWorkers
 			if (workerIndex === this.nActiveWorkers) {
-				expectedKeys = Object.keys(this.workersBalanceInfo[this.nActiveWorkers])
+				let _expectedKeys = Object.keys(this.workersBalanceInfo[this.nActiveWorkers])
 
-				if (expectedKeys.length !== 2) {
+				if (_expectedKeys !== expectedKeys) {
 					// TODO: sync workers and call init
 					throw Error(`workers are out of sync: ${this.workersBalanceInfo}`)
 				}
@@ -257,21 +255,15 @@ class ContractManager extends TxManager {
 
 		expectedKeys = Object.keys(this.workersBalanceInfo[0])
 
-		if (expectedKeys.length === 2) {
-			this.stakedAddr = null
-		}
-
-		// else if (expectedKeys.length === 3)
-
 		for (let key of expectedKeys) {
 
-			if ((key !== 'WORKER_ADDR') && (key !== CAKE_ADDRESS)) {
+			if (key !== CAKE_ADDRESS) {
 				this.stakedAddr = expectedKeys
 				return
 			}
 		}
 
-		throw Error('could not find staking addr')
+		this.stakedAddr = null
 	}
 
 	async setTotalBalance() {
