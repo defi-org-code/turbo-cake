@@ -328,7 +328,7 @@ class ContractManager extends TxManager {
 	}
 
 	async transferToWorkers(startIndex, endIndex) {
-		const amount = String(Math.floor(Number((new BigNumber(this.managerBalance).dividedBy(endIndex-startIndex)).toString())))
+		const amount = (new BigNumber(this.managerBalance).dividedBy(endIndex-startIndex)).toString()
 		logger.info(`transferToWorkers: amount=${amount}, startIndex=${startIndex}, endIndex=${endIndex}`)
 		const tx = await this.manager.methods.transferToWorkers([CAKE_ADDRESS, amount, startIndex, endIndex]).encodeABI()
 		const res = await this.sendTransactionWait(tx, this.manager.options.address)
