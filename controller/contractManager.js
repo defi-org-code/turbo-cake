@@ -170,7 +170,7 @@ class ContractManager extends TxManager {
 					}
 
 					if (res['rewardDebt'] !== '0') {
-						logger.info(`setWorkersBalanceInfo: workerAddr=${this.workersAddr[i]}, res=${res}`)
+						logger.info(`setWorkersBalanceInfo: workerAddr=${this.workersAddr[i]}, res=${JSON.stringify(res)}`)
 					}
 				}
 			}

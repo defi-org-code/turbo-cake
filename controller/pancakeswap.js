@@ -58,6 +58,7 @@ class Pancakeswap {
 		await this.getInvestInfo(null) // TODO: FIXME !!!
 
 		// await this.getTransferEvents()
+		await this.updatePoolsApy()
 
 		logger.debug(`init ps ended successfully`)
 	}
