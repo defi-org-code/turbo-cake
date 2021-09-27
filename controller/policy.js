@@ -69,6 +69,10 @@ class GreedyPolicy extends Policy {
 
 	shouldSwitchPools(poolsInfo, curSyrupPoolAddr, topYielderAddr, lastActionTimestamp) {
 
+		if (curSyrupPoolAddr === null) {
+			return true
+		}
+
 		if (Date.now() - lastActionTimestamp < this.syrupSwitchInterval) {
 			logger.debug('shouldSwitchPools: outside interval update')
 			return false
