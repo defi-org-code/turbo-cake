@@ -64,10 +64,10 @@ async function main() {
 
     web3.eth.defaultAccount = admin.address;
 
-	const msg = `[PID ${process.pid}] Starting Bot: admin=${admin.address}, mode=${runningMode}, mute-discord=${process.env.MUTE_DISCORD}`
-    logger.debug(msg);
+    logger.debug(`[PID ${process.pid}] Starting Bot: admin=${admin.address}, mode=${runningMode}, mute-discord=${process.env.MUTE_DISCORD}`);
+
 	const notif = new Notifications(runningMode);
-	notif.sendDiscord(msg)
+	notif.sendDiscord(`[PID ${process.pid}] Starting Bot: admin=${admin.address}, manager=${MANAGER_ADDRESS}, mode=${runningMode}`)
 
     const controller = new Controller(env, runningMode, admin, web3, managerContract, notif);
     await controller.start();

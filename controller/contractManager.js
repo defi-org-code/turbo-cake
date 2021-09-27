@@ -227,6 +227,7 @@ class ContractManager extends TxManager {
 
 		let expectedKeys = Object.keys(this.workersBalanceInfo[0])
 
+		// only cake or cake + 1 pool is expected
 		if (expectedKeys.length > 2) {
 			// TODO: sync workers and call init
 			throw Error(`workers are out of sync: ${this.workersBalanceInfo}`)
@@ -237,8 +238,11 @@ class ContractManager extends TxManager {
 
 			workerInfo = this.workersBalanceInfo[workerIndex]
 
-			if (Object.keys(workerInfo) !== expectedKeys) {
+			if (JSON.stringify(Object.keys(workerInfo)) !== JSON.stringify(expectedKeys)) {
 				// TODO: sync workers and call init
+				logger.info(`expectedKeys, Object.keys(workerInfo): `)
+				console.log(expectedKeys)
+				console.log(Object.keys(workerInfo))
 				throw Error(`workers are out of sync (workerIndex=${workerIndex}, nActiveWorkers=${this.nActiveWorkers}): ${this.workersBalanceInfo}`)
 			}
 		}
