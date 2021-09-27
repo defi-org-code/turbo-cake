@@ -213,6 +213,9 @@ class ContractManager extends TxManager {
 
 	initStakedAddr() {
 
+		logger.info(`workersBalanceInfo: `)
+		console.log(this.workersBalanceInfo)
+		
 		// validate all workers have the same staking addr and return this addr
 		if (Object.keys(this.workersBalanceInfo).length === 0) {
 
