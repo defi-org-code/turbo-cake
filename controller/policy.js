@@ -74,6 +74,10 @@ class GreedyPolicy extends Policy {
 			return false
 		}
 
+		if (!(topYielderAddr in poolsInfo)) {
+			throw Error(`topYielderAddr ${topYielderAddr} not found in poolsInfo`)
+		}
+
 		return (poolsInfo[topYielderAddr]['apy'] - poolsInfo[curSyrupPoolAddr]['apy'] >= this.apySwitchTh) ||
 				(poolsInfo[curSyrupPoolAddr]['active'] === false);
 	}
