@@ -235,16 +235,6 @@ class ContractManager extends TxManager {
 		let workerInfo
 		for (let workerIndex=0; workerIndex<this.workersAddr.length; workerIndex++) {
 
-			// consider case where nActiveWorkers < nWorkers
-			if (workerIndex === this.nActiveWorkers) {
-				let _expectedKeys = Object.keys(this.workersBalanceInfo[this.nActiveWorkers])
-
-				if (_expectedKeys !== expectedKeys) {
-					// TODO: sync workers and call init
-					throw Error(`workers are out of sync: ${this.workersBalanceInfo}`)
-				}
-			}
-
 			workerInfo = this.workersBalanceInfo[workerIndex]
 
 			if (Object.keys(workerInfo) !== expectedKeys) {
