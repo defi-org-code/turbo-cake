@@ -260,7 +260,6 @@ class ContractManager extends TxManager {
 
 			if (key !== CAKE_ADDRESS) {
 				this.stakedAddr = key
-				this.nActiveWorkers =
 				return
 			}
 		}
