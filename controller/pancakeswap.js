@@ -54,9 +54,6 @@ class Pancakeswap {
 		await this.getPoolsInfo()
 		await this.fetchPools()
 
-		// const curSyrupPoolAddr = await this.getStakingAddr()
-		await this.getInvestInfo(null) // TODO: FIXME !!!
-
 		// await this.getTransferEvents()
 		await this.updatePoolsApy()
 

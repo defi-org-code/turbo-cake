@@ -143,8 +143,15 @@ class Controller {
 
 			await this.ps.init();
 			this.curSyrupPoolAddr = await this.contractManager.init(this.ps.poolsInfo);
+			logger.info(`curSyrupPoolAddr was set to ${this.curSyrupPoolAddr}`)
+
 			this.totalBalance = this.contractManager.balance // TODO: improve
+			logger.info(`totalBalance was set to ${JSON.stringify(this.totalBalance)}`)
+
 			this.ps.setTotalBalance(this.totalBalance)
+
+			const blockNum = await this.web3.eth.getBlockNumber()
+			await this.ps.getInvestInfo(this.curSyrupPoolAddr, blockNum)
 
             this.intervalId = setInterval(() => this.run(), this.tickInterval);
             // setInterval(() => this.reportStats(), this.reportInterval);

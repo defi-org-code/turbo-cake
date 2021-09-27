@@ -236,15 +236,22 @@ class ContractManager extends TxManager {
 		let workerInfo
 		for (let workerIndex=0; workerIndex<this.workersAddr.length; workerIndex++) {
 
+			if (workerIndex === this.nActiveWorkers) {
+				expectedKeys = Object.keys(this.workersBalanceInfo[this.nActiveWorkers])
+
+				if (expectedKeys.length !== 1) {
+					// TODO: sync workers and call init
+					throw Error(`workers are out of sync: ${this.workersBalanceInfo}`)
+				}
+			}
+
 			workerInfo = this.workersBalanceInfo[workerIndex]
 
 			if (JSON.stringify(Object.keys(workerInfo)) !== JSON.stringify(expectedKeys)) {
 				// TODO: sync workers and call init
-				logger.info(`expectedKeys, Object.keys(workerInfo): `)
-				console.log(expectedKeys)
-				console.log(Object.keys(workerInfo))
-				throw Error(`workers are out of sync (workerIndex=${workerIndex}, nActiveWorkers=${this.nActiveWorkers}): ${this.workersBalanceInfo}`)
+				throw Error(`workers are out of sync (workerIndex=${workerIndex}, nActiveWorkers=${this.nActiveWorkers}): ${JSON.stringify(this.workersBalanceInfo)}`)
 			}
+
 		}
 
 		expectedKeys = Object.keys(this.workersBalanceInfo[0])
@@ -252,7 +259,8 @@ class ContractManager extends TxManager {
 		for (let key of expectedKeys) {
 
 			if (key !== CAKE_ADDRESS) {
-				this.stakedAddr = expectedKeys
+				this.stakedAddr = key
+				this.nActiveWorkers =
 				return
 			}
 		}
