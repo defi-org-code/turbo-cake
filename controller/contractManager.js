@@ -191,12 +191,16 @@ class ContractManager extends TxManager {
 		let workersBalance = {}
 		let workerInfo;
 
+		logger.debug(`setWorkersBalance started ...`)
+
 		for (let workerIndex=0; workerIndex<this.workersAddr.length; workerIndex++) {
 
 			workerInfo = this.workersBalanceInfo[workerIndex]
 			workersBalance[workerIndex] = {}
 
 			for (const [key, value] of Object.entries(workerInfo)) {
+
+				logger.debug(`setWorkersBalance started ...`)
 
 				if (key === CAKE_ADDRESS) {
 					workersBalance[workerIndex].unstaked = value

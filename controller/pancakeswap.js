@@ -317,6 +317,8 @@ class Pancakeswap {
 
 	async updatePoolsApy() {
 
+		logger.debug(`updatePoolsApy`)
+
 		for (const poolAddr of Object.keys(this.poolsInfo)) {
 			if (this.poolsInfo[poolAddr]['active'] === false) {
 				continue
@@ -324,8 +326,8 @@ class Pancakeswap {
 			this.poolsInfo[poolAddr]['apy'] = await this.poolApy(poolAddr)
 		}
 
-		// logger.debug(`poolsInfo:`)
-		// console.log(this.poolsInfo)
+		logger.debug(`poolsInfo:`)
+		console.log(this.poolsInfo)
 	}
 
 	async getLastBlockUpdate() {
