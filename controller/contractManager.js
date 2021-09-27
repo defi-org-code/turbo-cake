@@ -147,11 +147,11 @@ class ContractManager extends TxManager {
 		for (const poolAddr of Object.keys(poolsInfo)) {
 			contract = this.getContract(poolsInfo[poolAddr]['abi'], poolAddr)
 
-			logger.info(`fetching workers ${contract.methods.symbol().call()} balance ...`)
-
 			if (poolAddr === MASTER_CHEF_ADDRESS) {
 
 				for (let i=0; i<this.workersAddr.length; i++) {
+					logger.info(`fetching worker[${i}] usersInfo from pool ${poolsInfo[poolAddr]['rewardSymbol']} ...`)
+
 					res = await contract.methods.userInfo(0, this.workersAddr[i]).call()
 
 					if (res['amount'] !== '0') {
