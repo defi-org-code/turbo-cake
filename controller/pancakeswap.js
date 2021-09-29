@@ -188,7 +188,6 @@ class Pancakeswap {
 					res = await this.routerV2Contract.methods.getAmountsOut(rewardForDay, route).call()
 				}
 				catch (e) {
-					logger.debug(`poolAddr ${poolAddr} skipping route ${route}: ${e}`)
 					continue
 				}
 
