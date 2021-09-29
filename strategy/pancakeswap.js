@@ -314,7 +314,7 @@ class Pancakeswap {
 		logger.debug(`setActivePools started`)
 
 		const blockNum = await this.web3.eth.getBlockNumber()
-		let bonusEndBlock, startBlock, poolRewards
+		let bonusEndBlock, startBlock, poolRewards, smartChef
 
 		for (const poolAddr of Object.keys(this.poolsInfo)) {
 
@@ -325,6 +325,9 @@ class Pancakeswap {
 			if (!('poolRewards' in Object.keys(this.poolsInfo[poolAddr]))) {
 				this.poolsInfo[poolAddr]['poolRewards'] = await this.fetchPoolRewards(poolAddr)
 			}
+
+			smartChef = this.getContract(SMARTCHEF_INITIALIZABLE_ABI, poolAddr);
+			this.poolsInfo[poolAddr]['hasUserLimit'] = await smartChef.methods.hasUserLimit().call()
 
 			bonusEndBlock = Number(this.poolsInfo[poolAddr]['bonusEndBlock'])
 			startBlock = Number(this.poolsInfo[poolAddr]['startBlock'])
