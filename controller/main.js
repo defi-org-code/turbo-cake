@@ -237,7 +237,7 @@ class Controller {
 
         const startTime = Date.now();
 
-        if (nextAction.name === Action.NO_OP) {
+        if ((nextAction.name === Action.NO_OP) || (nextAction.name === Action.TRANSFER_TO_OWNER)) {
             return;
         }
 

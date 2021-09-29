@@ -341,6 +341,14 @@ class ContractManager extends TxManager {
 		console.log(res)
 	}
 
+	async transferToOwner() {
+		const tx = await this.manager.methods.transferToOwner(CAKE_ADDRESS).encodeABI()
+		const res = await this.sendTransactionWait(tx, this.manager.options.address)
+
+		logger.info(`transferToOwner: `)
+		console.log(res)
+	}
+
 	async run(nextAction, poolsInfo) {
 
 		if (Date.now() - this.lastWorkersValidate > this.workersValidateInterval) {
@@ -348,51 +356,64 @@ class ContractManager extends TxManager {
 			this.lastWorkersValidate = Date.now()
 		}
 
-		if (nextAction.name === Action.ENTER) {
+		switch (nextAction.name) {
 
-			logger.info(`enter pool, nActiveWorkers=${this.nActiveWorkers}, nextAction:`)
-			console.log(nextAction)
+			case Action.ENTER:
+				logger.info(`enter pool, nActiveWorkers=${this.nActiveWorkers}, nextAction:`)
+				console.log(nextAction)
 
-			await this.setWorkersBalanceInfo(poolsInfo) // TODO: improve
+				await this.setWorkersBalanceInfo(poolsInfo) // TODO: improve
 
-			if (nextAction.to.hasUserLimit === true) {
+				if (nextAction.to.hasUserLimit === true) {
 
-				if (this.nActiveWorkers === 0) {
-					logger.info(`nActiveWorkers=0`)
-					// transfer all funds back to manager and then transfer to all (nWorkers) workers
-					await this.addWorkers()
-					this.nActiveWorkers = this.nWorkers
-					await this.transferToWorkers(0, this.nActiveWorkers)
-					this.redisClient.set(`nActiveWorkers.${process.env.BOT_ID}`, this.nActiveWorkers)
+					if (this.nActiveWorkers === 0) {
+						logger.info(`nActiveWorkers=0`)
+						// transfer all funds back to manager and then transfer to all (nWorkers) workers
+						await this.addWorkers()
+						this.nActiveWorkers = this.nWorkers
+						await this.transferToWorkers(0, this.nActiveWorkers)
+						this.redisClient.set(`nActiveWorkers.${process.env.BOT_ID}`, this.nActiveWorkers)
+					}
+
+					if (this.nActiveWorkers === 1) {
+						// transfer all funds back to manager and then transfer to all (nWorkers) workers
+						await this.transferToManager(0, 0, this.nActiveWorkers)
+						await this.addWorkers()
+						this.nActiveWorkers = this.nWorkers
+						await this.transferToWorkers(0, this.nActiveWorkers)
+						this.redisClient.set(`nActiveWorkers.${process.env.BOT_ID}`, this.nActiveWorkers)
+					}
+
+				} else {
+
+					if (this.nActiveWorkers === 0) {
+						this.nActiveWorkers = 1
+						await this.addWorkers(1)
+						await this.transferToWorkers(0,  this.nActiveWorkers)
+						this.redisClient.set(`nActiveWorkers.${process.env.BOT_ID}`, this.nActiveWorkers)
+					}
+
+					else if (this.nActiveWorkers > 1) {
+						// transfer all funds back to manager and then transfer to all worker 0
+						await this.transferToManager(0, 0, this.nActiveWorkers)
+						this.nActiveWorkers = 1
+						await this.addWorkers(1)
+						await this.transferToWorkers(0,  this.nActiveWorkers)
+						this.redisClient.set(`nActiveWorkers.${process.env.BOT_ID}`, this.nActiveWorkers)
+					}
 				}
 
-				if (this.nActiveWorkers === 1) {
-					// transfer all funds back to manager and then transfer to all (nWorkers) workers
-					await this.transferToManager(0, 0, this.nActiveWorkers)
-					await this.addWorkers()
-					this.nActiveWorkers = this.nWorkers
-					await this.transferToWorkers(0, this.nActiveWorkers)
-					this.redisClient.set(`nActiveWorkers.${process.env.BOT_ID}`, this.nActiveWorkers)
-				}
+				break
 
-			} else {
+			case Action.TRANSFER_TO_OWNER:
 
-				if (this.nActiveWorkers === 0) {
-					this.nActiveWorkers = 1
-					await this.addWorkers(1)
-					await this.transferToWorkers(0,  this.nActiveWorkers)
-					this.redisClient.set(`nActiveWorkers.${process.env.BOT_ID}`, this.nActiveWorkers)
-				}
+				// assumes no funds in pools TODO: validate - no staked funds
+				await this.transferToManager(0, 0, this.nWorkers)
+				await this.transferToOwner()
+				break
 
-				else if (this.nActiveWorkers > 1) {
-					// transfer all funds back to manager and then transfer to all worker 0
-					await this.transferToManager(0, 0, this.nActiveWorkers)
-					this.nActiveWorkers = 1
-					await this.addWorkers(1)
-					await this.transferToWorkers(0,  this.nActiveWorkers)
-					this.redisClient.set(`nActiveWorkers.${process.env.BOT_ID}`, this.nActiveWorkers)
-				}
-			}
+			default:
+				break
 		}
 
 		nextAction.startIndex = 0

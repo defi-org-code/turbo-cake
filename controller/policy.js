@@ -7,6 +7,7 @@ const Action = {
     ENTER: "enter-syrup-pool",
     HARVEST: "harvest",
     EXIT: "exit-syrup-pool",
+    TRANSFER_TO_OWNER: "transfer-to-owner"
 }
 
 
@@ -87,18 +88,39 @@ class GreedyPolicy extends Policy {
 				(poolsInfo[curSyrupPoolAddr]['active'] === false);
 	}
 
-	async externalCommand() {
+	async externalCommand(args) {
 
 		let externalCommand = await this.redisClient.get(`command.${process.env.BOT_ID}`)
 
-		if (externalCommand === null) {
+		if (externalCommand == null) {
 			return null
 		}
 
 		logger.info(`external command ${externalCommand} detected`)
 
 		if (externalCommand === 'TransferToOwner') {
-			return true
+
+			if (args.curSyrupPoolAddr !== null) {
+
+				logger.info(`exit from pool ${args.curSyrupPoolAddr} before transfer ...`)
+
+				return {
+					name: Action.EXIT,
+					from: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy, active: args.poolsInfo[args.curSyrupPoolAddr].active, hasUserLimit: args.poolsInfo[args.curSyrupPoolAddr].hasUserLimit, routeToCake: args.poolsInfo[args.curSyrupPoolAddr].routeToCake},
+					to: {address: null}
+				};
+
+			} else {
+
+				this.redisClient.del(`command.${process.env.BOT_ID}`)
+				logger.info(`send transfer all funds to owner action and reset command flag ...`)
+
+				return {
+					name: Action.TRANSFER_TO_OWNER,
+					from: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy, active: args.poolsInfo[args.curSyrupPoolAddr].active, hasUserLimit: args.poolsInfo[args.curSyrupPoolAddr].hasUserLimit, routeToCake: args.poolsInfo[args.curSyrupPoolAddr].routeToCake},
+					to: {address: null}
+				};
+			}
 		}
 
 		return true
@@ -114,7 +136,7 @@ class GreedyPolicy extends Policy {
 		// logger.debug(`getAction args:`)
 		// console.log(args)
 
-		const externalCommand = await this.externalCommand()
+		const externalCommand = await this.externalCommand(args)
 		if (externalCommand !== null) {
 			return externalCommand
 		}

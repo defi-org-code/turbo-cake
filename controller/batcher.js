@@ -124,7 +124,7 @@ class Batcher extends TxManager {
         logger.debug(`batcher.enterPosition: start pool ${addr} `);
 
 		let withdraw=false, swap=false, deposit=true, stakedPoolAddr=addr, newPoolAddr=addr, amount=0;
-		let multiplier=0, path=[], deadline=0;
+		let multiplier = 0, path = [], deadline = 0;
 		let swapParams = [ROUTER_ADDRESS, multiplier, path, deadline];
 
 		let estimatedGas = 2 * (await this.contractManager.methods.doHardWork([withdraw, swap, deposit, stakedPoolAddr, newPoolAddr, amount, startIndex, endIndex, swapParams]).estimateGas())
