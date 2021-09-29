@@ -157,7 +157,7 @@ class Controller {
 			const blockNum = await this.web3.eth.getBlockNumber()
 			await this.ps.getInvestInfo(this.curSyrupPoolAddr, blockNum)
 
-            this.intervalId = setInterval(() => this.run(), this.tickInterval);
+            this.scheduleNextRun();
             // setInterval(() => this.reportStats(), this.reportInterval);
 
         } catch (e) {
@@ -165,6 +165,12 @@ class Controller {
             this.beforeExit(e);
         }
     }
+
+	scheduleNextRun() {
+		const nextRun = this.tickInterval - (Date.now() - Math.floor(Date.now()/60000)* 60000) // align to start of minute
+		logger.info(`Setting next run to ${nextRun}`)
+		setTimeout(() => this.run(), nextRun);
+	}
 
 	async reportStats(harvestBlockNum) {
 		logger.info(`reportStats: harvestBlockNum=${harvestBlockNum}`)
@@ -215,6 +221,8 @@ class Controller {
             nextAction = await this.contractManager.run(nextAction, this.ps.poolsInfo);
             await this.executeAction(nextAction);
             logger.debug('executeAction ended')
+
+            this.scheduleNextRun();
 
         } catch (e) {
 
