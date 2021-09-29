@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 import "../interfaces/IWorker.sol";
 import "../interfaces/ICakePools.sol";
@@ -14,6 +15,8 @@ import "../interfaces/ICakePools.sol";
 contract Worker is IWorker {
 
 	using SafeERC20 for IERC20;
+    using SafeMath for uint256;
+
     address public immutable owner;
 
 	address cake = address(0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82);
@@ -77,7 +80,7 @@ contract Worker is IWorker {
 			return;
 		}
 
-		uint256 amountOutMin = amountIn * params.multiplier;
+		uint256 amountOutMin = amountIn.mul(params.multiplier).div(100);
 
 		IERC20(ICakePools(stakedPoolAddr).rewardToken()).approve(params.swapRouter,amountIn);
 		ICakePools(params.swapRouter).swapExactTokensForTokens(amountIn, amountOutMin, params.path, address(this), params.deadline);

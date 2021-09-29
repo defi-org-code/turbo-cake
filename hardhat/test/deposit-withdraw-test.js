@@ -64,7 +64,8 @@ describe("DepositWithdrawTest", function () {
 	// workers doHardWork - deposit cakes in revv pool
 	// ################################################################################
 	let withdraw=false, swap=false, deposit=true;
-  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 0, N_WORKERS, [swapRouter, 0, revvSwapPath, deadline]]).send({from: admin});
+	let multiplier = 0
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 0, N_WORKERS, [swapRouter, multiplier, revvSwapPath, deadline]]).send({from: admin});
 
 	let res;
 	for (const worker of WorkersAddr) {
@@ -83,7 +84,8 @@ describe("DepositWithdrawTest", function () {
 	// workers doHardWork - withdraw cakes from revv pool
 	// ################################################################################
 	withdraw=true; swap=false; deposit=false;
-  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 0, N_WORKERS, [swapRouter, 0, revvSwapPath, deadline]]).send({from: admin});
+	multiplier = 10
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 0, N_WORKERS, [swapRouter, multiplier, revvSwapPath, deadline]]).send({from: admin});
 
 	for (const worker of WorkersAddr) {
 		res = await revvPoolContract.methods.userInfo(worker).call();

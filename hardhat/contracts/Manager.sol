@@ -18,6 +18,7 @@ import "../interfaces/IWorker.sol";
 contract Manager is ReentrancyGuard, IWorker {
 
 	using SafeERC20 for IERC20;
+    using SafeMath for uint256;
 
     address public immutable owner;
     address public admin;
@@ -99,7 +100,7 @@ contract Manager is ReentrancyGuard, IWorker {
 
 			require (params.amount > IERC20(params.stakedToken).balanceOf(workers[i]), 'unexpected worker amount');
 
-			amount = params.amount - IERC20(params.stakedToken).balanceOf(workers[i]);
+			amount = params.amount.sub(IERC20(params.stakedToken).balanceOf(workers[i]));
 
 			IERC20(params.stakedToken).safeTransfer(workers[i], amount);
 		}
