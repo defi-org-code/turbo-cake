@@ -89,7 +89,7 @@ class GreedyPolicy extends Policy {
 
 	async externalCommand() {
 
-		let externalCommand = this.redisClient.get(`command.${process.env.BOT_ID}`)
+		let externalCommand = await this.redisClient.get(`command.${process.env.BOT_ID}`)
 
 		if (externalCommand === null) {
 			return null
@@ -102,7 +102,6 @@ class GreedyPolicy extends Policy {
 		}
 
 		return true
-
 	}
 
     async getAction(args) {
