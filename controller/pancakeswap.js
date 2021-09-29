@@ -27,45 +27,55 @@ class Pancakeswap {
 
 	EXCLUDED_POOLS = ["0xa80240Eb5d7E05d3F250cF000eEc0891d00b51CC"]
 
-    constructor(redisClient, web3, notif, pancakeUpdateInterval, bestRouteUpdateInterval) {
+    constructor(redisClient, web3, notif, bestRouteUpdateInterval) {
         this.redisClient = redisClient;
-        this.pancakeUpdateInterval = pancakeUpdateInterval;
         this.bestRouteUpdateInterval = bestRouteUpdateInterval;
         this.psLastUpdate = null;
         this.web3 = web3
         this.notif = notif
 
         this.poolsInfo = {}
-        this.lastBlockUpdate = null
 
         this.investInfo = {}
         this.workersAddr = []
-        this.totalBalance = {'staked': 0, 'unstaked': 0}
+        this.totalBalance = null
     }
 
 	async init() {
-		// TODO: add support to contract manager
+
 		this.smartchefFactoryContract = this.getContract(SMARTCHEF_FACTORY_ABI, SMARTCHEF_FACTORY_ADDRESS)
 		this.cakeContract = this.getContract(CAKE_ABI, CAKE_ADDRESS)
 		this.routerV2Contract = this.getContract(ROUTER_V2_ABI, ROUTER_V2_ADDRESS)
 
 		await this.getPsLastUpdate()
-		await this.getLastBlockUpdate()
 		await this.getPoolsInfo()
-		await this.fetchPools()
 
-		// await this.getTransferEvents()
-		await this.updatePoolsApy()
+		await this.update({'staked': 0, 'unstaked': 0})
 
 		logger.debug(`init ps ended successfully`)
 	}
+
+    async update(totalBalance) {
+
+		this.totalBalance = totalBalance
+
+		await this.fetchPools();
+		await this.setActivePools()
+
+		if (Date.now() - this.psLastUpdate > this.bestRouteUpdateInterval) {
+			await this.updateBestRoute()
+		}
+
+		await this.updatePoolsApy()
+		await this.setPsLastUpdate()
+    }
 
 	async getPsLastUpdate() {
 
 		let reply = await this.redisClient.get(`psLastUpdate.${process.env.BOT_ID}`)
 
 		if (reply == null) {
-			this.psLastUpdate = Date.now() - Math.max(this.pancakeUpdateInterval, this.bestRouteUpdateInterval)
+			this.psLastUpdate = 0
 			return
 		}
 
@@ -143,38 +153,6 @@ class Pancakeswap {
 	setTotalBalance(totalBalance) {
 		this.totalBalance = totalBalance
 	}
-
-    async update(totalBalance) {
-
-        try {
-
-			this.totalBalance = totalBalance
-
-            if (Date.now() - this.psLastUpdate < this.pancakeUpdateInterval) {
-                return;
-            }
-
-            let shouldUpdateBestRoute;
-            if (Date.now() - this.psLastUpdate > this.bestRouteUpdateInterval) {
-				shouldUpdateBestRoute = true;
-            }
-
-			await this.fetchPools();
-			await this.setActivePools()
-			if (shouldUpdateBestRoute) {
-				await this.updateBestRoute()
-			}
-
-			await this.updatePoolsApy()
-
-			await this.redisClient.set(`poolsInfo.${process.env.BOT_ID}`, JSON.stringify(this.poolsInfo))
-			await this.setPsLastUpdate()
-
-        } catch (e) {
-			logger.debug(e.stack)
-            throw new FatalError(`pancake update error: ${e}`);
-        }
-    }
 
 	changePct(start, end) {
 		return new BigNumber(100).multipliedBy(new BigNumber(end).div(new BigNumber(start)) - new BigNumber(1))
@@ -331,32 +309,14 @@ class Pancakeswap {
 		console.log(this.poolsInfo)
 	}
 
-	async getLastBlockUpdate() {
-
-		const blockNum = await this.web3.eth.getBlockNumber()
-		let reply = await this.redisClient.get(`lastBlockUpdate.${process.env.BOT_ID}`)
-
-		if (reply == null) {
-			reply = blockNum - this.PAST_EVENTS_N_BLOCKS
-			logger.debug(`lastBlockUpdate was not found in redis`)
-		}
-
-		this.lastBlockUpdate = reply
-		logger.debug(`get lastBlockUpdate from redis: ${this.lastBlockUpdate}`)
-
-	}
-
 	async getPoolsInfo() {
 
 		let reply = await this.redisClient.get(`poolsInfo.${process.env.BOT_ID}`)
 
-		if (this.lastBlockUpdate == null) {
-			throw Error(`lastBlockUpdate should be != null`)
-		}
-
 		if (reply == null) {
 			logger.debug('poolInfo was not found in redis')
 			this.poolsInfo = {}
+			this.poolsInfo.lastBlockUpdate = 0
 			return
 		}
 
@@ -367,15 +327,14 @@ class Pancakeswap {
 	async savePoolsInfo(lastBlockUpdate) {
 
 		if (!Object.keys(this.poolsInfo).length) {
-			throw new FatalError("No pools found");
+			return
 		}
 
-		if (!lastBlockUpdate) {
-			throw new FatalError(`Invalid lastBlockUpdate ${lastBlockUpdate}`)
+		if (lastBlockUpdate === null) {
+			lastBlockUpdate = await this.web3.eth.getBlockNumber()
 		}
 
-		this.lastBlockUpdate = lastBlockUpdate
-		await this.redisClient.set(`lastBlockUpdate.${process.env.BOT_ID}`, this.lastBlockUpdate)
+		this.poolsInfo.lastBlockUpdate = lastBlockUpdate
 		await this.redisClient.set(`poolsInfo.${process.env.BOT_ID}`, JSON.stringify(this.poolsInfo))
 
 		logger.debug('pools info updated successfully')
@@ -393,22 +352,22 @@ class Pancakeswap {
 
 		let blockNum = await this.web3.eth.getBlockNumber()
 
-		if (this.lastBlockUpdate == null) {
+		if (this.poolsInfo.lastBlockUpdate == null) {
 			throw Error('lastBlockUpdate should be set')
 		}
 
-        if (this.lastBlockUpdate === blockNum) {
+        if (this.poolsInfo.lastBlockUpdate === blockNum) {
 
-			logger.debug(`fetchPools: nothing to fetch, lastBlockUpdate (${this.lastBlockUpdate}) >= blockNum (${blockNum})`)
+			logger.debug(`fetchPools: nothing to fetch, lastBlockUpdate (${this.poolsInfo.lastBlockUpdate}) >= blockNum (${blockNum})`)
 			return
 
-		} else if (this.lastBlockUpdate > blockNum) {
+		} else if (this.poolsInfo.lastBlockUpdate > blockNum) {
 
-			this.notif.sendDiscord(`[WARNING] lastBlockUpdate (${this.lastBlockUpdate}) > blockNum (${blockNum})`)
+			this.notif.sendDiscord(`[WARNING] lastBlockUpdate (${this.poolsInfo.lastBlockUpdate}) > blockNum (${blockNum})`)
 			return
 		}
 
-		const fetchNBlocks = blockNum - this.lastBlockUpdate
+		const fetchNBlocks = blockNum - this.poolsInfo.lastBlockUpdate
 
         let events = await getPastEventsLoop(this.smartchefFactoryContract, 'NewSmartChefContract', fetchNBlocks, blockNum)
 
@@ -448,8 +407,6 @@ class Pancakeswap {
                 this.notif.sendDiscord(`failed to setup smartChef info for (${event['returnValues']['smartChef']}): ${e}`)
             }
         }
-
-		await this.savePoolsInfo(blockNum)
     }
 }
 

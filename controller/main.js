@@ -27,7 +27,6 @@ function loadConfig(runningMode) {
 
     if (runningMode === RunningMode.DEV) {
 
-        config.pancakeUpdateInterval = DEV_PANCAKE_UPDATE_INTERVAL
         config.syrupSwitchInterval = DEV_SYRUP_SWITCH_INTERVAL
         config.harvestInterval = DEV_HARVEST_INTERVAL
         config.tickInterval = DEV_TICK_INTERVAL
@@ -38,7 +37,6 @@ function loadConfig(runningMode) {
 
     } else {
 
-        config.pancakeUpdateInterval = PANCAKE_UPDATE_INTERVAL;
         config.syrupSwitchInterval = SYRUP_SWITCH_INTERVAL;
         config.harvestInterval = HARVEST_INTERVAL;
         config.tickInterval = TICK_INTERVAL;
@@ -74,8 +72,7 @@ class Controller {
         this.account = account;
         this.notif = notif;
         this.redisInit();
-        this.ps = new Pancakeswap(this.redisClient, web3, this.notif,
-            config.pancakeUpdateInterval, config.bestRouteUpdateInterval);
+        this.ps = new Pancakeswap(this.redisClient, web3, this.notif, config.bestRouteUpdateInterval);
         this.policy = new GreedyPolicy(config);
         this.contractManager = new ContractManager(web3, account, manager, this.redisClient, config.workersValidateInterval)
 		this.batcher = new Batcher({
