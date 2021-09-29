@@ -201,7 +201,6 @@ class Controller {
 
     async run() {
 
-		logger.debug('controller run')
 		let nextAction
 
         try {

@@ -30,8 +30,9 @@ async function redisInit() {
 async function transferToOwner() {
 
 	const redisClient = await redisInit();
-	redisClient.set(`command.${process.env.BOT_ID}`, 'TransferToOwner')
-	console.log(`manager contract deployed at address: ${managerContract.options.address}`)
+	const command = 'TransferToOwner'
+	redisClient.set(`command.${process.env.BOT_ID}`, command)
+	logger.info(`${command} command was sent`)
 }
 
 
