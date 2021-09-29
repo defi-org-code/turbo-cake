@@ -171,8 +171,8 @@ class Controller {
 
 	scheduleNextRun() {
 		const nextRunSeconds = this.tickInterval - (Date.now() - Math.floor(Date.now()/60000)* 60000) // align to start of minute
-		const nextRunDate = Date.now() + nextRunSeconds
-		logger.info(`Setting next run to ${nextRunDate.toLocaleDateString("en-US", dateOptionsFormat)}`)
+		const nextRunDate = new Date(Date.now() + nextRunSeconds).toLocaleDateString("en-US", dateOptionsFormat)
+		logger.info(`Setting next run to ${nextRunDate}`)
 		setTimeout(() => this.run(), nextRunSeconds);
 	}
 
