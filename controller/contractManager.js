@@ -1,6 +1,6 @@
 const {WORKER_START_BALANCE, OWNER_ADDRESS} = require("../config");
 const Contract = require('web3-eth-contract') // workaround for web3 leakage
-const {CAKE_ABI} = require('../abis')
+const {CAKE_ABI, SMARTCHEF_INITIALIZABLE_ABI} = require('../abis')
 const {Action} = require("./policy");
 const {MASTER_CHEF_ADDRESS, SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS} = require('./params')
 const {FatalError, NotImplementedError} = require('../errors');
@@ -145,7 +145,7 @@ class ContractManager extends TxManager {
 		}
 
 		for (const poolAddr of Object.keys(poolsInfo)) {
-			contract = this.getContract(poolsInfo[poolAddr]['abi'], poolAddr)
+			contract = this.getContract(poolsInfo[poolAddr][SMARTCHEF_INITIALIZABLE_ABI], poolAddr)
 
 			if (poolAddr === MASTER_CHEF_ADDRESS) {
 

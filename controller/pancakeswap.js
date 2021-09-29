@@ -273,10 +273,16 @@ class Pancakeswap {
 		return await rewardContract.methods.balanceOf(poolAddr).call()
 	}
 
-	async fetchUpdateBonusInfo(poolAddr) {
-		const poolContract = await this.getContract(this.poolsInfo[poolAddr]['abi'], poolAddr)
+	async fetchUpdatePoolActiveVars(poolAddr) {
+		logger.info(`updating bonus info for ${poolAddr}`)
+		const poolContract = await this.getContract(this.poolsInfo[poolAddr][SMARTCHEF_INITIALIZABLE_ABI], poolAddr)
 		this.poolsInfo[poolAddr]['bonusEndBlock'] = await poolContract.methods.bonusEndBlock().call()
 		this.poolsInfo[poolAddr]['startBlock'] =  await poolContract.methods.startBlock().call()
+		this.poolsInfo[poolAddr]['hasUserLimit'] = await poolContract.methods.hasUserLimit().call()
+
+		logger.info(`updating pool rewards for ${poolAddr}`)
+		this.poolsInfo[poolAddr]['poolRewards'] = await this.fetchPoolRewards(poolAddr)
+
 	}
 
 	async setActivePools() {
@@ -288,15 +294,7 @@ class Pancakeswap {
 
 		for (const poolAddr of Object.keys(this.poolsInfo)) {
 
-			if (!('bonusEndBlock' in this.poolsInfo[poolAddr]) || !('startBlock' in this.poolsInfo[poolAddr])) {
-				logger.info(`updating bonus info for ${poolAddr}`)
-				await this.fetchUpdateBonusInfo(poolAddr)
-			}
-
-			if (!('poolRewards' in this.poolsInfo[poolAddr])) {
-				logger.info(`updating pool rewards for ${poolAddr}`)
-				this.poolsInfo[poolAddr]['poolRewards'] = await this.fetchPoolRewards(poolAddr)
-			}
+			await this.fetchUpdatePoolActiveVars(poolAddr)
 
 			bonusEndBlock = Number(this.poolsInfo[poolAddr]['bonusEndBlock'])
 			startBlock = Number(this.poolsInfo[poolAddr]['startBlock'])
@@ -462,7 +460,6 @@ class Pancakeswap {
 					'hasUserLimit': hasUserLimit,
 					'rewardPerBlock': rewardPerBlock,
 					'startBlock': startBlock,
-					'abi': SMARTCHEF_INITIALIZABLE_ABI,
 					'routeToCake': [rewardToken, BNB_ADDRESS, CAKE_ADDRESS],
 					'active': true, // default, will be set to false on setActivePools
 				}
