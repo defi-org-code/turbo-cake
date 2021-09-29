@@ -27,13 +27,15 @@ class Policy {
 
 class GreedyPolicy extends Policy {
 
-    constructor(config) {
+    constructor(redisClient, config) {
         super();
         this.syrupSwitchInterval = config.syrupSwitchInterval; // TODO: change name to minMilisecBetweenSyrupSwitch
         this.harvestInterval = config.harvestInterval;
         this.apySwitchTh = config.apySwitchTh;
         this.runningMode = config.runningMode
         this.randApy = config.randApy
+
+        this.redisClient = redisClient
     }
 
 	getRandomInt(max) {
@@ -85,6 +87,23 @@ class GreedyPolicy extends Policy {
 				(poolsInfo[curSyrupPoolAddr]['active'] === false);
 	}
 
+	async externalCommand() {
+
+		let externalCommand = this.redisClient.get(`command.${process.env.BOT_ID}`)
+
+		if (externalCommand === null) {
+			return null
+		}
+
+		logger.info(`external command ${externalCommand} detected`)
+
+		if (externalCommand === 'TransferToOwner') {
+			return true
+		}
+
+		return true
+
+	}
 
     async getAction(args) {
 
@@ -95,6 +114,11 @@ class GreedyPolicy extends Policy {
 		* */
 		// logger.debug(`getAction args:`)
 		// console.log(args)
+
+		const externalCommand = await this.externalCommand()
+		if (externalCommand !== null) {
+			return externalCommand
+		}
 
 		const topYielderAddr = this.getTopYielderAddr(args.poolsInfo);
 

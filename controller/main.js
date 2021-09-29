@@ -71,7 +71,7 @@ class Controller {
         this.notif = notif;
         this.redisInit();
         this.ps = new Pancakeswap(this.redisClient, web3, this.notif, config.bestRouteUpdateInterval);
-        this.policy = new GreedyPolicy(config);
+        this.policy = new GreedyPolicy(this.redisClient, config);
         this.contractManager = new ContractManager(web3, account, manager, this.redisClient, config.workersValidateInterval)
 		this.batcher = new Batcher({
 			web3: web3,
