@@ -117,7 +117,7 @@ class GreedyPolicy extends Policy {
 
 				return {
 					name: Action.TRANSFER_TO_OWNER,
-					from: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy, active: args.poolsInfo[args.curSyrupPoolAddr].active, hasUserLimit: args.poolsInfo[args.curSyrupPoolAddr].hasUserLimit, routeToCake: args.poolsInfo[args.curSyrupPoolAddr].routeToCake},
+					from: {address: null},
 					to: {address: null}
 				};
 			}
@@ -147,7 +147,7 @@ class GreedyPolicy extends Policy {
 
             return {
                 name: Action.ENTER,
-                from: null,
+                from: {address: null},
                 to: {address: topYielderAddr, name: args.poolsInfo[topYielderAddr].rewardSymbol, apy: args.poolsInfo[topYielderAddr].apy, active: args.poolsInfo[topYielderAddr].active, hasUserLimit: args.poolsInfo[topYielderAddr].hasUserLimit}
             }
         }
