@@ -290,7 +290,7 @@ class Pancakeswap {
 		logger.debug(`setActivePools started`)
 
 		const blockNum = await this.web3.eth.getBlockNumber()
-		let bonusEndBlock, startBlock, poolRewards, poolRewardsEnd
+		let bonusEndBlock, startBlock, poolRewards, poolRewardsEnd, poolEnded
 
 		for (const poolAddr of Object.keys(this.poolsInfo)) {
 
@@ -302,7 +302,13 @@ class Pancakeswap {
 
 			poolRewardsEnd = (new BigNumber(this.poolsInfo[poolAddr]['rewardPerBlock'])).multipliedBy(10)
 
-			this.poolsInfo[poolAddr]['active'] = !((startBlock > blockNum) || (bonusEndBlock <= blockNum) || (poolAddr in this.EXCLUDED_POOLS) || (poolRewards.lt(poolRewardsEnd)));
+			poolEnded = ((bonusEndBlock <= blockNum) || (poolAddr in this.EXCLUDED_POOLS) || (poolRewards.lt(poolRewardsEnd)))
+			if (poolEnded) {
+				delete this.poolsInfo[poolAddr]
+				continue
+			}
+
+			this.poolsInfo[poolAddr]['active'] = !(startBlock > blockNum);
 		}
 
 		logger.debug('setActivePools ended')
@@ -379,32 +385,6 @@ class Pancakeswap {
 		const bscscanAbiUrl =  `https://api.bscscan.com/api?module=contract&action=getabi&address=${addr}&apiKey=${process.env.BSCSCAN_API_KEY}`
 		const data = await nodeFetch(bscscanAbiUrl).then(response => response.json())
 		return JSON.parse(data.result)
-	}
-
-	async getTransferEvents() {
-
-		logger.debug('getTransferEvents ... ')
-
-		let blockNum = await this.web3.eth.getBlockNumber()
-
-		const fetchNBlocks = 90 * this.BLOCKS_PER_DAY // blockNum - this.lastBlockUpdate
-
-        let events = await getPastEventsLoop(this.cakeContract, 'Transfer', fetchNBlocks, blockNum, 5000, {'to': '0xEf61Fe3cC3BC8d0D0266325221F5F0A9B7014C84'})
-		let transfers = []
-
-		for (const event of events) {
-
-        	try {
-        		if (await this.web3.eth.getCode(event['from']) === '0x') {
-        			transfers.push(event)
-        		}
-        	}
-        	catch (e) {
-        		logger.debug(`unexpected error while processing transfer events: ${e}, skipping event...`)
-        	}
-		}
-
-		return transfers
 	}
 
     async fetchPools() {

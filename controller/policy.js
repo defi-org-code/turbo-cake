@@ -56,6 +56,7 @@ class GreedyPolicy extends Policy {
 			throw Error(`Could not find any active pool while searching for best pool address`)
 		}
 
+		logger.info(`apyDict: `)
 		console.info(apyDict)
 
 		if ((this.runningMode === RunningMode.DEV) && (this.randApy === true)) {
@@ -115,7 +116,7 @@ class GreedyPolicy extends Policy {
 			};
 		}
 
-		logger.debug(`now=${Date.now()},lastActionTimestamp=${args.lastActionTimestamp},harvestInterval=${this.harvestInterval},eval=${Date.now() - args.lastActionTimestamp}`)
+		// logger.debug(`now=${Date.now()},lastActionTimestamp=${args.lastActionTimestamp},harvestInterval=${this.harvestInterval},eval=${Date.now() - args.lastActionTimestamp}`)
 
         if (Date.now() - args.lastActionTimestamp > this.harvestInterval) {
 
