@@ -39,6 +39,7 @@ async function transferToOwner() {
 transferToOwner()
     .then(() => {
 		logger.debug(`all done`);
+		process.exit()
 	})
 	.catch((error) => {
         logger.error(error);
