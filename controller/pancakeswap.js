@@ -275,7 +275,7 @@ class Pancakeswap {
 
 	async fetchUpdatePoolActiveVars(poolAddr) {
 		logger.info(`updating bonus info for ${poolAddr}`)
-		const poolContract = await this.getContract(this.poolsInfo[poolAddr][SMARTCHEF_INITIALIZABLE_ABI], poolAddr)
+		const poolContract = await this.getContract(SMARTCHEF_INITIALIZABLE_ABI, poolAddr)
 		this.poolsInfo[poolAddr]['bonusEndBlock'] = await poolContract.methods.bonusEndBlock().call()
 		this.poolsInfo[poolAddr]['startBlock'] =  await poolContract.methods.startBlock().call()
 		this.poolsInfo[poolAddr]['hasUserLimit'] = await poolContract.methods.hasUserLimit().call()
