@@ -19,6 +19,9 @@ const {TransactionFailure, FatalError, GasError, NotImplementedError} = require(
 const {Logger} = require('../logger')
 const logger = new Logger('controller')
 
+const dateOptionsFormat = {year: 'numeric', month: 'long', day: 'numeric',hour: 'numeric',minute: 'numeric',second: 'numeric' };
+
+
 function loadConfig(runningMode) {
     let config = {};
 
@@ -167,9 +170,10 @@ class Controller {
     }
 
 	scheduleNextRun() {
-		const nextRun = this.tickInterval - (Date.now() - Math.floor(Date.now()/60000)* 60000) // align to start of minute
-		logger.info(`Setting next run to ${nextRun}`)
-		setTimeout(() => this.run(), nextRun);
+		const nextRunSeconds = this.tickInterval - (Date.now() - Math.floor(Date.now()/60000)* 60000) // align to start of minute
+		const nextRunDate = Date.now() + nextRunSeconds
+		logger.info(`Setting next run to ${nextRunDate.toLocaleDateString("en-US", dateOptionsFormat)}`)
+		setTimeout(() => this.run(), nextRunSeconds);
 	}
 
 	async reportStats(harvestBlockNum) {
