@@ -274,20 +274,20 @@ class Pancakeswap {
 	}
 
 	async fetchUpdatePoolActiveVars(poolAddr) {
-		logger.info(`updating bonus info for ${poolAddr}`)
+		// logger.info(`updating bonus info for ${poolAddr}`)
 		const poolContract = await this.getContract(SMARTCHEF_INITIALIZABLE_ABI, poolAddr)
 		this.poolsInfo[poolAddr]['bonusEndBlock'] = await poolContract.methods.bonusEndBlock().call()
 		this.poolsInfo[poolAddr]['startBlock'] =  await poolContract.methods.startBlock().call()
 		this.poolsInfo[poolAddr]['hasUserLimit'] = await poolContract.methods.hasUserLimit().call()
 
-		logger.info(`updating pool rewards for ${poolAddr}`)
+		// logger.info(`updating pool rewards for ${poolAddr}`)
 		this.poolsInfo[poolAddr]['poolRewards'] = await this.fetchPoolRewards(poolAddr)
 
 	}
 
 	async setActivePools() {
 
-		logger.debug(`setActivePools started`)
+		logger.debug(`setActivePools started: updating start, end block, user limit, pool rewards ...`)
 
 		const blockNum = await this.web3.eth.getBlockNumber()
 		let bonusEndBlock, startBlock, poolRewards, poolRewardsEnd, poolEnded
