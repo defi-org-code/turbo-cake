@@ -145,7 +145,7 @@ class ContractManager extends TxManager {
 		}
 
 		for (const poolAddr of Object.keys(poolsInfo)) {
-			contract = this.getContract(poolsInfo[poolAddr][SMARTCHEF_INITIALIZABLE_ABI], poolAddr)
+			contract = this.getContract(SMARTCHEF_INITIALIZABLE_ABI, poolAddr)
 
 			if (poolAddr === MASTER_CHEF_ADDRESS) {
 
