@@ -1,5 +1,4 @@
 const asyncRedis = require("async-redis");
-const Notifications = require('../notifications');
 const {GreedyPolicy, Action} = require("./policy");
 const {Batcher} = require("./batcher");
 const {Pancakeswap} = require("./pancakeswap");
@@ -12,9 +11,8 @@ const {
     DEV_TICK_INTERVAL, DEV_PANCAKE_UPDATE_INTERVAL, DEV_SYRUP_SWITCH_INTERVAL, DEV_HARVEST_INTERVAL,
     BEST_ROUTE_UPDATE_INTERVAL, DEV_BEST_ROUTE_UPDATE_INTERVAL, DEV_RAND_APY,
     REPORT_INTERVAL, DEV_APY_SWITCH_TH, WORKERS_VALIDATE_INTERVAL, DEV_WORKERS_VALIDATE_INTERVAL
-
 } = require("../config");
-const {TransactionFailure, FatalError, GasError, NotImplementedError} = require('../errors');
+const {FatalError} = require('../errors');
 
 const {Logger} = require('../logger')
 const logger = new Logger('controller')
@@ -95,7 +93,6 @@ class Controller {
         this.runningMode = runningMode;
         this.name = "pancakeswap-controller";
         this.lastActionTimestamp = null;
-        this.inTransition = false;
         this.totalBalance = null
 
 		this.reporter = new Reporter(runningMode)
@@ -208,39 +205,21 @@ class Controller {
 		let nextAction
 
         try {
-            if (this.inTransition) {
-            	logger.debug('inTransition')
-                return;
-            }
-
-            this.inTransition = true;
-
             await this.ps.update(this.totalBalance);
-            logger.debug('ps update ended')
             nextAction = await this.getAction();
-            logger.debug('set action ended')
             nextAction = await this.contractManager.run(nextAction, this.ps.poolsInfo);
             await this.executeAction(nextAction);
-            logger.debug('executeAction ended')
 
             this.scheduleNextRun();
 
         } catch (e) {
 
 			this.beforeExit(e)
-
-            // if (e instanceof FatalError) {
-            //     this.beforeExit(e)
-			//
-            // } else {
-            //     this.beforeExit(e)
-            // }
         }
     }
 
     async getAction() {
         const lastAction = this.nextAction;
-        // logger.debug(`setAction: nextAction=${JSON.stringify(this.nextAction)}`)
         this.nextAction = await this.policy.getAction({
             'poolsInfo': this.ps.poolsInfo,
             'curSyrupPoolAddr': this.curSyrupPoolAddr,
@@ -259,7 +238,6 @@ class Controller {
         const startTime = Date.now();
 
         if (nextAction.name === Action.NO_OP) {
-            this.inTransition = false;
             return;
         }
 
@@ -281,9 +259,6 @@ class Controller {
         	const harvestBlockNum = Number(await this.web3.eth.getBlockNumber()) // TODO: FIXME better estimation
         	await this.reportStats(harvestBlockNum)
         }
-
-		this.inTransition = false;
-
     }
 
     async handleExecutionError(err, action, startTime) {
@@ -291,19 +266,15 @@ class Controller {
 					action = ${JSON.stringify(action)}
 		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
 
-        // this.nextAction = { name: Action.NO_OP,};
         // TODO: continue flow according to trace - batcher.retry
         await this.setLastActionTimestamp()
-        this.inTransition = false;
     }
-
 
     beforeExit(e) {
         this.notif.sendDiscord(`Terminating process: ${e}`)
         logger.debug(e.stack)
         process.exit()
     }
-
 
 }
 

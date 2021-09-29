@@ -2,14 +2,14 @@ const hre = require("hardhat");
 let {web3} = require("hardhat");
 const Web3 = require("web3");
 
-const KeyEncryption = require('./keyEncryption');
-const {OWNER_ADDRESS, ADMIN_ADDRESS} = require('./config');
+const KeyEncryption = require('../keyEncryption');
+const {OWNER_ADDRESS, ADMIN_ADDRESS} = require('../config');
 
-const {Logger} = require('./logger')
+const {Logger} = require('../logger')
 const logger = new Logger('deployer')
 
-const managerAbi = require('./hardhat/artifacts/contracts/Manager.sol/Manager.json').abi
-const managerBytecode = require('./hardhat/artifacts/contracts/Manager.sol/Manager.json').bytecode
+const managerAbi = require('../hardhat/artifacts/contracts/Manager.sol/Manager.json').abi
+const managerBytecode = require('../hardhat/artifacts/contracts/Manager.sol/Manager.json').bytecode
 
 
 async function deploy() {
