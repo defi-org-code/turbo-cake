@@ -196,7 +196,7 @@ class ContractManager extends TxManager {
 		for (let workerIndex=0; workerIndex<this.workersAddr.length; workerIndex++) {
 
 			workerInfo = this.workersBalanceInfo[workerIndex]
-			workersBalance[workerIndex] = {}
+			workersBalance[workerIndex] = {staked: '0', unstaked: '0'}
 
 			for (const [key, value] of Object.entries(workerInfo)) {
 
@@ -270,6 +270,7 @@ class ContractManager extends TxManager {
 	}
 
 	async setTotalBalance() {
+
 		await this.setManagerBalance()
 		logger.info(`manager total balance: ${this.managerBalance}`)
 		let totalBalance = {unstaked: new BigNumber(this.managerBalance), staked: new BigNumber(0)}
@@ -280,8 +281,9 @@ class ContractManager extends TxManager {
 		}
 
 		this.balance = totalBalance
-		logger.info(`total balance: `)
+		logger.info(`saving total balance to redis, total balance => `)
 		console.log(this.balance)
+		this.redisClient.set(`totalBalance.${process.env.BOT_ID}`, JSON.stringify(this.balance))
 		return this.balance
 	}
 
@@ -351,27 +353,19 @@ class ContractManager extends TxManager {
 		console.log(res)
 	}
 
-	async run(nextAction, poolsInfo) {
+	async prepare(nextAction) {
 
 		if (Date.now() - this.lastWorkersValidate > this.workersValidateInterval) {
 			// await this.initWorkers(poolsInfo) // TODO: periodic updates
 			this.lastWorkersValidate = Date.now()
 		}
 
-		logger.info(`nWorkers=${this.nWorkers}, nActiveWorkers=${this.nActiveWorkers}, nextAction:`)
+		logger.info(`nWorkers=${this.nWorkers}, nActiveWorkers=${this.nActiveWorkers}, nextAction =>`)
 		console.log(nextAction)
 
 		switch (nextAction.name) {
 
 			case Action.ENTER:
-
-				await this.setWorkersBalanceInfo(poolsInfo) // TODO: improve
-				await this.setTotalBalance()
-
-				if ((this.balance.staked === '0') && (this.balance.unstaked === '0')) {
-					logger.warning('enter action was sent but total balance is 0')
-					return {name: Action.NO_OP}
-				}
 
 				if (nextAction.to.hasUserLimit === true) {
 
@@ -414,13 +408,6 @@ class ContractManager extends TxManager {
 
 				break
 
-			case Action.TRANSFER_TO_OWNER:
-
-				// assumes no funds in pools TODO: validate - no staked funds
-				await this.transferToManager(0, 0, this.nWorkers)
-				await this.transferToOwner()
-				return {name: Action.NO_OP}
-
 			default:
 				break
 		}
@@ -428,6 +415,25 @@ class ContractManager extends TxManager {
 		nextAction.startIndex = 0
 		nextAction.endIndex = this.nActiveWorkers
 		return nextAction
+	}
+
+	async postRun(nextAction, poolsInfo) {
+
+		switch (nextAction) {
+
+			case Action.TRANSFER_TO_OWNER:
+
+				// assumes no funds in pools TODO: validate - no staked funds
+				await this.transferToManager(0, 0, this.nWorkers)
+				await this.transferToOwner()
+				break
+		}
+
+		if (nextAction.name !== Action.NO_OP) {
+
+			await this.setWorkersBalanceInfo(poolsInfo)
+			await this.setTotalBalance()
+		}
 	}
 
 }

@@ -93,7 +93,6 @@ class Controller {
         this.runningMode = runningMode;
         this.name = "pancakeswap-controller";
         this.lastActionTimestamp = null;
-        this.totalBalance = null
 
 		this.reporter = new Reporter(runningMode)
     }
@@ -146,10 +145,7 @@ class Controller {
 			this.curSyrupPoolAddr = await this.contractManager.init(this.ps.poolsInfo);
 			logger.info(`curSyrupPoolAddr was set to ${this.curSyrupPoolAddr}`)
 
-			this.totalBalance = this.contractManager.balance // TODO: improve
-			logger.info(`totalBalance was set to ${JSON.stringify(this.totalBalance)}`)
-
-			this.ps.setTotalBalance(this.totalBalance)
+			this.ps.setTotalBalance(this.contractManager.balance)
 
 			const blockNum = await this.web3.eth.getBlockNumber()
 			await this.ps.getInvestInfo(this.curSyrupPoolAddr, blockNum)
@@ -173,10 +169,10 @@ class Controller {
 	async reportStats(harvestBlockNum) {
 		logger.info(`reportStats: harvestBlockNum=${harvestBlockNum}`)
 
-		this.totalBalance = await this.contractManager.setTotalBalance()
-		logger.info(`reportStats: totalBalance=${this.totalBalance}`)
+		const balance = await this.contractManager.setTotalBalance()
+		logger.info(`reportStats: totalBalance=${balance}`)
 
-		const investApy = await this.ps.getInvestApy(this.totalBalance, this.curSyrupPoolAddr, harvestBlockNum)
+		const investApy = await this.ps.getInvestApy(balance, this.curSyrupPoolAddr, harvestBlockNum)
 
 		if (investApy === null) {
 			return
@@ -205,10 +201,15 @@ class Controller {
         let startTime = Date.now();
 
         try {
-            await this.ps.update(this.totalBalance);
+            await this.ps.update(this.contractManager.balance);
+
             nextAction = await this.getAction();
-            nextAction = await this.contractManager.run(nextAction, this.ps.poolsInfo);
-            await this.executeAction(startTime, nextAction);
+
+            nextAction = await this.contractManager.prepare(nextAction);
+
+            await this.batcherRun(startTime, nextAction);
+
+			await this.contractManager.postRun(nextAction, this.ps.poolsInfo);
 
             this.scheduleNextRun();
 
@@ -225,23 +226,21 @@ class Controller {
             'curSyrupPoolAddr': this.curSyrupPoolAddr,
             'lastActionTimestamp': this.lastActionTimestamp,
             'lastAction': lastAction,
+            'balance': this.contractManager.balance
         });
 
         return this.nextAction
     }
 
-    async executeAction(startTime, nextAction) {
+    async batcherRun(startTime, nextAction) {
 
-		logger.debug('executeAction: nextAction:')
+		logger.debug('batcherRun: nextAction =>')
 		console.log(nextAction)
 
         if ((nextAction.name === Action.NO_OP)) {
         	logger.info(`updated in ${(Date.now() - startTime) / 1000} seconds`)
             return;
         }
-
-		// logger.info('error shouldnt be here')
-		// return
 
         this.batcher.on("failure", async (trace) => await this.handleExecutionError(trace, nextAction, startTime));
         this.batcher.on("success", async (trace) => await this.handleExecutionSuccess(trace, nextAction, startTime));

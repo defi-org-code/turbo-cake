@@ -123,7 +123,7 @@ class GreedyPolicy extends Policy {
 			}
 		}
 
-		return true
+		return null
 	}
 
     async getAction(args) {
@@ -135,6 +135,11 @@ class GreedyPolicy extends Policy {
 		* */
 		// logger.debug(`getAction args:`)
 		// console.log(args)
+
+		if ((args.balance.staked.toString() === '0') && (args.balance.unstaked.toString() === '0')) {
+			logger.info(`total balance is 0, ignoring state and setting action to ${Action.NO_OP}`)
+			return {name: Action.NO_OP}
+		}
 
 		const externalCommand = await this.externalCommand(args)
 		if (externalCommand !== null) {
