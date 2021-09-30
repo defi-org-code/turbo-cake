@@ -3,7 +3,7 @@ const Contract = require('web3-eth-contract') // workaround for web3 leakage
 const {CAKE_ABI, SMARTCHEF_INITIALIZABLE_ABI} = require('../abis')
 const {Action} = require("./policy");
 const {MASTER_CHEF_ADDRESS, CAKE_ADDRESS} = require('./params')
-const {FatalError, NotImplementedError} = require('../errors');
+const {assert} = require('../helpers')
 
 const {Logger} = require('../logger')
 const logger = new Logger('ContractManager')
@@ -33,13 +33,27 @@ class ContractManager extends TxManager {
 		this.managerBalance = 0
 		this.lastWorkersValidate = 0
 		this.workersValidateInterval = workersValidateInterval
+
+		this.nStakedWorkers = null
+		this.nUnstakedWorkers = null
+
+		this.fullStaking = null
+		this.workersStakingAddr = null
+		this.stakedAddr = null
 	}
 
 	async init(poolsInfo) {
 
-		await this.initWorkers(poolsInfo)
+		await this.validateAddr()
+		await this.getNWorkers()
+		await this.setWorkersBalanceInfo(poolsInfo)
+		this.setWorkersBalance()
+		this.setNActiveWorkers()
+		this.validateWorkers()
+
 		await this.setTotalBalance()
-		// redis set total balance
+		this.initFullStaking()
+		await this.setWorkersStakingAddr()
 
 		return this.stakedAddr
 	}
@@ -50,20 +64,7 @@ class ContractManager extends TxManager {
 		return contract
 	}
 
-	async initWorkers(poolsInfo) {
-
-		await this.restrictValidate()
-		await this.getNWorkers()
-		await this.fetchWorkersAddr()
-		await this.setWorkersBalanceInfo(poolsInfo)
-		await this.setWorkersBalance()
-		await this.setNActiveWorkers()
-		await this.initStakedAddr()
-
-		// await this.syncWorkers()
-	}
-
-	async restrictValidate() {
+	async validateAddr() {
 		const admin = await this.manager.methods.admin().call()
 		const owner = await this.manager.methods.owner().call()
 
@@ -89,24 +90,6 @@ class ContractManager extends TxManager {
 
 		this.workersAddr = await this.manager.methods.getWorkers(0, this.nWorkers).call()
 		logger.info(`workersAddr: ${this.workersAddr}`)
-	}
-
-	async getWorkersStakingAddr() {
-
-		let reply = await this.redisClient.get(`WorkersStakingAddr.${process.env.BOT_ID}`)
-
-		if (reply == null) {
-
-			logger.info('WorkersStakingAddr is null, fetching staking address from chain')
-			await this.fetchWorkersStakingAddr();
-			return
-		}
-
-		const workersStakingAddr = JSON.parse(reply)
-		logger.debug(`workersStakingAddr: `)
-		console.log(workersStakingAddr)
-
-		return workersStakingAddr
 	}
 
 	async setWorkersBalanceInfo(poolsInfo) {
@@ -173,7 +156,7 @@ class ContractManager extends TxManager {
 		this.managerBalance = await this.cakeContract.methods.balanceOf(this.manager.options.address).call();
 	}
 
-	async setWorkersBalance() {
+	setWorkersBalance() {
 
 		// updates workersBalance
 		let workersBalance = {}
@@ -191,6 +174,8 @@ class ContractManager extends TxManager {
 				}
 
 				else {
+
+					assert(workersBalance[workerIndex].staked === '0', `worker ${workerIndex} has staking in more than 1 pool: ${workerInfo}`)
 					workersBalance[workerIndex].staked = value
 				}
 			}
@@ -215,73 +200,79 @@ class ContractManager extends TxManager {
 
 			if (workerBalance.unstaked !== '0') {
 
-				if (workerBalance.staked !== '0') {
-					throw Error(`unexpected state, worker ${workerIndex} has both staked and unstaked balance: ${workerBalance}`)
-				}
-
+				assert(workerBalance.staked === '0', `unexpected state, worker ${workerIndex} has both staked and unstaked balance: ${workerBalance}`)
 				nUnstakedWorkers += 1
 			}
 		}
 
 		logger.info(`detected ${nStakedWorkers} staked workers, ${nUnstakedWorkers} unstaked workers`)
 		this.nActiveWorkers = nStakedWorkers + nUnstakedWorkers
+		this.nStakedWorkers = nStakedWorkers
+		this.nUnstakedWorkers = nUnstakedWorkers
 		return this.nActiveWorkers
 	}
 
-	initStakedAddr() {
+	validateWorkers() {
 
 		// validate all workers have the same staking addr and return this addr
 		if (Object.keys(this.workersBalanceInfo).length === 0) {
 
-			if(this.nActiveWorkers !== 0) {
-				// TODO: sync workers and call init
-				throw Error(`workers are out of sync: nActiveWorkers=${this.nActiveWorkers} while there is no active workersBalanceInfo`)
-			}
-
-			this.stakedAddr = null
+			assert(this.nActiveWorkers === 0, `workers are out of sync: nActiveWorkers=${this.nActiveWorkers} while there is no active workersBalanceInfo`)
 			return
-		}
-
-		let expectedKeys = Object.keys(this.workersBalanceInfo[0])
-
-		// only cake or cake + 1 pool is expected
-		if (expectedKeys.length > 2) {
-			// TODO: sync workers and call init
-			throw Error(`workers are out of sync: ${this.workersBalanceInfo}`)
 		}
 
 		let workerInfo
 		for (let workerIndex=0; workerIndex<this.workersAddr.length; workerIndex++) {
 
-			if (workerIndex === this.nActiveWorkers) {
-				expectedKeys = Object.keys(this.workersBalanceInfo[this.nActiveWorkers])
-
-				if (expectedKeys.length !== 1) {
-					// TODO: sync workers and call init
-					throw Error(`workers are out of sync: ${this.workersBalanceInfo}`)
-				}
-			}
+			assert(workerIndex in this.workersBalanceInfo, `worker ${workerIndex} was not found in workersBalanceInfo: ${JSON.stringify(this.workersBalanceInfo)}`)
 
 			workerInfo = this.workersBalanceInfo[workerIndex]
+			// only cake or cake + 1 pool is expected
+			assert(Object.keys(workerInfo).length <= 2, `worker might have staking in more than 1 pool: ${JSON.stringify(workerInfo)}`)
+		}
+	}
 
-			if (JSON.stringify(Object.keys(workerInfo)) !== JSON.stringify(expectedKeys)) {
-				// TODO: sync workers and call init
-				throw Error(`workers are out of sync (workerIndex=${workerIndex}, nActiveWorkers=${this.nActiveWorkers}): ${JSON.stringify(this.workersBalanceInfo)}`)
+	async setWorkersStakingAddr() {
+
+		// updates workersBalance
+		let workersStakingAddr = {}
+		let workerInfo, stakingAddr = null;
+
+		for (let workerIndex=0; workerIndex<this.workersAddr.length; workerIndex++) {
+
+			workerInfo = this.workersBalanceInfo[workerIndex]
+			workersStakingAddr[workerIndex] = null
+
+			for (const [key, value] of Object.entries(workerInfo)) {
+
+				if (key !== CAKE_ADDRESS) {
+					assert(workersStakingAddr[workerIndex] === null, (`worker ${workerIndex} has staking in more than 1 pool: ${workerInfo}`))
+					assert(stakingAddr === null || stakingAddr === value, `workers are staked at 2 different addresses: ${value}, ${stakingAddr}`)
+					workersStakingAddr[workerIndex] = value
+					stakingAddr = value
+				}
 			}
-
 		}
 
-		expectedKeys = Object.keys(this.workersBalanceInfo[0])
+		this.workersStakingAddr = workersStakingAddr
+		this.stakedAddr = stakingAddr
 
-		for (let key of expectedKeys) {
+		logger.info(`stakingAddr: ${stakingAddr}`)
+		logger.info(`workersStakingAddr: `)
+		console.log(workersStakingAddr)
+	}
 
-			if (key !== CAKE_ADDRESS) {
-				this.stakedAddr = key
-				return
-			}
+	initFullStaking() {
+		// assumes manager balance is updated
+
+		if (this.nStakedWorkers !== 0 && this.nUnstakedWorkers !== 0) {
+			this.fullStaking = false
 		}
 
-		this.stakedAddr = null
+		else {
+			this.fullStaking = (this.managerBalance === '0')
+		}
+
 	}
 
 	async setTotalBalance() {
@@ -298,13 +289,7 @@ class ContractManager extends TxManager {
 		this.balance = totalBalance
 		logger.info(`saving total balance to redis, total balance => `)
 		console.log(this.balance)
-		this.redisClient.set(`totalBalance.${process.env.BOT_ID}`, JSON.stringify(this.balance))
 		return this.balance
-	}
-
-	async syncWorkers() {
-		// check if workers are synced if not:
-		// swap all digens to cakes, transfer all to manager
 	}
 
 	async addWorkers(nExpectedWorkers=null) {
@@ -443,7 +428,6 @@ class ContractManager extends TxManager {
 		}
 
 		if (nextAction.name !== Action.NO_OP) {
-
 			await this.setWorkersBalanceInfo(poolsInfo)
 			await this.setTotalBalance()
 		}
