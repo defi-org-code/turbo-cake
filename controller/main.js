@@ -202,12 +202,13 @@ class Controller {
     async run() {
 
 		let nextAction
+        let startTime = Date.now();
 
         try {
             await this.ps.update(this.totalBalance);
             nextAction = await this.getAction();
             nextAction = await this.contractManager.run(nextAction, this.ps.poolsInfo);
-            await this.executeAction(nextAction);
+            await this.executeAction(startTime, nextAction);
 
             this.scheduleNextRun();
 
@@ -229,16 +230,18 @@ class Controller {
         return this.nextAction
     }
 
-    async executeAction(nextAction) {
+    async executeAction(startTime, nextAction) {
 
 		logger.debug('executeAction: nextAction:')
 		console.log(nextAction)
 
-        const startTime = Date.now();
-
-        if ((nextAction.name === Action.NO_OP) || (nextAction.name === Action.TRANSFER_TO_OWNER)) {
+        if ((nextAction.name === Action.NO_OP)) {
+        	logger.info(`updated in ${(Date.now() - startTime) / 1000} seconds`)
             return;
         }
+
+		// logger.info('error shouldnt be here')
+		// return
 
         this.batcher.on("failure", async (trace) => await this.handleExecutionError(trace, nextAction, startTime));
         this.batcher.on("success", async (trace) => await this.handleExecutionSuccess(trace, nextAction, startTime));
@@ -249,7 +252,7 @@ class Controller {
     async handleExecutionSuccess(trace, action, startTime) {
         this.notif.sendDiscord(`controller.handleExecutionSuccess:
 					action = ${JSON.stringify(action)}
-		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
+		            exec time(sec) = ${(Date.now() - startTime) / 1000}`);
 
         this.curSyrupPoolAddr = action.to.address
 		await this.setLastActionTimestamp()

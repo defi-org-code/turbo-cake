@@ -1,10 +1,3 @@
-const hre = require("hardhat");
-let {web3} = require("hardhat");
-const Web3 = require("web3");
-
-const KeyEncryption = require('../keyEncryption');
-const {OWNER_ADDRESS, ADMIN_ADDRESS} = require('../config');
-
 const {Logger} = require('../logger')
 const logger = new Logger('TransferToOwner')
 const asyncRedis = require("async-redis");

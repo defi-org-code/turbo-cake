@@ -162,6 +162,8 @@ class ContractManager extends TxManager {
 
 			else {
 
+				// TODO: fetch rewards symbol balance (expected to be 0)
+
 				for (let i=0; i<this.workersAddr.length; i++) {
 					res = await contract.methods.userInfo(this.workersAddr[i]).call()
 
@@ -356,13 +358,20 @@ class ContractManager extends TxManager {
 			this.lastWorkersValidate = Date.now()
 		}
 
+		logger.info(`nWorkers=${this.nWorkers}, nActiveWorkers=${this.nActiveWorkers}, nextAction:`)
+		console.log(nextAction)
+
 		switch (nextAction.name) {
 
 			case Action.ENTER:
-				logger.info(`enter pool, nActiveWorkers=${this.nActiveWorkers}, nextAction:`)
-				console.log(nextAction)
 
 				await this.setWorkersBalanceInfo(poolsInfo) // TODO: improve
+				await this.setTotalBalance()
+
+				if ((this.balance.staked === '0') && (this.balance.unstaked === '0')) {
+					logger.warning('enter action was sent but total balance is 0')
+					return {name: Action.NO_OP}
+				}
 
 				if (nextAction.to.hasUserLimit === true) {
 
@@ -410,7 +419,7 @@ class ContractManager extends TxManager {
 				// assumes no funds in pools TODO: validate - no staked funds
 				await this.transferToManager(0, 0, this.nWorkers)
 				await this.transferToOwner()
-				break
+				return {name: Action.NO_OP}
 
 			default:
 				break

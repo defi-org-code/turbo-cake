@@ -116,10 +116,6 @@ class Batcher extends TxManager {
         }
     }
 
-	async cakeBalance() {
-		return (new BigNumber(this.balance.staked)).plus(this.balance.unstaked).toString()
-	}
-
     async enterPosition(startIndex, endIndex, addr) {
         logger.debug(`batcher.enterPosition: start pool ${addr} `);
 
