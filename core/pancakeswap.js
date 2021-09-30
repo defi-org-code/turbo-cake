@@ -282,6 +282,7 @@ class Pancakeswap {
 
 			poolEnded = ((bonusEndBlock <= blockNum) || (poolAddr in this.EXCLUDED_POOLS) || (poolRewards.lt(poolRewardsEnd)))
 			if (poolEnded) {
+				logger.info(`pool ${poolAddr} has ended, removing pool from poolsInfo ...`)
 				delete this.poolsInfo[poolAddr]
 				continue
 			}

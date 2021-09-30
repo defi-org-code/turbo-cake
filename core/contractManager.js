@@ -53,12 +53,12 @@ class ContractManager extends TxManager {
 	async initWorkers(poolsInfo) {
 
 		await this.restrictValidate()
-		await this.getNActiveWorkers()
 		await this.getNWorkers()
 		await this.fetchWorkersAddr()
 		await this.setWorkersBalanceInfo(poolsInfo)
-		await this.initStakedAddr()
 		await this.setWorkersBalance()
+		await this.setNActiveWorkers()
+		await this.initStakedAddr()
 
 		// await this.syncWorkers()
 	}
@@ -109,20 +109,6 @@ class ContractManager extends TxManager {
 		return workersStakingAddr
 	}
 
-	async getNActiveWorkers() {
-
-		let reply = await this.redisClient.get(`nActiveWorkers.${process.env.BOT_ID}`)
-
-		if (reply == null) {
-
-			logger.info('nActiveWorkers is null, setting nActiveWorkers to 0')
-			this.nActiveWorkers = 0
-			return
-		}
-
-		this.nActiveWorkers = Number(reply)
-	}
-
 	async setWorkersBalanceInfo(poolsInfo) {
 		let res, contract
 		let workersBalanceInfo = {}
@@ -162,7 +148,7 @@ class ContractManager extends TxManager {
 
 			else {
 
-				// TODO: fetch rewards symbol balance (expected to be 0)
+				// TODO: fetch rewards symbol balance (expected to be 0) - in case we have some rewards (not in cake) convert to cake
 
 				for (let i=0; i<this.workersAddr.length; i++) {
 					res = await contract.methods.userInfo(this.workersAddr[i]).call()
@@ -211,6 +197,35 @@ class ContractManager extends TxManager {
 		}
 
 		this.workersBalance = workersBalance
+	}
+
+	getActiveWorkersIndices() {
+
+	}
+
+	setNActiveWorkers() {
+
+		let nStakedWorkers = 0, nUnstakedWorkers = 0
+
+		for (let [workerIndex, workerBalance] of Object.entries(this.workersBalance)) {
+
+			if (workerBalance.staked !== '0') {
+				nStakedWorkers += 1
+			}
+
+			if (workerBalance.unstaked !== '0') {
+
+				if (workerBalance.staked !== '0') {
+					throw Error(`unexpected state, worker ${workerIndex} has both staked and unstaked balance: ${workerBalance}`)
+				}
+
+				nUnstakedWorkers += 1
+			}
+		}
+
+		logger.info(`detected ${nStakedWorkers} staked workers, ${nUnstakedWorkers} unstaked workers`)
+		this.nActiveWorkers = nStakedWorkers + nUnstakedWorkers
+		return this.nActiveWorkers
 	}
 
 	initStakedAddr() {
@@ -320,7 +335,7 @@ class ContractManager extends TxManager {
 			console.log(res)
 		}
 
-		this.nWorkers = nExpectedWorkers
+		this.nWorkers = await this.getNWorkers()
 	}
 
 	calcNWorkers(balance) {
@@ -356,7 +371,7 @@ class ContractManager extends TxManager {
 	async prepare(nextAction) {
 
 		if (Date.now() - this.lastWorkersValidate > this.workersValidateInterval) {
-			// await this.initWorkers(poolsInfo) // TODO: periodic updates
+			// TODO: periodic updates - add workers? (e.g.: we are staked in pool for long period without pool change and each worker has now more than 100 cakes)
 			this.lastWorkersValidate = Date.now()
 		}
 
@@ -375,7 +390,6 @@ class ContractManager extends TxManager {
 						await this.addWorkers()
 						this.nActiveWorkers = this.nWorkers
 						await this.transferToWorkers(0, this.nActiveWorkers)
-						this.redisClient.set(`nActiveWorkers.${process.env.BOT_ID}`, this.nActiveWorkers)
 					}
 
 					if (this.nActiveWorkers === 1) {
@@ -384,7 +398,6 @@ class ContractManager extends TxManager {
 						await this.addWorkers()
 						this.nActiveWorkers = this.nWorkers
 						await this.transferToWorkers(0, this.nActiveWorkers)
-						this.redisClient.set(`nActiveWorkers.${process.env.BOT_ID}`, this.nActiveWorkers)
 					}
 
 				} else {
@@ -393,16 +406,15 @@ class ContractManager extends TxManager {
 						this.nActiveWorkers = 1
 						await this.addWorkers(1)
 						await this.transferToWorkers(0,  this.nActiveWorkers)
-						this.redisClient.set(`nActiveWorkers.${process.env.BOT_ID}`, this.nActiveWorkers)
+
 					}
 
 					else if (this.nActiveWorkers > 1) {
-						// transfer all funds back to manager and then transfer to all worker 0
+						// transfer all funds back to manager and then transfer all to worker 0
 						await this.transferToManager(0, 0, this.nActiveWorkers)
 						this.nActiveWorkers = 1
 						await this.addWorkers(1)
 						await this.transferToWorkers(0,  this.nActiveWorkers)
-						this.redisClient.set(`nActiveWorkers.${process.env.BOT_ID}`, this.nActiveWorkers)
 					}
 				}
 
@@ -425,6 +437,7 @@ class ContractManager extends TxManager {
 
 				// assumes no funds in pools TODO: validate - no staked funds
 				await this.transferToManager(0, 0, this.nWorkers)
+				this.nActiveWorkers = 0
 				await this.transferToOwner()
 				break
 		}
