@@ -4,7 +4,7 @@ const BigNumber = require('bignumber.js')
 
 const KeyEncryption = require('./keyEncryption');
 const env = require('dotenv').config();
-const { Controller } = require('./controller/main');
+const { Controller } = require('./core/controller');
 const { RunningMode, CAKE_WHALE_ACCOUNT, CAKE_ADDRESS, OWNER_ADDRESS, MANAGER_ADDRESS} = require('./config');
 const yargs = require('yargs/yargs');
 const {CAKE_ABI} = require("./abis");

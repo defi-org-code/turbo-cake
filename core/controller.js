@@ -91,7 +91,7 @@ class Controller {
 		this.syrupSwitchInterval = config.syrupSwitchInterval
 
         this.runningMode = runningMode;
-        this.name = "pancakeswap-controller";
+        this.name = "pancakeswap-core";
         this.lastActionTimestamp = null;
 
 		this.reporter = new Reporter(runningMode)

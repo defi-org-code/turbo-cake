@@ -6,7 +6,7 @@ const org = 'xorbs'
 const {Point} = require('@influxdata/influxdb-client')
 require('dotenv').config();
 
-const {VERSION, GRAPHITE_IP} = require('./controller/params')
+const {VERSION, GRAPHITE_IP} = require('./core/params')
 
 class Reporter {
 
