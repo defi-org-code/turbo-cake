@@ -1,4 +1,4 @@
-const {WORKER_START_BALANCE, OWNER_ADDRESS} = require("../config");
+const {WORKER_START_BALANCE, WORKER_END_BALANCE, OWNER_ADDRESS} = require("../config");
 const Contract = require('web3-eth-contract') // workaround for web3 leakage
 const {CAKE_ABI, SMARTCHEF_INITIALIZABLE_ABI} = require('../abis')
 const {Action} = require("./policy");
@@ -37,7 +37,7 @@ class ContractManager extends TxManager {
 		this.nStakedWorkers = null
 		this.nUnstakedWorkers = null
 
-		this.fullStaking = null
+		this.workersSync = null
 		this.workersStakingAddr = null
 		this.stakedAddr = null
 	}
@@ -52,7 +52,7 @@ class ContractManager extends TxManager {
 		this.validateWorkers()
 
 		await this.setTotalBalance()
-		this.initFullStaking()
+		this.initWorkersSync()
 		await this.setWorkersStakingAddr()
 
 		return this.stakedAddr
@@ -262,15 +262,15 @@ class ContractManager extends TxManager {
 		console.log(workersStakingAddr)
 	}
 
-	initFullStaking() {
-		// assumes manager balance is updated
+	initWorkersSync() {
+		// assumes manager balance and nStakedWorkers, nUnstakedWorkers are updated
 
 		if (this.nStakedWorkers !== 0 && this.nUnstakedWorkers !== 0) {
-			this.fullStaking = false
+			this.workersSync = false
 		}
 
 		else {
-			this.fullStaking = (this.managerBalance === '0')
+			this.workersSync = (this.managerBalance === '0')
 		}
 
 	}
@@ -323,8 +323,15 @@ class ContractManager extends TxManager {
 		this.nWorkers = await this.getNWorkers()
 	}
 
-	calcNWorkers(balance) {
-		return Math.ceil(Number((new BigNumber(balance).dividedBy(WORKER_START_BALANCE)).toString()))
+	calcNWorkers(balance, startBalance=true) {
+
+		if (startBalance) {
+			return Math.ceil(Number((new BigNumber(balance).dividedBy(WORKER_START_BALANCE)).toString()))
+		}
+		else {
+			return Math.ceil(Number((new BigNumber(balance).dividedBy(WORKER_END_BALANCE)).toString()))
+		}
+
 	}
 
 	async transferToWorkers(startIndex, endIndex) {
@@ -385,6 +392,8 @@ class ContractManager extends TxManager {
 						await this.transferToWorkers(0, this.nActiveWorkers)
 					}
 
+					// TODO: validate workers amount < 100-th
+
 				} else {
 
 					if (this.nActiveWorkers === 0) {
@@ -429,7 +438,9 @@ class ContractManager extends TxManager {
 
 		if (nextAction.name !== Action.NO_OP) {
 			await this.setWorkersBalanceInfo(poolsInfo)
+			this.setWorkersBalance()
 			await this.setTotalBalance()
+			this.setNActiveWorkers()
 		}
 	}
 

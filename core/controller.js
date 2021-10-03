@@ -224,6 +224,7 @@ class Controller {
         this.nextAction = await this.policy.getAction({
             'poolsInfo': this.ps.poolsInfo,
             'curSyrupPoolAddr': this.curSyrupPoolAddr,
+            'workersSync': this.contractManager.workersSync,
             'lastActionTimestamp': this.lastActionTimestamp,
             'lastAction': lastAction,
             'balance': this.contractManager.balance
