@@ -1,4 +1,4 @@
-const {WORKER_START_BALANCE, WORKER_END_BALANCE, OWNER_ADDRESS} = require("../config");
+const {WORKER_START_BALANCE, WORKER_END_BALANCE, OWNER_ADDRESS, TRANSFER_BATCH_SIZE} = require("../config");
 const Contract = require('web3-eth-contract') // workaround for web3 leakage
 const {CAKE_ABI, SMARTCHEF_INITIALIZABLE_ABI} = require('../abis')
 const {Action} = require("./policy");
@@ -51,8 +51,9 @@ class ContractManager extends TxManager {
 		this.setNActiveWorkers()
 		this.validateWorkers()
 
+		await this.setManagerBalance()
 		await this.setTotalBalance()
-		this.initWorkersSync()
+		// this.initWorkersSync()
 		await this.setWorkersStakingAddr()
 
 		return this.stakedAddr
@@ -184,10 +185,6 @@ class ContractManager extends TxManager {
 		this.workersBalance = workersBalance
 	}
 
-	getActiveWorkersIndices() {
-
-	}
-
 	setNActiveWorkers() {
 
 		let nStakedWorkers = 0, nUnstakedWorkers = 0
@@ -272,36 +269,53 @@ class ContractManager extends TxManager {
 		else {
 			this.workersSync = (this.managerBalance === '0')
 		}
-
 	}
 
 	async setTotalBalance() {
 
-		await this.setManagerBalance()
 		logger.info(`manager total balance: ${this.managerBalance}`)
 		let totalBalance = {unstaked: new BigNumber(this.managerBalance), staked: new BigNumber(0)}
+		let maxStaked = 0
 
-		for (let [workerIndex, workerBalance] of Object.entries(this.workersBalance)) {
+		for (let workerBalance of Object.values(this.workersBalance)) {
 			totalBalance.staked = totalBalance.staked.plus(workerBalance.staked)
 			totalBalance.unstaked = totalBalance.unstaked.plus(workerBalance.unstaked)
+
+			if ((new BigNumber(workerBalance.staked)).gt(maxStaked)) {
+				maxStaked = workerBalance.staked
+			}
+
 		}
 
 		this.balance = totalBalance
 		logger.info(`saving total balance to redis, total balance => `)
 		console.log(this.balance)
+		this.maxStaked = maxStaked
 		return this.balance
 	}
 
-	async addWorkers(nExpectedWorkers=null) {
-		logger.debug(`checking if need to add workers...`)
+	async shouldRebalance(poolsInfo, poolAddr) {
 
-		if (nExpectedWorkers === null) {
-
-			await this.setManagerBalance()
-			logger.info(`manager balance: ${this.managerBalance}`)
-
-			nExpectedWorkers = this.calcNWorkers(this.managerBalance)
+		if (poolAddr === null) {
+			return false
 		}
+
+		let hasUserLimit = poolsInfo[poolAddr].hasUserLimit
+
+		if (hasUserLimit === false) {
+			return false
+		}
+
+		return (new BigNumber(this.maxStaked)).gt(WORKER_END_BALANCE)
+	}
+
+	calcNWorkers() {
+		const totalBalance = this.balance.staked.plus(this.balance.unstaked)
+		return Math.ceil(Number((new BigNumber(totalBalance).dividedBy(WORKER_START_BALANCE)).toString()))
+	}
+
+	async addWorkers(nExpectedWorkers) {
+		logger.debug(`checking if need to add workers...`)
 
 		logger.info(`nExpectedWorkers=${nExpectedWorkers}, nWorkers=${this.nWorkers}`)
 		logger.info(`adding ${nExpectedWorkers-this.nWorkers} workers`)
@@ -323,33 +337,46 @@ class ContractManager extends TxManager {
 		this.nWorkers = await this.getNWorkers()
 	}
 
-	calcNWorkers(balance, startBalance=true) {
-
-		if (startBalance) {
-			return Math.ceil(Number((new BigNumber(balance).dividedBy(WORKER_START_BALANCE)).toString()))
-		}
-		else {
-			return Math.ceil(Number((new BigNumber(balance).dividedBy(WORKER_END_BALANCE)).toString()))
-		}
-
-	}
-
 	async transferToWorkers(startIndex, endIndex) {
+		await this.setManagerBalance()
 		const amount = (new BigNumber(this.managerBalance).dividedBy(endIndex-startIndex)).toString()
 		logger.info(`transferToWorkers: amount=${amount}, startIndex=${startIndex}, endIndex=${endIndex}`)
-		const tx = await this.manager.methods.transferToWorkers([CAKE_ADDRESS, amount, startIndex, endIndex]).encodeABI()
-		const res = await this.sendTransactionWait(tx, this.manager.options.address)
 
-		logger.info(`transferToWorkers: `)
-		console.log(res)
+		let _endIndex
+		while (startIndex < endIndex) {
+
+			_endIndex = Math.min(endIndex, startIndex+TRANSFER_BATCH_SIZE)
+			const tx = await this.manager.methods.transferToWorkers([CAKE_ADDRESS, amount, startIndex, _endIndex]).encodeABI()
+			const res = await this.sendTransactionWait(tx, this.manager.options.address)
+
+			logger.info(`transferToWorkers: _startIndex=[${startIndex}], _endIndex=${_endIndex}: `)
+			console.log(res)
+			startIndex += TRANSFER_BATCH_SIZE
+		}
+
+		logger.info(`transferred successfully to workers`)
 	}
 
 	async transferToManager(amount, startIndex, endIndex) {
-		const tx = await this.manager.methods.transferToManager([CAKE_ADDRESS, amount, startIndex, endIndex]).encodeABI()
-		const res = await this.sendTransactionWait(tx, this.manager.options.address)
 
-		logger.info(`transferToManager: `)
-		console.log(res)
+		if (startIndex >= endIndex) {
+			return
+		}
+
+		let _endIndex
+		while (startIndex < endIndex) {
+
+			_endIndex = Math.min(endIndex, startIndex + TRANSFER_BATCH_SIZE)
+
+			const tx = await this.manager.methods.transferToManager([CAKE_ADDRESS, amount, startIndex, _endIndex]).encodeABI()
+			const res = await this.sendTransactionWait(tx, this.manager.options.address)
+
+			logger.info(`transferToManager: _startIndex=[${startIndex}], _endIndex=${_endIndex}: `)
+			console.log(res)
+			startIndex += TRANSFER_BATCH_SIZE
+		}
+
+		logger.info(`transferred successfully to manager`)
 	}
 
 	async transferToOwner() {
@@ -370,51 +397,34 @@ class ContractManager extends TxManager {
 		logger.info(`nWorkers=${this.nWorkers}, nActiveWorkers=${this.nActiveWorkers}, nextAction =>`)
 		console.log(nextAction)
 
+		let nExpectedWorkers;
+
 		switch (nextAction.name) {
+
+			case Action.NO_OP:
+				return nextAction
 
 			case Action.ENTER:
 
 				if (nextAction.to.hasUserLimit === true) {
 
-					if (this.nActiveWorkers === 0) {
-						logger.info(`nActiveWorkers=0`)
-						// transfer all funds back to manager and then transfer to all (nWorkers) workers
-						await this.addWorkers()
-						this.nActiveWorkers = this.nWorkers
-						await this.transferToWorkers(0, this.nActiveWorkers)
-					}
+					nExpectedWorkers = this.calcNWorkers()
 
-					if (this.nActiveWorkers === 1) {
-						// transfer all funds back to manager and then transfer to all (nWorkers) workers
+					if (this.nActiveWorkers < nExpectedWorkers) {
 						await this.transferToManager(0, 0, this.nActiveWorkers)
-						await this.addWorkers()
+						await this.addWorkers(nExpectedWorkers)
 						this.nActiveWorkers = this.nWorkers
 						await this.transferToWorkers(0, this.nActiveWorkers)
 					}
-
-					// TODO: validate workers amount < 100-th
 
 				} else {
 
-					if (this.nActiveWorkers === 0) {
-						this.nActiveWorkers = 1
-						await this.addWorkers(1)
-						await this.transferToWorkers(0,  this.nActiveWorkers)
-
-					}
-
-					else if (this.nActiveWorkers > 1) {
-						// transfer all funds back to manager and then transfer all to worker 0
-						await this.transferToManager(0, 0, this.nActiveWorkers)
-						this.nActiveWorkers = 1
-						await this.addWorkers(1)
-						await this.transferToWorkers(0,  this.nActiveWorkers)
-					}
+					await this.transferToManager(0, 1, this.nActiveWorkers)
+					await this.addWorkers(1)
+					this.nActiveWorkers = 1
+					await this.transferToWorkers(0,  this.nActiveWorkers)
 				}
 
-				break
-
-			default:
 				break
 		}
 
@@ -439,6 +449,7 @@ class ContractManager extends TxManager {
 		if (nextAction.name !== Action.NO_OP) {
 			await this.setWorkersBalanceInfo(poolsInfo)
 			this.setWorkersBalance()
+			await this.setManagerBalance()
 			await this.setTotalBalance()
 			this.setNActiveWorkers()
 		}

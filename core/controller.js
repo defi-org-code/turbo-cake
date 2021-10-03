@@ -227,7 +227,8 @@ class Controller {
             'workersSync': this.contractManager.workersSync,
             'lastActionTimestamp': this.lastActionTimestamp,
             'lastAction': lastAction,
-            'balance': this.contractManager.balance
+            'balance': this.contractManager.balance,
+            'rebalance': this.contractManager.shouldRebalance(this.ps.poolsInfo, this.curSyrupPoolAddr)
         });
 
         return this.nextAction
