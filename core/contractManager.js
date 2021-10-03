@@ -452,6 +452,7 @@ class ContractManager extends TxManager {
 			await this.setManagerBalance()
 			await this.setTotalBalance()
 			this.setNActiveWorkers()
+			this.validateWorkers()
 		}
 	}
 
