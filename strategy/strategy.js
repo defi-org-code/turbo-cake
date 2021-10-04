@@ -128,15 +128,15 @@ class Strategy {
     }
 
 	async reportStats() {
-		const investApy = await this.ps.getInvestApy(this.curSyrupPoolAddr)
+		const investReport = await this.ps.getInvestReport(this.curSyrupPoolAddr)
 
-		if (investApy === null) {
+		if (investReport === null) {
 			return
 		}
 
-		logger.debug(`reportStats: investApy=${investApy}`)
-		this.notif.sendDiscord(`apy: ${investApy}`)
-		await this.reporter.send({apy: investApy})
+		logger.debug(`reportStats: investReport=${investReport}`)
+		this.notif.sendDiscord(`apy: ${investReport}`)
+		await this.reporter.send(investReport)
 	}
 
     redisInit() {
@@ -281,6 +281,7 @@ class Strategy {
 
         this.executor.on("failure", async (trace) => await this.handleExecutionError(trace, action, startTime));
         this.executor.on("success", async (trace) => await this.handleExecutionSuccess(trace, action, startTime));
+		await this.reporter.send({ping: 1})
 
         await this.executor.run();
     }
