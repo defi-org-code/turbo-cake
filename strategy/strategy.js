@@ -154,7 +154,9 @@ class Strategy {
     async run() {
 
 		logger.debug('strategy run')
-        try {
+		await this.reporter.send({ping: 1})
+
+	    try {
             if (this.inTransition) {
             	logger.debug('inTransition')
                 return;
@@ -281,7 +283,6 @@ class Strategy {
 
         this.executor.on("failure", async (trace) => await this.handleExecutionError(trace, action, startTime));
         this.executor.on("success", async (trace) => await this.handleExecutionSuccess(trace, action, startTime));
-		await this.reporter.send({ping: 1})
 
         await this.executor.run();
     }
