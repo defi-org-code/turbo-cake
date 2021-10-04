@@ -135,7 +135,7 @@ class Strategy {
 		}
 
 		logger.debug(`reportStats: investReport=${JSON.stringify(investReport)}`)
-		this.notif.sendDiscord(investReport)
+		this.notif.sendDiscord(JSON.stringify(investReport))
 		await this.reporter.send(investReport)
 	}
 
