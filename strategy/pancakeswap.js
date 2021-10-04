@@ -342,9 +342,10 @@ class Pancakeswap {
 
 		for (const poolAddr of Object.keys(this.poolsInfo)) {
 			if (this.poolsInfo[poolAddr]['active'] === false) {
-				continue
+				this.poolsInfo[poolAddr]['apy'] = 0
+			} else {
+				this.poolsInfo[poolAddr]['apy'] = await this.poolApy(poolAddr)
 			}
-			this.poolsInfo[poolAddr]['apy'] = await this.poolApy(poolAddr)
 		}
 
 
