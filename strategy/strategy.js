@@ -136,7 +136,7 @@ class Strategy {
 
 		logger.debug(`reportStats: investApy=${investApy}`)
 		this.notif.sendDiscord(`apy: ${investApy}`)
-		await this.reporter.send('profitStats', {apy: investApy})
+		await this.reporter.send({apy: investApy})
 	}
 
     redisInit() {
