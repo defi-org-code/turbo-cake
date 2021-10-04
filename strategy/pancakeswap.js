@@ -126,7 +126,7 @@ class Pancakeswap {
 		logger.info(`balance=${JSON.stringify(this.balance)}`)
 	}
 
-	async getInvestApy(curSyrupPoolAddr) {
+	async getInvestReport(curSyrupPoolAddr) {
 
 		if(Object.keys(this.investInfo).length === 0) {
 			await this.getInvestInfo(curSyrupPoolAddr)
@@ -139,21 +139,21 @@ class Pancakeswap {
 		const endBalance = (new BigNumber(this.balance.staked)).plus(this.balance.unstaked)
 		const balanceCngPct = this.changePct(startBalance, endBalance)
 		const blockNum = Number(await this.web3.eth.getBlockNumber())
-		const period = Number(blockNum - this.investInfo['startBlock'])
+		const blocksPeriod = Number(blockNum - this.investInfo['startBlock'])
 
-		logger.debug(`getInvestApy: startBalance=${startBalance}, endBalance=${endBalance}, balanceCngPct=${balanceCngPct}, blockNum=${blockNum}, period=${period}`)
+		logger.debug(`getInvestReport: startBalance=${startBalance}, endBalance=${endBalance}, balanceCngPct=${balanceCngPct}, blockNum=${blockNum}, blocksPeriod=${blocksPeriod}`)
 		logger.debug('investInfo: ')
 		console.log(this.investInfo)
 
-		const apy = balanceCngPct.multipliedBy(this.BLOCKS_PER_YEAR).toString() / period
+		const apy = balanceCngPct.multipliedBy(this.BLOCKS_PER_YEAR).toString() / blocksPeriod
 		logger.info(`Investment APY: ${apy}`)
 
-		if (period < this.BLOCKS_PER_DAY) {
-			logger.info(`ignoring report for period < 1 day`)
+		if (blocksPeriod < this.BLOCKS_PER_DAY) {
+			logger.info(`ignoring report for blocksPeriod < 1 day`)
 			return null
 		}
 
-		return apy
+		return {apy: apy, roi: balanceCngPct.toString(), roiBlockPeriod: blocksPeriod, roiDaysPeriod: blocksPeriod / this.BLOCKS_PER_DAY}
 	}
 
 	async getInvestInfo(curSyrupPoolAddr) {
@@ -314,7 +314,7 @@ class Pancakeswap {
 		logger.debug(`setActivePools started`)
 
 		const blockNum = await this.web3.eth.getBlockNumber()
-		let bonusEndBlock, startBlock, poolRewards
+		let bonusEndBlock, startBlock, poolRewards, smartChef
 
 		for (const poolAddr of Object.keys(this.poolsInfo)) {
 
@@ -325,6 +325,9 @@ class Pancakeswap {
 			if (!('poolRewards' in Object.keys(this.poolsInfo[poolAddr]))) {
 				this.poolsInfo[poolAddr]['poolRewards'] = await this.fetchPoolRewards(poolAddr)
 			}
+
+			smartChef = this.getContract(SMARTCHEF_INITIALIZABLE_ABI, poolAddr);
+			this.poolsInfo[poolAddr]['hasUserLimit'] = await smartChef.methods.hasUserLimit().call()
 
 			bonusEndBlock = Number(this.poolsInfo[poolAddr]['bonusEndBlock'])
 			startBlock = Number(this.poolsInfo[poolAddr]['startBlock'])

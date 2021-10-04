@@ -1,14 +1,16 @@
-const Influx = require('./influx');
 const graphite = require('graphite');
 const {VERSION, GRAPHITE_IP} = require('./strategy/params')
+require('dotenv').config();
+
+const {Logger} = require('./logger')
+const logger = new Logger('reporter')
 
 class Reporter {
 
 	constructor(runningMode) {
-		// this.influxClient = new Influx('TurboCake', VERSION);
 		this.graphiteClient = graphite.createClient(`plaintext://${GRAPHITE_IP}:2003`)
 		this.runningMode = runningMode
-		this.prefix = `turbo-cake.${this.runningMode}.${VERSION}`
+		this.prefix = `turbo-cake.${this.runningMode}.BOT-ID=${process.env.BOT_ID}.${VERSION}`
 	}
 
 	addPrefix(_metrics, prefix) {
@@ -19,6 +21,8 @@ class Reporter {
 			metrics[`${prefix}.${key}`] = _metrics[key]
 		}
 
+		logger.debug(`metrics: `)
+		console.log(metrics)
 		return metrics
 	}
 

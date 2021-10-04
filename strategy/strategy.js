@@ -112,6 +112,7 @@ class Strategy {
     async start() {
         try {
         	logger.debug(`[Strategy] start`)
+			// await this.reporter.send('profitStats', {apy: 100})
 
 	        this.lastActionTimestamp = await this.getLastActionTimestamp();
 
@@ -127,15 +128,15 @@ class Strategy {
     }
 
 	async reportStats() {
-		const investApy = await this.ps.getInvestApy(this.curSyrupPoolAddr)
+		const investReport = await this.ps.getInvestReport(this.curSyrupPoolAddr)
 
-		if (investApy === null) {
+		if (investReport === null) {
 			return
 		}
 
-		logger.debug(`reportStats: investApy=${investApy}`)
-		this.notif.sendDiscord(`apy: ${investApy}`)
-		await this.reporter.send({apy: investApy})
+		logger.debug(`reportStats: investReport=${JSON.stringify(investReport)}`)
+		this.notif.sendDiscord(JSON.stringify(investReport))
+		await this.reporter.send(investReport)
 	}
 
     redisInit() {
@@ -153,7 +154,9 @@ class Strategy {
     async run() {
 
 		logger.debug('strategy run')
-        try {
+		await this.reporter.send({ping: 1})
+
+	    try {
             if (this.inTransition) {
             	logger.debug('inTransition')
                 return;

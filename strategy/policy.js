@@ -59,6 +59,8 @@ class GreedyPolicy extends Policy {
 			return apyDict[apyArr[this.getRandomInt(apyArr.length)]]
 		}
 
+		console.log(apyDict)
+		
         return apyDict[Math.max.apply(null, Object.keys(apyDict))];
     }
 
