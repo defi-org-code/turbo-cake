@@ -127,7 +127,7 @@ class Strategy {
         }
     }
 
-	async reportStats() {
+    async reportStats() {
 		const investReport = await this.ps.getInvestReport(this.curSyrupPoolAddr)
 
 		if (investReport === null) {
@@ -135,9 +135,9 @@ class Strategy {
 		}
 
 		logger.debug(`reportStats: investReport=${JSON.stringify(investReport)}`)
-		this.notif.sendDiscord(JSON.stringify(investReport))
+		this.notif.sendDiscord(`investment report: ${JSON.stringify(investReport)}`)
 		await this.reporter.send(investReport)
-	}
+    }
 
     redisInit() {
         this.redisClient = asyncRedis.createClient();
