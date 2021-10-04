@@ -10,7 +10,7 @@ class Reporter {
 	constructor(runningMode) {
 		this.graphiteClient = graphite.createClient(`plaintext://${GRAPHITE_IP}:2003`)
 		this.runningMode = runningMode
-		this.prefix = `turbo-cake.${this.runningMode}.BOT-ID${process.env.BOT_ID}.${VERSION}`
+		this.prefix = `turbo-cake.${this.runningMode}.BOT-ID=${process.env.BOT_ID}.${VERSION}`
 	}
 
 	addPrefix(_metrics, prefix) {

@@ -99,7 +99,7 @@ class Pancakeswap {
 		return contract
 	}
 
-	async getInvestApy(totalBalance, curSyrupPoolAddr, blockNum) {
+	async getInvestReport(totalBalance, curSyrupPoolAddr, blockNum) {
 
 		this.totalBalance = totalBalance
 
@@ -117,7 +117,7 @@ class Pancakeswap {
 		const balanceCngPct = this.changePct(startBalance, endBalance)
 		const period = Number(blockNum - this.investInfo['startBlock'])
 
-		logger.debug(`getInvestApy: startBalance=${startBalance}, endBalance=${endBalance}, balanceCngPct=${balanceCngPct}, blockNum=${blockNum}, period=${period}`)
+		logger.debug(`getInvestReport: startBalance=${startBalance}, endBalance=${endBalance}, balanceCngPct=${balanceCngPct}, blockNum=${blockNum}, period=${period}`)
 		logger.debug('investInfo')
 		console.log(this.investInfo)
 
@@ -129,7 +129,7 @@ class Pancakeswap {
 			return null
 		}
 
-		return apy
+		return {apy: apy, roi: balanceCngPct.toString(), roiBlockPeriod: blocksPeriod, roiDaysPeriod: blocksPeriod / this.BLOCKS_PER_DAY}
 	}
 
 	async getInvestInfo(curSyrupPoolAddr, blockNum) {

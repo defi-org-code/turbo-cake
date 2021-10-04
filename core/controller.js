@@ -173,15 +173,15 @@ class Controller {
 		logger.info(`reportStats: totalBalance ==>`)
 		console.log(balance)
 
-		const investApy = await this.ps.getInvestApy(balance, this.curSyrupPoolAddr, harvestBlockNum)
+		const investReport = await this.ps.getInvestReport(balance, this.curSyrupPoolAddr, harvestBlockNum)
 
-		if (investApy === null) {
+		if (investReport === null) {
 			return
 		}
 
-		logger.debug(`reportStats: investApy=${investApy}`)
-		this.notif.sendDiscord(`apy: ${investApy}`)
-		await this.reporter.send({apy: investApy})
+		logger.debug(`reportStats: investReport=${JSON.stringify(investReport)}`)
+		this.notif.sendDiscord(investReport)
+		await this.reporter.send(investReport)
 	}
 
     redisInit() {
