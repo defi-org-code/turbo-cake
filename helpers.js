@@ -7,7 +7,12 @@ function assert(condition, message="Assertion failed") {
     }
 }
 
+function getRandomInt(max) {
+  return Math.floor(Math.random() * max);
+}
+
 
 module.exports = {
-	assert
+	assert,
+	getRandomInt
 }

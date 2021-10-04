@@ -1,9 +1,11 @@
-const {WORKER_START_BALANCE, WORKER_END_BALANCE, OWNER_ADDRESS, TRANSFER_BATCH_SIZE} = require("../config");
+const {WORKER_START_BALANCE, WORKER_END_BALANCE, OWNER_ADDRESS, TRANSFER_BATCH_SIZE, DEV_RAND_FAILURES} = require("../config");
 const Contract = require('web3-eth-contract') // workaround for web3 leakage
 const {CAKE_ABI, SMARTCHEF_INITIALIZABLE_ABI} = require('../abis')
 const {Action} = require("./policy");
 const {MASTER_CHEF_ADDRESS, CAKE_ADDRESS} = require('./params')
 const {assert} = require('../helpers')
+const {RunningMode} = require("../config");
+const {getRandomInt} = require('../helpers')
 
 const {Logger} = require('../logger')
 const logger = new Logger('ContractManager')
@@ -15,7 +17,7 @@ BigNumber.config({POW_PRECISION: 100, EXPONENTIAL_AT: 1e+9})
 
 class ContractManager extends TxManager {
 
-	constructor(web3, admin	, manager, redisClient, workersValidateInterval) {
+	constructor(web3, admin	, manager, redisClient, workersValidateInterval, runningMode) {
 		super(web3, admin)
 		this.web3 = web3
 		this.redisClient = redisClient
@@ -23,7 +25,7 @@ class ContractManager extends TxManager {
 
 		this.manager = manager
 		this.cakeContract = this.getContract(CAKE_ABI, CAKE_ADDRESS)
-
+		this.runningMode = runningMode
 		this.nWorkers = 0 // how many workers were created
 		this.balance = null
 		this.nActiveWorkers = null
@@ -45,13 +47,12 @@ class ContractManager extends TxManager {
 	async init(poolsInfo) {
 
 		await this.validateAddr()
-		await this.getNWorkers()
+		await this.setNWorkers()
 		await this.setWorkersBalanceInfo(poolsInfo)
 		this.setWorkersBalance()
 		this.setNActiveWorkers()
 		this.validateWorkers()
 
-		await this.setManagerBalance()
 		await this.setTotalBalance()
 		// this.initWorkersSync()
 		await this.setWorkersStakingAddr()
@@ -78,13 +79,14 @@ class ContractManager extends TxManager {
 		}
 	}
 
-	async getNWorkers() {
+	async setNWorkers() {
 		this.nWorkers = await this.manager.methods.getNWorkers().call()
+		logger.info(`nWorkers was set to ${this.nWorkers}`)
 	}
 
 	async fetchWorkersAddr() {
 		// TODO: save in redis and fetch only missing
-		if (this.nWorkers === 0) {
+		if (this.nWorkers === '0') {
 			this.workersAddr = []
 			return
 		}
@@ -273,6 +275,7 @@ class ContractManager extends TxManager {
 
 	async setTotalBalance() {
 
+		await this.setManagerBalance()
 		logger.info(`manager total balance: ${this.managerBalance}`)
 		let totalBalance = {unstaked: new BigNumber(this.managerBalance), staked: new BigNumber(0)}
 		let maxStaked = 0
@@ -334,13 +337,24 @@ class ContractManager extends TxManager {
 			console.log(res)
 		}
 
-		this.nWorkers = await this.getNWorkers()
+		await this.setNWorkers()
 	}
 
 	async transferToWorkers(startIndex, endIndex) {
+
+		if ((this.runningMode === RunningMode.DEV) && DEV_RAND_FAILURES) {
+			logger.warning(`RANDOM failure mode is on ...`)
+			assert (getRandomInt(3) !== 0, `transferToWorkers: simulating random failure`)
+		}
+
 		await this.setManagerBalance()
 		const amount = (new BigNumber(this.managerBalance).dividedBy(endIndex-startIndex)).toString()
 		logger.info(`transferToWorkers: amount=${amount}, startIndex=${startIndex}, endIndex=${endIndex}`)
+
+		if (amount === '0') {
+			logger.info(`no available funds to transfer to workers`)
+			return
+		}
 
 		let _endIndex
 		while (startIndex < endIndex) {
@@ -349,7 +363,7 @@ class ContractManager extends TxManager {
 			const tx = await this.manager.methods.transferToWorkers([CAKE_ADDRESS, amount, startIndex, _endIndex]).encodeABI()
 			const res = await this.sendTransactionWait(tx, this.manager.options.address)
 
-			logger.info(`transferToWorkers: _startIndex=[${startIndex}], _endIndex=${_endIndex}: `)
+			logger.info(`transferToWorkers: _startIndex=${startIndex}, _endIndex=${_endIndex}: `)
 			console.log(res)
 			startIndex += TRANSFER_BATCH_SIZE
 		}
@@ -363,6 +377,11 @@ class ContractManager extends TxManager {
 			return
 		}
 
+		if ((this.runningMode === RunningMode.DEV) && DEV_RAND_FAILURES) {
+			logger.warning(`RANDOM failure mode is on ...`)
+			assert (getRandomInt(3) !== 0, `transferToWorkers: simulating random failure`)
+		}
+
 		let _endIndex
 		while (startIndex < endIndex) {
 
@@ -371,7 +390,7 @@ class ContractManager extends TxManager {
 			const tx = await this.manager.methods.transferToManager([CAKE_ADDRESS, amount, startIndex, _endIndex]).encodeABI()
 			const res = await this.sendTransactionWait(tx, this.manager.options.address)
 
-			logger.info(`transferToManager: _startIndex=[${startIndex}], _endIndex=${_endIndex}: `)
+			logger.info(`transferToManager: _startIndex=${startIndex}, _endIndex=${_endIndex}: `)
 			console.log(res)
 			startIndex += TRANSFER_BATCH_SIZE
 		}
@@ -449,7 +468,6 @@ class ContractManager extends TxManager {
 		if (nextAction.name !== Action.NO_OP) {
 			await this.setWorkersBalanceInfo(poolsInfo)
 			this.setWorkersBalance()
-			await this.setManagerBalance()
 			await this.setTotalBalance()
 			this.setNActiveWorkers()
 			this.validateWorkers()

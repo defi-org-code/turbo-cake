@@ -72,7 +72,7 @@ class Controller {
         this.redisInit();
         this.ps = new Pancakeswap(this.redisClient, web3, this.notif, config.bestRouteUpdateInterval);
         this.policy = new GreedyPolicy(this.redisClient, config);
-        this.contractManager = new ContractManager(web3, account, manager, this.redisClient, config.workersValidateInterval)
+        this.contractManager = new ContractManager(web3, account, manager, this.redisClient, config.workersValidateInterval, runningMode)
 		this.batcher = new Batcher({
 			web3: web3,
 			account: account,
@@ -160,7 +160,7 @@ class Controller {
     }
 
 	scheduleNextRun() {
-		const nextRunSeconds = this.tickInterval - (Date.now() - Math.floor(Date.now()/60000)* 60000) // align to start of minute
+		const nextRunSeconds = this.tickInterval - (Date.now() - Math.floor(Date.now()/this.tickInterval)* this.tickInterval) // align to tick interval
 		const nextRunDate = new Date(Date.now() + nextRunSeconds).toLocaleDateString("en-US", dateOptionsFormat)
 		logger.info(`next update will be at ${nextRunDate}`)
 		setTimeout(() => this.run(), nextRunSeconds);
@@ -170,7 +170,8 @@ class Controller {
 		logger.info(`reportStats: harvestBlockNum=${harvestBlockNum}`)
 
 		const balance = await this.contractManager.setTotalBalance()
-		logger.info(`reportStats: totalBalance=${balance}`)
+		logger.info(`reportStats: totalBalance ==>`)
+		console.log(balance)
 
 		const investApy = await this.ps.getInvestApy(balance, this.curSyrupPoolAddr, harvestBlockNum)
 
@@ -180,7 +181,7 @@ class Controller {
 
 		logger.debug(`reportStats: investApy=${investApy}`)
 		this.notif.sendDiscord(`apy: ${investApy}`)
-		await this.reporter.send('profitStats', {apy: investApy})
+		await this.reporter.send({apy: investApy})
 	}
 
     redisInit() {
@@ -257,6 +258,8 @@ class Controller {
 
         this.curSyrupPoolAddr = action.to.address
 		await this.setLastActionTimestamp()
+
+		await this.reportStats(await this.web3.eth.getBlockNumber())
 
         if (action.name === Action.HARVEST) {
         	const harvestBlockNum = Number(await this.web3.eth.getBlockNumber()) // TODO: FIXME better estimation

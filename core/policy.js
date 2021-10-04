@@ -1,6 +1,7 @@
 const {RunningMode} = require("../config");
 const {Logger} = require('../logger')
 const logger = new Logger('policy')
+const {getRandomInt} = require('../helpers')
 
 const Action = {
     NO_OP: "no-op",
@@ -39,10 +40,6 @@ class GreedyPolicy extends Policy {
         this.redisClient = redisClient
     }
 
-	getRandomInt(max) {
-	  return Math.floor(Math.random() * max);
-	}
-
     getTopYielderAddr(poolsInfo) {
 
     	let apyDict = {}
@@ -65,7 +62,7 @@ class GreedyPolicy extends Policy {
 		if ((this.runningMode === RunningMode.DEV) && (this.randApy === true)) {
 			logger.warning(`RANDOM mode is on, returning random pool ...`)
 			const apyArr = Object.keys(apyDict)
-			return apyDict[apyArr[this.getRandomInt(apyArr.length)]]
+			return apyDict[apyArr[getRandomInt(apyArr.length)]]
 		}
 
         return apyDict[Math.max.apply(null, Object.keys(apyDict))];

@@ -63,11 +63,11 @@ contract Manager is ReentrancyGuard, IWorker {
 		emit WorkersAdded(workers.length);
 	}
 
-	function getNWorkers() external restricted view returns (uint256) {
+	function getNWorkers() external view returns (uint256) {
 		return workers.length;
 	}
 
-	function getWorkers(uint16 startIndex, uint16 endIndex) external restricted view returns (address [] memory) {
+	function getWorkers(uint16 startIndex, uint16 endIndex) external view returns (address [] memory) {
 		address [] memory _workers = new address [] (endIndex-startIndex);
 
 		for (uint16 i=0; i<endIndex-startIndex; i++) {
