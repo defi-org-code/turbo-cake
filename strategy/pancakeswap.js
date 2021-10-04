@@ -153,7 +153,7 @@ class Pancakeswap {
 			return null
 		}
 
-		return {apy: apy, roi: balanceCngPct, roiBlockPeriod: blocksPeriod, roiDaysPeriod: blocksPeriod / this.BLOCKS_PER_DAY}
+		return {apy: apy, roi: balanceCngPct.toString(), roiBlockPeriod: blocksPeriod, roiDaysPeriod: blocksPeriod / this.BLOCKS_PER_DAY}
 	}
 
 	async getInvestInfo(curSyrupPoolAddr) {
