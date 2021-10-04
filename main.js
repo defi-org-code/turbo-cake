@@ -28,8 +28,8 @@ async function main() {
 
     } else if (runningMode === RunningMode.DEV) {
 
-        account = web3.eth.accounts.create();
-	    // account = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
+        // account = web3.eth.accounts.create();
+	    account = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
 
 		// process.exit()
 		await hre.network.provider.request({method: "hardhat_impersonateAccount",params: [CAKE_WHALE_ACCOUNT]});
@@ -47,6 +47,7 @@ async function main() {
 
     logger.debug(`[PID pid ${process.pid}] Starting Bot: address=${account.address}, mode=${runningMode}, mute-discord=${process.env.MUTE_DISCORD}`);
 
+    process.exit()
     const strategy = new Strategy(env, runningMode, account, web3);
     await strategy.start();
 }

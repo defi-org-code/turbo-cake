@@ -288,7 +288,12 @@ class Strategy {
     }
 
     async handleExecutionSuccess(trace, action, startTime) {
+        let rewardEndedNotice;
+        if (action.name === Action.SWITCH && action.from.active === false) {
+            rewardEndedNotice = "switch from inactive pool (rewards has ended)";
+        }
         this.notif.sendDiscord(`strategy.handleExecutionSuccess:
+                    ${rewardEndedNotice? rewardEndedNotice:""}
 					action = ${JSON.stringify(action)}
 		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
 
