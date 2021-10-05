@@ -115,17 +115,17 @@ class Pancakeswap {
 		const startBalance = (new BigNumber(this.investInfo['startBalance'].staked)).plus(this.investInfo['startBalance'].unstaked)
 		const endBalance = (new BigNumber(this.totalBalance.staked)).plus(this.totalBalance.unstaked)
 		const balanceCngPct = this.changePct(startBalance, endBalance)
-		const period = Number(blockNum - this.investInfo['startBlock'])
+		const blocksPeriod = Number(blockNum - this.investInfo['startBlock'])
 
-		logger.debug(`getInvestReport: startBalance=${startBalance}, endBalance=${endBalance}, balanceCngPct=${balanceCngPct}, blockNum=${blockNum}, period=${period}`)
+		logger.debug(`getInvestReport: startBalance=${startBalance}, endBalance=${endBalance}, balanceCngPct=${balanceCngPct}, blockNum=${blockNum}, blocksPeriod=${blocksPeriod}`)
 		logger.debug('investInfo')
 		console.log(this.investInfo)
 
-		const apy = balanceCngPct.multipliedBy(this.BLOCKS_PER_YEAR).toString() / period
+		const apy = balanceCngPct.multipliedBy(this.BLOCKS_PER_YEAR).toString() / blocksPeriod
 		logger.info(`Investment APY: ${apy}`)
 
-		// if (period < this.BLOCKS_PER_DAY) {
-		// 	logger.info(`ignoring report for period < 1 day`)
+		// if (blocksPeriod < this.BLOCKS_PER_DAY) {
+		// 	logger.info(`ignoring report for blocksPeriod < 1 day`)
 		// 	return null
 		// }
 

@@ -20,8 +20,8 @@ interface ICakePools {
         address to,
         uint deadline
     ) external returns (uint[] memory amounts);
-
     function userInfo(address) external view returns (IWorker.UserInfo memory);
+	function getAmountsOut(uint amountIn, address[] calldata path) external view returns (uint[] memory amounts);
 }
 
 

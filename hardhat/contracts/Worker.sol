@@ -80,7 +80,8 @@ contract Worker is IWorker {
 			return;
 		}
 
-		uint256 amountOutMin = amountIn.mul(params.multiplier).div(100); // TODO: FIXME
+        uint256 [] memory amounts = ICakePools(params.swapRouter).getAmountsOut(amountIn, params.path);
+		uint256 amountOutMin = amounts[amounts.length-1].mul(params.multiplier).div(100);
 
 		IERC20(ICakePools(stakedPoolAddr).rewardToken()).approve(params.swapRouter,amountIn);
 		ICakePools(params.swapRouter).swapExactTokensForTokens(amountIn, amountOutMin, params.path, address(this), params.deadline);

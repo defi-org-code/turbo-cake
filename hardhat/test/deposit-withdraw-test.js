@@ -83,8 +83,8 @@ describe("DepositWithdrawTest", function () {
 	// ################################################################################
 	// workers doHardWork - withdraw cakes from revv pool
 	// ################################################################################
-	withdraw=true; swap=false; deposit=false;
-	multiplier = 10
+	withdraw=true; swap=true; deposit=false;
+	multiplier = 50
   	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 0, N_WORKERS, [swapRouter, multiplier, revvSwapPath, deadline]]).send({from: admin});
 
 	for (const worker of WorkersAddr) {
