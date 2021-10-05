@@ -72,6 +72,7 @@ class GreedyPolicy extends Policy {
 
 		if (Date.now() - lastActionTimestamp < this.syrupSwitchInterval) {
 			logger.debug('shouldSwitchPools: outside interval update')
+			// logger.debug(`diff=${Date.now() - lastActionTimestamp}, interval=${this.syrupSwitchInterval}, now=${Date.now()}, lastActionTimestamp=${lastActionTimestamp}`)
 			return false
 		}
 

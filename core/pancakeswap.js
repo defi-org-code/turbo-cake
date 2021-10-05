@@ -215,35 +215,32 @@ class Pancakeswap {
 		// TODO: pool EMA
 		res = await this.routerV2Contract.methods.getAmountsOut(amountIn, this.poolsInfo[poolAddr]['routeToCake']).call()
 
-		const rate = (new BigNumber(res[res.length-1]).dividedBy(amountIn)).toString()
-		logger.debug(`getTokenCakeRate: poolAddr=${poolAddr}, res=${res}, amountIn=${amountIn.toString()}, rate=${rate}`)
-		return rate
+		return (new BigNumber(res[res.length-1]).dividedBy(amountIn)).toString()
+		// logger.debug(`getTokenCakeRate: poolAddr=${poolAddr}, res=${res}, amountIn=${amountIn.toString()}, rate=${rate}`)
 	}
 
 	async poolApy(poolAddr) {
 
 		let poolTvl = await this.getPoolTvl(poolAddr)
-		logger.info(`poolTvl before: ${poolTvl}`)
+		// logger.info(`poolTvl before: ${poolTvl}`)
 		// account for bot staking in tvl
-		poolTvl = new BigNumber(poolTvl).plus(new BigNumber(this.totalBalance.unstaked))
+		poolTvl = new BigNumber(poolTvl).plus(new BigNumber(this.totalBalance.unstaked)).plus(new BigNumber(this.totalBalance.staked))
 
 		const rewardPerBlock = new BigNumber(this.poolsInfo[poolAddr]['rewardPerBlock'])
 
 		// estimate token cake rate based on daily rewards (max harvest period)
 		const rewardForDay = rewardPerBlock.multipliedBy(this.BLOCKS_PER_DAY)
 		const tokenCakeRate = await this.getTokenCakeRate(poolAddr, rewardForDay)
-		logger.debug(`poolAddr=${poolAddr}, rewardPerBlock=${rewardPerBlock.toString()}, tokenCakeRate=${tokenCakeRate}, poolTvl=${poolTvl.toString()}`)
-		console.log(this.totalBalance)
+		// logger.debug(`poolAddr=${poolAddr}, rewardPerBlock=${rewardPerBlock.toString()}, tokenCakeRate=${tokenCakeRate}, poolTvl=${poolTvl.toString()}`)
+		// console.log(this.totalBalance)
 
 		const rewardForYear = rewardPerBlock.multipliedBy(this.BLOCKS_PER_YEAR)
 		const cakeForYear = rewardForYear.multipliedBy(tokenCakeRate);
 
 		const apr = cakeForYear.div(poolTvl).multipliedBy(100);
 		// TODO: harvest cost
-		const apy = this.aprToApy(apr.toString())
-		logger.debug(`poolAddr=${poolAddr}, rewardForPeriod=${rewardForYear.toString()}, cakeForYear=${cakeForYear.toString()}, apr=${apr.toString()}, apy=${apy}`)
-
-		return apy
+		return this.aprToApy(apr.toString())
+		// logger.debug(`poolAddr=${poolAddr}, rewardForPeriod=${rewardForYear.toString()}, cakeForYear=${cakeForYear.toString()}, apr=${apr.toString()}, apy=${apy}`)
 	}
 
 	async fetchPoolRewards(poolAddr) {
@@ -306,8 +303,8 @@ class Pancakeswap {
 			this.poolsInfo[poolAddr]['apy'] = await this.poolApy(poolAddr)
 		}
 
-		logger.debug(`poolsInfo:`)
-		console.log(this.poolsInfo)
+		// logger.debug(`poolsInfo:`)
+		// console.log(this.poolsInfo)
 	}
 
 	async getLastBlockUpdate() {

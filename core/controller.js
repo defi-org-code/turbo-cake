@@ -200,13 +200,14 @@ class Controller {
 
 		let nextAction
         let startTime = Date.now();
+        logger.info(`controller started`)
 
         try {
             await this.ps.update(this.contractManager.balance);
 
             nextAction = await this.getAction();
 
-            nextAction = await this.contractManager.prepare(nextAction);
+            nextAction = await this.contractManager.prepare(nextAction, this.ps.poolsInfo);
 
             await this.batcherRun(startTime, nextAction);
 
@@ -259,8 +260,6 @@ class Controller {
         this.curSyrupPoolAddr = action.to.address
 		await this.setLastActionTimestamp()
 
-		await this.reportStats(await this.web3.eth.getBlockNumber())
-
         if (action.name === Action.HARVEST) {
         	const harvestBlockNum = Number(await this.web3.eth.getBlockNumber()) // TODO: FIXME better estimation
         	await this.reportStats(harvestBlockNum)
@@ -273,6 +272,7 @@ class Controller {
 		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
 
         // TODO: continue flow according to trace - batcher.retry
+        // TODO: limit number of tries and remove set last action
         await this.setLastActionTimestamp()
     }
 
