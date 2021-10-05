@@ -1,4 +1,5 @@
-const { init_test, cakeWhale, cakeToken, revvPoolAddr, cake, revvPoolContract,
+const hre = require("hardhat");
+const { init_test, cakeWhale, cakeToken, revvPoolAddr, cake, revvPoolContract, revv,
 		admin, owner, swapRouter, revvSwapPath, deadline, managerAbi, N_WORKERS, TRANSFER_BALANCE, expect, BigNumber} = require("./init-test");
 
 
@@ -81,10 +82,47 @@ describe("DepositWithdrawTest", function () {
 	}
 
 	// ################################################################################
+	// get cakes staked before harvest
+	// ################################################################################
+	let cakesStaked = {}
+	for (const worker of WorkersAddr) {
+		cakesStaked[worker] = await revvPoolContract.methods.userInfo(worker).call();
+	}
+
+	await hre.network.provider.send("evm_mine")
+	// ################################################################################
+	// workers doHardWork - withdraw rewards without swap
+	// ################################################################################
+	withdraw=true; swap=false; deposit=false;
+	let amount=0;
+	multiplier = 100
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, amount, 0, N_WORKERS, [swapRouter, multiplier, revvSwapPath, deadline]]).send({from: admin});
+
+	for (const worker of WorkersAddr) {
+		res = await revv.methods.balanceOf(worker).call();
+		console.log(res)
+		expect(Number(res)).to.be.gt(0);
+	}
+
+	// ################################################################################
+	// workers doHardWork - harvest
+	// ################################################################################
+	withdraw=true; swap=true; deposit=false;
+	amount=0;
+	multiplier = 100
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, amount, 0, N_WORKERS, [swapRouter, multiplier, revvSwapPath, deadline]]).send({from: admin});
+
+	for (const worker of WorkersAddr) {
+		res = await revvPoolContract.methods.userInfo(worker).call();
+		expect((new BigNumber(cakesStaked[worker]['amount'])).lt(new BigNumber(res['amount']))).to.equal(true);
+		console.log(cakesStaked[worker]['amount'], res['amount'], (new BigNumber(cakesStaked[worker]['amount'])).lt(new BigNumber(res['amount'])))
+	}
+
+	// ################################################################################
 	// workers doHardWork - withdraw cakes from revv pool
 	// ################################################################################
 	withdraw=true; swap=true; deposit=false;
-	multiplier = 50
+	multiplier = 100
   	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 0, N_WORKERS, [swapRouter, multiplier, revvSwapPath, deadline]]).send({from: admin});
 
 	for (const worker of WorkersAddr) {
