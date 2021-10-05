@@ -46,7 +46,7 @@ async function main() {
         await hre.network.provider.request({method: "hardhat_setBalance", params: [admin.address, "0x1000000000000000000000"]});
 
         const cakeContract =  new web3.eth.Contract(CAKE_ABI, CAKE_ADDRESS);
-        let amount = new BigNumber(100e18)  // TODO: check with 10 cakes
+        let amount = new BigNumber(250e18)  // TODO: check with 10 cakes
         await cakeContract.methods.transfer(admin.address, amount.toString()).send({ from: CAKE_WHALE_ACCOUNT});
 
         console.log('Bot cake balance (DEV mode): ', await cakeContract.methods.balanceOf(admin.address).call())

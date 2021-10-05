@@ -21,7 +21,8 @@ class Reporter {
 			metrics[`${prefix}.${key}`] = _metrics[key]
 		}
 
-		logger.debug(`metrics: ${metrics}`)
+		logger.debug(`metrics: `)
+		console.log(metrics)
 		return metrics
 	}
 

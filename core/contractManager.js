@@ -41,7 +41,7 @@ class ContractManager extends TxManager {
 
 		this.workersSync = null
 		this.workersStakingAddr = null
-		this.stakedAddr = null
+		this.maxStaked = 0
 	}
 
 	async init(poolsInfo) {
@@ -294,20 +294,25 @@ class ContractManager extends TxManager {
 		logger.info(`saving total balance to redis, total balance => `)
 		console.log(this.balance)
 		this.maxStaked = maxStaked
+		logger.info(`maxStaked = ${this.maxStaked}`)
+
 		return this.balance
 	}
 
 	async shouldRebalance(poolsInfo, poolAddr) {
 
-		if (poolAddr === null) {
+		if (!poolAddr) {
 			return false
 		}
 
 		let hasUserLimit = poolsInfo[poolAddr].hasUserLimit
 
-		if (hasUserLimit === false) {
+		if (!hasUserLimit) {
+			logger.info(`pool ${poolAddr} without user limit`)
 			return false
 		}
+
+		logger.info(`pool ${poolAddr} has user limit: rebalance=${(new BigNumber(this.maxStaked)).gt(WORKER_END_BALANCE)}`)
 
 		return (new BigNumber(this.maxStaked)).gt(WORKER_END_BALANCE)
 	}
