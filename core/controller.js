@@ -201,6 +201,7 @@ class Controller {
 		let nextAction
         let startTime = Date.now();
         logger.info(`controller started`)
+		await this.reporter.send({ping: 1})
 
         try {
             await this.ps.update(this.contractManager.balance);
