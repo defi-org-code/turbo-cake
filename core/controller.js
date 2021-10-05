@@ -180,7 +180,7 @@ class Controller {
 		}
 
 		logger.debug(`reportStats: investReport=${JSON.stringify(investReport)}`)
-		this.notif.sendDiscord(investReport)
+		this.notif.sendDiscord(`investment report: ${JSON.stringify(investReport)}`)
 		await this.reporter.send(investReport)
 	}
 
