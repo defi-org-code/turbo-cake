@@ -299,7 +299,7 @@ class ContractManager extends TxManager {
 		return this.balance
 	}
 
-	async shouldRebalance(poolsInfo, poolAddr) {
+	shouldRebalance(poolsInfo, poolAddr) {
 
 		if (!poolAddr) {
 			return false
@@ -308,11 +308,11 @@ class ContractManager extends TxManager {
 		let hasUserLimit = poolsInfo[poolAddr].hasUserLimit
 
 		if (!hasUserLimit) {
-			logger.info(`pool ${poolAddr} without user limit`)
+			logger.info(`pool ${poolAddr} has no user limit`)
 			return false
 		}
 
-		logger.info(`pool ${poolAddr} has user limit: rebalance=${(new BigNumber(this.maxStaked)).gt(WORKER_END_BALANCE)}`)
+		logger.info(`pool ${poolAddr} has user limit = ${hasUserLimit}: rebalance=${(new BigNumber(this.maxStaked)).gt(WORKER_END_BALANCE)}`)
 
 		return (new BigNumber(this.maxStaked)).gt(WORKER_END_BALANCE)
 	}
