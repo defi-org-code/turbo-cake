@@ -80,7 +80,7 @@ class GreedyPolicy extends Policy {
 			throw Error(`topYielderAddr ${topYielderAddr} not found in poolsInfo`)
 		}
 
-		logger.debug(`shouldSwitchPools: topYielderAddr=${topYielderAddr}, curSyrupPoolAddr=${curSyrupPoolAddr}`)
+		logger.debug(`shouldSwitchPools: topYielderAddr=${topYielderAddr}, curSyrupPoolAddr=${curSyrupPoolAddr}, active=${poolsInfo[curSyrupPoolAddr]['active']}`)
 
 		return (poolsInfo[topYielderAddr]['apy'] - poolsInfo[curSyrupPoolAddr]['apy'] >= this.apySwitchTh) ||
 				(poolsInfo[curSyrupPoolAddr]['active'] === false);

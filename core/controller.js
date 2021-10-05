@@ -207,7 +207,7 @@ class Controller {
 
             nextAction = await this.getAction();
 
-            nextAction = await this.contractManager.prepare(nextAction, this.ps.poolsInfo);
+            nextAction = await this.contractManager.prepare(nextAction);
 
             await this.batcherRun(startTime, nextAction);
 

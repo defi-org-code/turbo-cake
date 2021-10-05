@@ -406,17 +406,7 @@ class ContractManager extends TxManager {
 		console.log(res)
 	}
 
-	async prepare(nextAction, poolsInfo) {
-
-		if (Date.now() - this.lastWorkersValidate > this.workersValidateInterval) {
-			// TODO: periodic updates - add workers? (e.g.: we are staked in pool for long period without pool change and each worker has now more than 100 cakes)
-			this.lastWorkersValidate = Date.now()
-			await this.setWorkersBalanceInfo(poolsInfo)
-			this.setWorkersBalance()
-			await this.setTotalBalance()
-			this.setNActiveWorkers()
-			this.validateWorkers()
-		}
+	async prepare(nextAction) {
 
 		logger.info(`nWorkers=${this.nWorkers}, nActiveWorkers=${this.nActiveWorkers}, nextAction =>`)
 		console.log(nextAction)
@@ -470,7 +460,8 @@ class ContractManager extends TxManager {
 				break
 		}
 
-		if (nextAction.name !== Action.NO_OP) {
+		if ((nextAction.name !== Action.NO_OP) || (Date.now() - this.lastWorkersValidate > this.workersValidateInterval)) {
+			this.lastWorkersValidate = Date.now()
 			await this.setWorkersBalanceInfo(poolsInfo)
 			this.setWorkersBalance()
 			await this.setTotalBalance()

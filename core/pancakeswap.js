@@ -303,8 +303,8 @@ class Pancakeswap {
 			this.poolsInfo[poolAddr]['apy'] = await this.poolApy(poolAddr)
 		}
 
-		// logger.debug(`poolsInfo:`)
-		// console.log(this.poolsInfo)
+		logger.debug(`poolsInfo:`)
+		console.log(this.poolsInfo)
 	}
 
 	async getLastBlockUpdate() {
