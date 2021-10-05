@@ -124,10 +124,10 @@ class Pancakeswap {
 		const apy = balanceCngPct.multipliedBy(this.BLOCKS_PER_YEAR).toString() / period
 		logger.info(`Investment APY: ${apy}`)
 
-		if (period < this.BLOCKS_PER_DAY) {
-			logger.info(`ignoring report for period < 1 day`)
-			return null
-		}
+		// if (period < this.BLOCKS_PER_DAY) {
+		// 	logger.info(`ignoring report for period < 1 day`)
+		// 	return null
+		// }
 
 		return {apy: apy, roi: balanceCngPct.toString(), roiBlockPeriod: blocksPeriod, roiDaysPeriod: blocksPeriod / this.BLOCKS_PER_DAY}
 	}
