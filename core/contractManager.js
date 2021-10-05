@@ -248,7 +248,7 @@ class ContractManager extends TxManager {
 					assert(workersStakingAddr[workerIndex] === null, (`worker ${workerIndex} has staking in more than 1 pool: ${workerInfo}`))
 					assert(stakingAddr === null || stakingAddr === value, `workers are staked at 2 different addresses: ${value}, ${stakingAddr}`)
 					workersStakingAddr[workerIndex] = value
-					stakingAddr = value
+					stakingAddr = key
 				}
 			}
 		}
