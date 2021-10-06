@@ -1,6 +1,6 @@
 const hre = require("hardhat");
-const { init_test, cakeWhale, cakeToken, revvPoolAddr, cake, revvPoolContract, revv,
-		admin, owner, swapRouter, revvSwapPath, deadline, managerAbi, N_WORKERS, TRANSFER_BALANCE, expect, BigNumber} = require("./init-test");
+const { init_test, cakeWhale, cakeToken, nftPoolAddr, cake, nftPoolContract, nft,
+		admin, owner, swapRouter, nftSwapPath, deadline, managerAbi, N_WORKERS, TRANSFER_BALANCE, expect, BigNumber} = require("./init-test");
 
 
 describe("DepositWithdrawTest", function () {
@@ -62,94 +62,125 @@ describe("DepositWithdrawTest", function () {
 	}
 
 	// ################################################################################
-	// workers doHardWork - deposit cakes in revv pool
+	// workers doHardWork - deposit cakes in nft pool
 	// ################################################################################
 	let withdraw=false, swap=false, deposit=true;
 	let multiplier = 0
-  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 0, N_WORKERS, [swapRouter, multiplier, revvSwapPath, deadline]]).send({from: admin});
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, nftPoolAddr, nftPoolAddr, TRANSFER_BALANCE, 0, N_WORKERS, [swapRouter, multiplier, nftSwapPath, deadline]]).send({from: admin});
 
 	let res;
 	for (const worker of WorkersAddr) {
-		res = await revvPoolContract.methods.userInfo(worker).call();
+		res = await nftPoolContract.methods.userInfo(worker).call();
 		expect(res['amount']).to.equal(TRANSFER_BALANCE);
 	}
 
 	// ################################################################################
-	// workers has no cakes (all staked in revv pool)
+	// workers have no cakes, all staked in nft pool, workers have no nft
 	// ################################################################################
 	for (const worker of WorkersAddr) {
 		expect(await cake.methods.balanceOf(worker).call()).to.equal('0');
-	}
+		res = await nftPoolContract.methods.userInfo(worker).call();
+		expect(res['amount']).to.equal(TRANSFER_BALANCE);
 
-	// ################################################################################
-	// get cakes staked before harvest
-	// ################################################################################
-	let cakesStaked = {}
-	for (const worker of WorkersAddr) {
-		cakesStaked[worker] = await revvPoolContract.methods.userInfo(worker).call();
+		res = await nft.methods.balanceOf(worker).call();
+		expect(Number(res)).to.be.equal(0);
+
 	}
 
 	await hre.network.provider.send("evm_mine")
 	// ################################################################################
-	// workers doHardWork - withdraw rewards without swap
+	// workers doHardWork - withdraw rewards without swap, check workers have nft
 	// ################################################################################
 	withdraw=true; swap=false; deposit=false;
 	let amount=0;
 	multiplier = 100
-  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, amount, 0, N_WORKERS, [swapRouter, multiplier, revvSwapPath, deadline]]).send({from: admin});
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, nftPoolAddr, nftPoolAddr, amount, 0, N_WORKERS, [swapRouter, multiplier, nftSwapPath, deadline]]).send({from: admin});
 
 	for (const worker of WorkersAddr) {
-		res = await revv.methods.balanceOf(worker).call();
-		console.log(res)
+		res = await nft.methods.balanceOf(worker).call();
 		expect(Number(res)).to.be.gt(0);
 	}
 
 	// ################################################################################
-	// workers doHardWork - harvest
+	// workers doHardWork - swap + deposit
 	// ################################################################################
-	withdraw=true; swap=true; deposit=false;
+	withdraw=false; swap=true; deposit=true;
+	amount=0;
+	multiplier = 0
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, nftPoolAddr, nftPoolAddr, amount, 0, N_WORKERS, [swapRouter, multiplier, nftSwapPath, deadline]]).send({from: admin});
+
+	for (const worker of WorkersAddr) {
+		res = await nftPoolContract.methods.userInfo(worker).call();
+		expect(Number(TRANSFER_BALANCE)).to.be.lt(Number(res['amount']));
+	}
+
+	// ################################################################################
+	// get workers current amount status in pool
+	// ################################################################################
+	let workersAmount = {}
+	let nftAmounts = {}
+	let cakeAmounts = {}
+	for (const worker of WorkersAddr) {
+		res = await nftPoolContract.methods.userInfo(worker).call();
+		workersAmount[worker] = Number(res['amount'])
+
+		nftAmounts[worker] = Number(await nft.methods.balanceOf(worker).call());
+	}
+
+	await hre.network.provider.send("evm_mine")
+
+	// ################################################################################
+	// get reward amount without staking
+	// ################################################################################
+	withdraw=true; swap=false; deposit=false;
+	amount=0;
+	multiplier = 0
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, nftPoolAddr, nftPoolAddr, amount, 0, N_WORKERS, [swapRouter, multiplier, nftSwapPath, deadline]]).send({from: admin});
+
+	for (const worker of WorkersAddr) {
+		nftAmounts[worker] = Number(await nft.methods.balanceOf(worker).call());
+		cakeAmounts[worker] = Number(await cake.methods.balanceOf(worker).call());
+	}
+
+	// ################################################################################
+	// swap with multiplier = 100
+	// ################################################################################
+	withdraw=false; swap=true; deposit=false;
 	amount=0;
 	multiplier = 100
-  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, amount, 0, N_WORKERS, [swapRouter, multiplier, revvSwapPath, deadline]]).send({from: admin});
+  	await managerContract.methods.doHardWork([withdraw, swap, deposit, nftPoolAddr, nftPoolAddr, amount, 0, N_WORKERS, [swapRouter, multiplier, nftSwapPath, deadline]]).send({from: admin});
 
 	for (const worker of WorkersAddr) {
-		res = await revvPoolContract.methods.userInfo(worker).call();
-		expect((new BigNumber(cakesStaked[worker]['amount'])).lt(new BigNumber(res['amount']))).to.equal(true);
-		console.log(cakesStaked[worker]['amount'], res['amount'], (new BigNumber(cakesStaked[worker]['amount'])).lt(new BigNumber(res['amount'])))
+		// no nft
+		res = Number(await nft.methods.balanceOf(worker).call());
+		expect(res).to.be.eq(0);
+
+		// more cakes
+		res = Number(await cake.methods.balanceOf(worker).call())
+		expect(res).to.be.gt(cakeAmounts[worker]);
 	}
 
-	// ################################################################################
-	// workers doHardWork - withdraw cakes from revv pool
-	// ################################################################################
-	withdraw=true; swap=true; deposit=false;
-	multiplier = 100
-  	await managerContract.methods.doHardWork([withdraw, swap, deposit, revvPoolAddr, revvPoolAddr, TRANSFER_BALANCE, 0, N_WORKERS, [swapRouter, multiplier, revvSwapPath, deadline]]).send({from: admin});
-
+	let sumCakes = 0
 	for (const worker of WorkersAddr) {
-		res = await revvPoolContract.methods.userInfo(worker).call();
-		expect(res['amount']).to.equal('0');
-	}
+		nftAmounts[worker] = Number(await nft.methods.balanceOf(worker).call());
+		cakeAmounts[worker] = Number(await cake.methods.balanceOf(worker).call());
 
-	// ################################################################################
-	// cakes sent back to workers (from revv pool)
-	// ################################################################################
-	for (const worker of WorkersAddr) {
-		expect(await cake.methods.balanceOf(worker).call()).to.equal(TRANSFER_BALANCE);
+		sumCakes += cakeAmounts[worker]
 	}
 
 	// ################################################################################
 	// transfer all cakes from workers back to manager
 	// ################################################################################
 	expect(await cake.methods.balanceOf(manager.address).call()).to.equal('0');
-  	await managerContract.methods.transferToManager([cakeToken, TRANSFER_BALANCE, 0, N_WORKERS]).send({from: admin});
-	expect(await cake.methods.balanceOf(manager.address).call()).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
+  	await managerContract.methods.transferToManager([cakeToken, 0, 0, N_WORKERS]).send({from: admin});
+	expect(await cake.methods.balanceOf(manager.address).call()).to.equal(String(sumCakes));
 
 	// ################################################################################
 	// transfer all cakes to owner
 	// ################################################################################
 	expect(await cake.methods.balanceOf(owner).call()).to.equal('0');
   	await managerContract.methods.transferToOwner(cakeToken).send({from: admin});
-	expect(await cake.methods.balanceOf(owner).call()).to.equal(new BigNumber(TRANSFER_BALANCE).multipliedBy(N_WORKERS).toString());
+	expect(await cake.methods.balanceOf(owner).call()).to.equal(String(sumCakes));
 
   });
 });
