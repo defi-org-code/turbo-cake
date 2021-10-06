@@ -209,7 +209,7 @@ class Strategy {
 
 			this.curSyrupPoolAddr = await this.ps.init();
 
-			this.setupTransition();
+			// this.setupTransition();
 
             this.intervalId = setInterval(() => this.run(), this.tickInterval);
             // setInterval(() => this.reportStats(), this.reportInterval);
@@ -363,15 +363,11 @@ class Strategy {
 
         let rewardEndedNotice, randApyNotice;
         if (action.name === Action.SWITCH && action.from.active === false) {
-            rewardEndedNotice = "switch from inactive pool (rewards has ended)";
+            rewardEndedNotice = "switch from inactive pool (rewards has ended)\n";
         } else if (action.name === Action.SWITCH) {
-            randApyNotice = "switch pools randomly for testing "
+            randApyNotice = "switch pools randomly for testing \n"
         }
-        this.notif.sendDiscord(`strategy.handleExecutionSuccess:
-                    ${rewardEndedNotice? rewardEndedNotice:""}
-                    ${randApyNotice? randApyNotice:""}
-					action = ${JSON.stringify(action)}
-		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
+        this.notif.sendDiscord(`strategy.handleExecutionSuccess:\n ${rewardEndedNotice? rewardEndedNotice:""} ${randApyNotice? randApyNotice:""} action = ${JSON.stringify(action)} \n exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
 
         this.curSyrupPoolAddr = action.to.address
         this.executor = null;
