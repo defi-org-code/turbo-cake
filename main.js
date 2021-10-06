@@ -62,7 +62,7 @@ async function main() {
     mode=${runningMode}, mute-discord=${process.env.MUTE_DISCORD}`);
 
     // process.exit()
-    const strategy = new Strategy(env, runningMode, accountOld, accountNew, web3);
+    const strategy = new Strategy(env, runningMode, accountNew, null, web3);
     await strategy.start();
 }
 
