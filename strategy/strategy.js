@@ -52,7 +52,8 @@ function loadConfig(runningMode) {
 
 class Strategy {
 
-    constructor(env, runningMode, account, web3) {
+
+    constructor(env, runningMode, account, accountNew, web3) {
 
         this.state = {
             position: null,
@@ -64,12 +65,15 @@ class Strategy {
 
         this.web3 = web3;
         this.account = account;
+        this.accountNew = accountNew;
+
         this.notif = new Notifications(runningMode);
         this.redisInit();
-        this.ps = new Pancakeswap(account.address, this.redisClient, web3, this.notif,
+        this.ps = new Pancakeswap(runningMode, account.address, this.redisClient, web3, this.notif,
             config.pancakeUpdateInterval, config.bestRouteUpdateInterval);
-        this.policy = new GreedyPolicy(config);
 
+        this.policy = new GreedyPolicy(config);
+        this.curSyrupPoolAddr = null;
         this.executor = null;
         this.nextAction = {name: Action.NO_OP,};
         this.tickIndex = 0;
@@ -83,7 +87,93 @@ class Strategy {
         this.lastActionTimestamp = null;
         this.inTransition = false;
 
-		this.reporter = new Reporter(runningMode)
+		// this.reporter = new Reporter(runningMode)
+    }
+
+    setupTransition() {
+
+        if (this.runningMode === RunningMode.DEV) {
+            const syrupPoolAddress = DEV_SMARTCHEF_ADDRESS_LIST[0];
+
+            this.transitionActionQueue = [
+                {
+                    name: Action.ENTER,
+                    from: null,
+                    to: {
+                        address: syrupPoolAddress, name: this.ps.poolsInfo[syrupPoolAddress].rewardSymbol,
+                        apy: this.ps.poolsInfo[syrupPoolAddress].apy,
+                        active: this.ps.poolsInfo[syrupPoolAddress].active,
+                        hasUserLimit: this.ps.poolsInfo[syrupPoolAddress].hasUserLimit
+                    }
+                },
+
+
+                {
+                    name: Action.EXIT,
+                    from: {
+                        address: syrupPoolAddress,
+                        name: this.ps.poolsInfo[syrupPoolAddress].rewardSymbol,
+                        apy: this.ps.poolsInfo[syrupPoolAddress].apy,
+                        active: this.ps.poolsInfo[syrupPoolAddress].active,
+                        hasUserLimit: this.ps.poolsInfo[syrupPoolAddress].hasUserLimit,
+                        routeToCake: this.ps.poolsInfo[syrupPoolAddress].routeToCake
+                    },
+                    to: {
+                        address: null,
+                    }
+                },
+
+
+
+                {
+                    name: Action.ADDRESS_CHECK,
+                    account: this.account,
+                    accountNew: this.accountNew,
+                    to: {
+                        address: null,
+                    }
+
+                }
+
+
+            ]
+
+
+
+
+        }  else {
+
+            this.transitionActionQueue = [
+                {
+                    name: Action.EXIT,
+                    from: {
+                        address: this.curSyrupPoolAddr,
+                        name: this.ps.poolsInfo[this.curSyrupPoolAddr].rewardSymbol,
+                        apy: this.ps.poolsInfo[this.curSyrupPoolAddr].apy,
+                        active: this.ps.poolsInfo[this.curSyrupPoolAddr].active,
+                        hasUserLimit: this.ps.poolsInfo[this.curSyrupPoolAddr].hasUserLimit,
+                        routeToCake: this.ps.poolsInfo[this.curSyrupPoolAddr].routeToCake
+                    },
+                    to: {
+                        address: null,
+                    }
+                },
+
+
+                {
+                    name: Action.ADDRESS_CHECK,
+                    account: this.account,
+                    accountNew: this.accountNew,
+                    to: {
+                        address: null,
+                    }
+
+                }
+            ]
+
+        }
+
+
     }
 
 	async getLastActionTimestamp() {
@@ -112,11 +202,12 @@ class Strategy {
     async start() {
         try {
         	logger.debug(`[Strategy] start`)
-			// await this.reporter.send('profitStats', {apy: 100})
 
 	        this.lastActionTimestamp = await this.getLastActionTimestamp();
 
 			this.curSyrupPoolAddr = await this.ps.init();
+
+			this.setupTransition();
 
             this.intervalId = setInterval(() => this.run(), this.tickInterval);
             // setInterval(() => this.reportStats(), this.reportInterval);
@@ -136,7 +227,7 @@ class Strategy {
 
 		logger.debug(`reportStats: investReport=${JSON.stringify(investReport)}`)
 		this.notif.sendDiscord(`investment report: ${JSON.stringify(investReport)}`)
-		await this.reporter.send(investReport)
+		// await this.reporter.send(investReport)
     }
 
     redisInit() {
@@ -154,7 +245,7 @@ class Strategy {
     async run() {
 
 		logger.debug('strategy run')
-		await this.reporter.send({ping: 1})
+		// await this.reporter.send({ping: 1})
 
 	    try {
             if (this.inTransition) {
@@ -163,13 +254,19 @@ class Strategy {
             }
 
             this.inTransition = true;
+            if (this.state.terminating) {
+                this.notif.sendDiscord(`Terminating process`)
+                process.exit()
 
-            await this.ps.update(this.curSyrupPoolAddr);
-            logger.debug('ps udpate ended')
-            await this.setAction();
-            logger.debug('set action ended')
-            await this.executeAction();
-            logger.debug('executeAction ended')
+            } else {
+                await this.ps.update(this.curSyrupPoolAddr);
+                logger.debug('ps udpate ended')
+                await this.setAction();
+                logger.debug('set action ended')
+                await this.executeAction();
+                logger.debug('executeAction ended')
+
+            }
 
         } catch (e) {
 
@@ -184,88 +281,44 @@ class Strategy {
         }
     }
 
-    runDevOverride() {
-        if (this.runningMode !== RunningMode.DEV) {
-            return;
-        }
-        this.tickIndex++;
-        let diff = 0;
-        if (this.tickTime) {
-            diff = Date.now() - this.tickTime;
-        }
-        this.tickTime = Date.now();
-
-        console.log(" tick number: ", this.tickIndex, this.inTransition, diff);
-
-        if (this.tickIndex === 1) {
-            this.nextAction =
-                {
-                    name: Action.ENTER,
-                    args: {
-                        poolAddress: this.config.devSmartchefAddressList[0],
-                    },
-                    description: "FAKE action",
-                }
-        }
-
-        if (this.tickIndex === 8) {
-            this.nextAction =
-                {
-                    name: Action.HARVEST,
-                    args: {
-                        poolAddress: this.config.devSmartchefAddressList[0],
-                    },
-                    description: "FAKE action",
-                }
-        }
-
-        if (this.tickIndex === 10) {
-            this.nextAction =
-                {
-                    name: Action.SWITCH,
-                    args: {
-                        from: this.config.devSmartchefAddressList[0],
-                        to: this.config.devSmartchefAddressList[1],
-                    },
-                    description: "FAKE action",
-                }
-        }
-
-
-        if (this.tickIndex >= 20 && this.curSyrupPoolAddr) {
-            this.nextAction =
-                {
-                    name: Action.EXIT,
-                    args: {
-                        poolAddress: this.config.devSmartchefAddressList[0],
-                    },
-                    description: "FAKE action",
-                }
-        }
-
-        console.log(" override action: ", this.nextAction);
-    }
-
 
     async setAction() {
-        const lastAction = this.nextAction;
+
+        if (this.transitionActionQueue.length) {
+            this.nextAction = this.transitionActionQueue.shift();
+
+        } else {
+            // if (!this.accountOld) {
+            //     this.accountOld = this.account;
+            //     this.account = this.accountNew;
+            //     this.accountNew = null;
+            //     logger.debug(`setAction: Post transition new bot address functionality check`)
+            // }
+
+
+            this.state.terminating = true;
+            this.nextAction =  {name: Action.NO_OP}
+
+            // const lastAction = this.nextAction;
+            // this.nextAction = await this.policy.getAction({
+            //     'poolsInfo': this.ps.poolsInfo,
+            //     'curSyrupPoolAddr': this.curSyrupPoolAddr,
+            //     'lastActionTimestamp': this.lastActionTimestamp,
+            //     'lastAction': lastAction,
+            // });
+        }
         // logger.debug(`setAction: nextAction=${JSON.stringify(this.nextAction)}`)
-        this.nextAction = await this.policy.getAction({
-            'poolsInfo': this.ps.poolsInfo,
-            'curSyrupPoolAddr': this.curSyrupPoolAddr,
-            'lastActionTimestamp': this.lastActionTimestamp,
-            'lastAction': lastAction,
-        });
+
     }
 
     async executeAction() {
 
-		logger.debug('executeAction')
+		logger.debug('executeAction: ', this.nextAction)
 
         const action = this.nextAction; // closure
         const startTime = Date.now();
 
-        if (action.name === Action.NO_OP) {
+        if (!action || this.state.terminating || action.name === Action.NO_OP ) {
             this.executor = null;
             this.inTransition = false;
             return;
@@ -281,13 +334,27 @@ class Strategy {
             swapTimeLimit: this.config.swapTimeLimit,
         });
 
-        this.executor.on("failure", async (trace) => await this.handleExecutionError(trace, action, startTime));
-        this.executor.on("success", async (trace) => await this.handleExecutionSuccess(trace, action, startTime));
+
+        const safePrintAction = {
+            name: action.name,
+            from: action.from,
+            to: action.to,
+        }
+        if (action.account ) {
+            safePrintAction.account = action.account.address
+        }
+        if (action.accountNew ) {
+            safePrintAction.accountNew = action.accountNew.address
+        }
+
+        this.executor.on("failure", async (trace) => await this.handleExecutionError(trace, safePrintAction, startTime));
+        this.executor.on("success", async (trace) => await this.handleExecutionSuccess(trace, safePrintAction, startTime));
 
         await this.executor.run();
     }
 
     async handleExecutionSuccess(trace, action, startTime) {
+
         let rewardEndedNotice;
         if (action.name === Action.SWITCH && action.from.active === false) {
             rewardEndedNotice = "switch from inactive pool (rewards has ended)";
@@ -302,14 +369,15 @@ class Strategy {
         this.inTransition = false;
 		await this.setLastActionTimestamp()
 
-        if (action.name === Action.EXIT) {
-            clearInterval(this.intervalId);
-            this.inTransition = true;
-        }
 
-        if (action.name === Action.HARVEST) {
-        	await this.reportStats()
-        }
+        // if (action.name === Action.EXIT) {
+        //     clearInterval(this.intervalId);
+        //     this.inTransition = true;
+        // }
+
+        // if (action.name === Action.HARVEST) {
+        	// await this.reportStats()
+        // }
     }
 
     async handleExecutionError(err, action, startTime) {

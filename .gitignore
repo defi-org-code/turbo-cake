@@ -5,6 +5,9 @@ node_modules/
 *.pem
 cache/
 .config.json
+.config_DSDS.old
+.config.old
+.config.new
 .env
 *.csv
 *.pkl

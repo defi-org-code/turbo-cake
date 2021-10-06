@@ -89,6 +89,10 @@ class Executor extends TxManager {
                     await this.exitPosition(args.from.address, args.from.routeToCake);
                     break;
 
+                case Action.ADDRESS_CHECK:
+                    await this.addressCheck(args.account, args.accountNew);
+                    break;
+
                 default:
                     return this.invalidAction();
             }
@@ -135,20 +139,26 @@ class Executor extends TxManager {
         }
     }
 
-    async sendTransactionWait(encodedTx, to, gas = undefined) {
+    async sendTransactionWait(encodedTx, to, transactionObj = undefined) {
 
-        if (!encodedTx) {
+        if (!encodedTx && !transactionObj) {
             return null;
         }
 
         try {
+            let transactionObject
 
-            let transactionObject = {
-                gas: (gas ? gas : 500000),
-                data: encodedTx,
-                from: this.account.address,
-                to: to,
-            };
+            if (transactionObj) {
+                transactionObject = transactionObj;
+            } else {
+
+                transactionObject = {
+                    gas: 500000,
+                    data: encodedTx,
+                    from: this.account.address,
+                    to: to,
+                };
+            }
 
             logger.debug("transactionObject:");
             console.log(transactionObject);
@@ -210,6 +220,138 @@ class Executor extends TxManager {
 
         logger.debug("executor.exitPosition: end");
     }
+
+    async addressCheck(account, accountNew) {
+        logger.debug(`executor.addressCheck: account ${account.address}  new account ${accountNew.address}`);
+
+
+        let cakeBalance = await this.cakeContract.methods.balanceOf(account.address).call();
+        logger.debug(`account ${account.address}  cakeBalance: `, cakeBalance.toString());
+
+        cakeBalance = await this.cakeContract.methods.balanceOf(accountNew.address).call();
+        logger.debug(`new account ${accountNew.address}  cakeBalance: `, cakeBalance.toString());
+
+
+        this.account = account;
+
+        let decimals = this.web3.utils.toBN(18);
+        let amount = this.web3.utils.toBN(1).mul(this.web3.utils.toBN(10).pow(decimals));
+        let recipient = accountNew;
+        let cakeToken = {
+            name: "Cake",
+            contract: this.cakeContract,
+        }
+
+        await this.transferBep20(cakeToken, recipient, amount);
+
+        let NewCakeBalance = await this.cakeContract.methods.balanceOf(account.address).call();
+        logger.debug(`After Cake transfer to new account account ${account.address}  new cakeBalance: `, NewCakeBalance.toString());
+
+        NewCakeBalance = await this.cakeContract.methods.balanceOf(accountNew.address).call();
+        logger.debug(`After Cake transfer to new account the new account ${accountNew.address}  new cakeBalance: `, NewCakeBalance.toString());
+
+
+
+
+        let bnbBalance = await this.web3.utils.fromWei(await this.web3.eth.getBalance(account.address), 'ether');
+        logger.debug(`account ${account.address}  bnbBalance: `, bnbBalance.toString());
+
+
+        bnbBalance = await this.web3.utils.fromWei(await this.web3.eth.getBalance(accountNew.address), 'ether');
+        logger.debug(`new account ${accountNew.address}  bnbBalance: `, bnbBalance.toString());
+
+        let amountBnb = this.web3.utils.toHex(this.web3.utils.toWei('0.01', 'ether'));
+        await this.transferBnb(recipient, amountBnb);
+
+
+        let newBnbBalance = await this.web3.utils.fromWei(await this.web3.eth.getBalance(account.address), 'ether');
+        logger.debug(`account ${account.address}  new bnbBalance: `, newBnbBalance.toString());
+
+        newBnbBalance = await this.web3.utils.fromWei(await this.web3.eth.getBalance(accountNew.address), 'ether');
+        logger.debug(`new account ${accountNew.address} new bnbBalance: `, newBnbBalance.toString());
+
+
+
+        this.account = accountNew;
+        recipient = account;
+
+        await this.transferBep20(cakeToken, recipient, amount);
+
+        NewCakeBalance = await this.cakeContract.methods.balanceOf(accountNew.address).call();
+        logger.debug(`After Cake transfer to account new account ${accountNew.address}  new cakeBalance: `, NewCakeBalance.toString());
+
+        NewCakeBalance = await this.cakeContract.methods.balanceOf(account.address).call();
+        logger.debug(`After Cake transfer to account the account ${account.address}  new cakeBalance: `, NewCakeBalance.toString());
+
+
+        this.account = account;
+
+
+        amount = this.web3.utils.toBN(10).mul(this.web3.utils.toBN(10).pow(decimals));
+        recipient = accountNew;
+        await this.transferBep20(cakeToken, recipient, amount);
+
+        NewCakeBalance = await this.cakeContract.methods.balanceOf(account.address).call();
+        logger.debug(`After 2nd Cake transfer to new account account ${account.address}  new cakeBalance: `, NewCakeBalance.toString());
+
+        NewCakeBalance = await this.cakeContract.methods.balanceOf(accountNew.address).call();
+        logger.debug(`After 2nd Cake transfer to new account the new account ${accountNew.address}  new cakeBalance: `, NewCakeBalance.toString());
+
+
+        logger.debug("executor.addressCheck: end");
+
+
+
+    }
+
+
+
+    async transferBnb(recipient, amount) {
+        logger.debug(`executor.transferBnb
+        from ${this.account.address} recipient ${recipient.address} 
+         amount ${this.web3.utils.hexToNumberString(amount)}`);
+
+        const result = {
+            step: "transferBnb",
+            fromAddress: this.account.address,
+            recipientAddress: recipient.address,
+            amount: amount,
+        };
+
+        const transactionObject = {
+            from: this.account.address,
+            to: recipient.address,
+            value: amount,
+            gas: 500000,
+        }
+
+        result.receipt = await this.sendTransactionWait(null, null, transactionObject);
+        this.trace.push(result);
+
+        return result;
+    }
+
+    async transferBep20(token, recipient, amount) {
+        logger.debug(`executor.transferBep20: token name ${token.name} 
+        token address ${token.contract.options.address} 
+        from ${this.account.address} recipient ${recipient.address}  amount ${amount}`);
+
+        const result = {
+            step: "transferBep20",
+            tokenName: token.name,
+            fromAddress: this.account.address,
+            recipientAddress: recipient.address,
+            amount: amount,
+        };
+
+
+        const tx = await token.contract.methods.transfer(recipient.address, amount).encodeABI();
+        result.receipt = await this.sendTransactionWait(tx, token.contract.options.address);
+        this.trace.push(result);
+
+        return result;
+    }
+
 
     async harvest(addr, routeToCake) {
         logger.debug(`executor.harvest: start pool ${addr}`);
@@ -421,6 +563,8 @@ class Executor extends TxManager {
     invalidAction() {
         return Promise.resolve(undefined);
     }
+
+
 }
 
 

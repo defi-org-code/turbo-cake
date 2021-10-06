@@ -13,6 +13,7 @@ BigNumber.config({POW_PRECISION: 100, EXPONENTIAL_AT: 1e+9})
 // const {getLogger} = require('../logger')
 const {Logger} = require('../logger')
 const logger = new Logger('pancakeswap')
+const {RunningMode} = require("../config");
 
 
 class Pancakeswap {
@@ -23,12 +24,13 @@ class Pancakeswap {
 	BLOCKS_PER_DAY = this.SECONDS_PER_DAY / this.AVG_BLOCK_SEC
 	BLOCKS_PER_YEAR = this.BLOCKS_PER_DAY * 365
 
-	PAST_EVENTS_N_DAYS =  10
+	PAST_EVENTS_N_DAYS =  1
 	PAST_EVENTS_N_BLOCKS = Math.floor(this.PAST_EVENTS_N_DAYS * this.BLOCKS_PER_DAY)
 
 	EXCLUDED_POOLS = ["0xa80240Eb5d7E05d3F250cF000eEc0891d00b51CC"]
 
-    constructor(botAddress, redisClient, web3, notif, pancakeUpdateInterval, bestRouteUpdateInterval) {
+    constructor(runningMode, botAddress, redisClient, web3, notif, pancakeUpdateInterval, bestRouteUpdateInterval) {
+		this.runningMode = runningMode;
 		this.botAddress = botAddress;
         this.redisClient = redisClient;
         this.pancakeUpdateInterval = pancakeUpdateInterval;
@@ -52,6 +54,9 @@ class Pancakeswap {
 		this.routerV2Contract = this.getContract(ROUTER_V2_ABI, ROUTER_V2_ADDRESS)
 
 		await this.getLastBlockUpdate()
+		if (this.runningMode === RunningMode.DEV) {
+			this.lastBlockUpdate = 10186109
+		}
 		await this.getPoolsInfo()
 		await this.fetchPools()
 
@@ -447,6 +452,9 @@ class Pancakeswap {
 		logger.debug('fetchPools ... ')
 
 		let blockNum = await this.web3.eth.getBlockNumber()
+		if (this.runningMode === RunningMode.DEV) {
+			blockNum = 10186309
+		}
 
 		if (this.lastBlockUpdate == null) {
 			throw Error('lastBlockUpdate should be set')

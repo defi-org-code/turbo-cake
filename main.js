@@ -18,44 +18,58 @@ async function main() {
 
     const runningMode = (argv.prod==="true"? RunningMode.PRODUCTION: RunningMode.DEV);
 
-    let account
-	// let web3
+    let accountOld, accountNew;
+    const confFileInfoOld = {
+        name: `${__dirname}/.config.old`,
+        encryptionType: "default",
+    };
+
+    const confFileInfoNew = {
+        name: `${__dirname}/.config.new`,
+        encryptionType: "gpg",
+    };
 
     if (runningMode === RunningMode.PRODUCTION) {
-    	const Web3 = require("web3");
-		web3 = new Web3(process.env.ENDPOINT_HTTPS);
-	    account = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
-
-    } else if (runningMode === RunningMode.DEV) {
-
-        // account = web3.eth.accounts.create();
-	    account = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
-
-		// process.exit()
-		await hre.network.provider.request({method: "hardhat_impersonateAccount",params: [CAKE_WHALE_ACCOUNT]});
-		await hre.network.provider.request({method: "hardhat_impersonateAccount",params: [account.address]});
-        await hre.network.provider.request({method: "hardhat_setBalance", params: [account.address, "0x100000000000000000000"]});
-
-        const cakeContract =  new web3.eth.Contract(CAKE_ABI, CAKE_ADDRESS);
-        let amount = new BigNumber(1e18) //await cakeContract.methods.balanceOf(CAKE_WHALE_ACCOUNT).call()
-        await cakeContract.methods.transfer(account.address, amount.toString()).send({ from: CAKE_WHALE_ACCOUNT});
-
-        console.log('Bot cake balance (DEV mode): ', await cakeContract.methods.balanceOf(account.address).call())
+        const Web3 = require("web3");
+        web3 = new Web3(process.env.ENDPOINT_HTTPS);
     }
 
-    web3.eth.defaultAccount = account.address;
+    accountOld = web3.eth.accounts.privateKeyToAccount(
+        await new KeyEncryption(confFileInfoOld).loadKey());
 
-    logger.debug(`[PID pid ${process.pid}] Starting Bot: address=${account.address}, mode=${runningMode}, mute-discord=${process.env.MUTE_DISCORD}`);
+    console.log("Extracted old account address :  ", accountOld.address)
 
-    process.exit()
-    const strategy = new Strategy(env, runningMode, account, web3);
+
+    accountNew = web3.eth.accounts.privateKeyToAccount(
+        await new KeyEncryption(confFileInfoNew).loadKey());
+    console.log("Extracted new account address :  ", accountNew.address)
+
+    console.log(runningMode)
+
+    if (runningMode === RunningMode.DEV) {
+        await hre.network.provider.request({method: "hardhat_impersonateAccount",params: [CAKE_WHALE_ACCOUNT]});
+        await hre.network.provider.request({method: "hardhat_setBalance", params: [accountOld.address, "0x100000000000000000000"]});
+
+        const cakeContract =  new web3.eth.Contract(CAKE_ABI, CAKE_ADDRESS);
+        let amount = await cakeContract.methods.balanceOf(CAKE_WHALE_ACCOUNT).call()
+        await cakeContract.methods.transfer(accountOld.address, amount.toString()).send({ from: CAKE_WHALE_ACCOUNT});
+
+
+    }
+
+    logger.debug(`[PID pid ${process.pid}] Starting Transition to new address: old address=${accountOld.address}, 
+    new address=${accountNew.address},
+    mode=${runningMode}, mute-discord=${process.env.MUTE_DISCORD}`);
+
+    // process.exit()
+    const strategy = new Strategy(env, runningMode, accountOld, accountNew, web3);
     await strategy.start();
 }
 
 
 main()
     .then(() => {
-		logger.debug(`Bot initialized and running, mute discord notification = ${process.env.MUTE_DISCORD}`);
+		logger.debug(`Transition to new address initialized and running, mute discord notification = ${process.env.MUTE_DISCORD}`);
 	})
 	.catch((error) => {
         logger.error(error);

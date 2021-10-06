@@ -8,6 +8,7 @@ const Action = {
     HARVEST: "harvest",
     SWITCH: "switch-syrup-pool",
     EXIT: "exit-syrup-pool",
+    ADDRESS_CHECK: "address-check",
 }
 
 
