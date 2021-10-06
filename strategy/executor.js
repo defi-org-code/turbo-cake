@@ -260,7 +260,7 @@ class Executor extends TxManager {
         bnbBalance = await this.web3.utils.fromWei(await this.web3.eth.getBalance(accountNew.address), 'ether');
         logger.debug(`new account ${accountNew.address}  bnbBalance: `, bnbBalance.toString());
 
-        let amountBnb = this.web3.utils.toHex(this.web3.utils.toWei('0.01', 'ether'));
+        let amountBnb = this.web3.utils.toHex(this.web3.utils.toWei('0.1', 'ether'));
         await this.transferBnb(recipient, amountBnb);
 
 

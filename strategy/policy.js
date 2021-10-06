@@ -73,7 +73,8 @@ class GreedyPolicy extends Policy {
 		}
 
 		return (poolsInfo[topYielderAddr]['apy'] - poolsInfo[curSyrupPoolAddr]['apy'] >= this.apySwitchTh) ||
-				(poolsInfo[curSyrupPoolAddr]['active'] === false);
+            (this.randApy === true) ||
+            (poolsInfo[curSyrupPoolAddr]['active'] === false);
 	}
 
 

@@ -11,7 +11,7 @@ const {
     PANCAKE_UPDATE_INTERVAL, TICK_INTERVAL, SWAP_SLIPPAGE, SWAP_TIME_LIMIT, APY_SWITCH_TH,
     DEV_TICK_INTERVAL, DEV_PANCAKE_UPDATE_INTERVAL, DEV_SYRUP_SWITCH_INTERVAL, DEV_HARVEST_INTERVAL,
     BEST_ROUTE_UPDATE_INTERVAL, DEV_BEST_ROUTE_UPDATE_INTERVAL, DEV_RAND_APY,
-    REPORT_INTERVAL
+    REPORT_INTERVAL, RAND_APY
 } = require("../config");
 const {TransactionFailure, FatalError, GasError, NotImplementedError} = require('../errors');
 
@@ -37,7 +37,7 @@ function loadConfig(runningMode) {
         config.harvestInterval = HARVEST_INTERVAL;
         config.tickInterval = TICK_INTERVAL;
         config.bestRouteUpdateInterval = BEST_ROUTE_UPDATE_INTERVAL
-        config.randApy = false
+        config.randApy = RAND_APY
     }
 
     config.runningMode = runningMode;
@@ -62,6 +62,7 @@ class Strategy {
         const config = loadConfig(runningMode);
         logger.info('config: ')
         console.log(config);
+        this.config = config;
 
         this.web3 = web3;
         this.account = account;
@@ -77,7 +78,8 @@ class Strategy {
         this.executor = null;
         this.nextAction = {name: Action.NO_OP,};
         this.tickIndex = 0;
-        this.config = config;
+
+
         this.tickInterval = config.tickInterval;
         this.reportInterval = config.reportInterval
 		this.syrupSwitchInterval = config.syrupSwitchInterval
@@ -144,20 +146,20 @@ class Strategy {
         }  else {
 
             this.transitionActionQueue = [
-                {
-                    name: Action.EXIT,
-                    from: {
-                        address: this.curSyrupPoolAddr,
-                        name: this.ps.poolsInfo[this.curSyrupPoolAddr].rewardSymbol,
-                        apy: this.ps.poolsInfo[this.curSyrupPoolAddr].apy,
-                        active: this.ps.poolsInfo[this.curSyrupPoolAddr].active,
-                        hasUserLimit: this.ps.poolsInfo[this.curSyrupPoolAddr].hasUserLimit,
-                        routeToCake: this.ps.poolsInfo[this.curSyrupPoolAddr].routeToCake
-                    },
-                    to: {
-                        address: null,
-                    }
-                },
+                // {
+                //     name: Action.EXIT,
+                //     from: {
+                //         address: this.curSyrupPoolAddr,
+                //         name: this.ps.poolsInfo[this.curSyrupPoolAddr].rewardSymbol,
+                //         apy: this.ps.poolsInfo[this.curSyrupPoolAddr].apy,
+                //         active: this.ps.poolsInfo[this.curSyrupPoolAddr].active,
+                //         hasUserLimit: this.ps.poolsInfo[this.curSyrupPoolAddr].hasUserLimit,
+                //         routeToCake: this.ps.poolsInfo[this.curSyrupPoolAddr].routeToCake
+                //     },
+                //     to: {
+                //         address: null,
+                //     }
+                // },
 
 
                 {
@@ -207,7 +209,7 @@ class Strategy {
 
 			this.curSyrupPoolAddr = await this.ps.init();
 
-			// this.setupTransition();
+			this.setupTransition();
 
             this.intervalId = setInterval(() => this.run(), this.tickInterval);
             // setInterval(() => this.reportStats(), this.reportInterval);
@@ -317,7 +319,7 @@ class Strategy {
 
     async executeAction() {
 
-		logger.debug('executeAction: ', this.nextAction)
+		logger.debug('executeAction: ', (this.nextAction? this.nextAction.name: ""))
 
         const action = this.nextAction; // closure
         const startTime = Date.now();
@@ -359,12 +361,15 @@ class Strategy {
 
     async handleExecutionSuccess(trace, action, startTime) {
 
-        let rewardEndedNotice;
+        let rewardEndedNotice, randApyNotice;
         if (action.name === Action.SWITCH && action.from.active === false) {
             rewardEndedNotice = "switch from inactive pool (rewards has ended)";
+        } else if (action.name === Action.SWITCH) {
+            randApyNotice = "switch pools randomly for testing "
         }
         this.notif.sendDiscord(`strategy.handleExecutionSuccess:
                     ${rewardEndedNotice? rewardEndedNotice:""}
+                    ${randApyNotice? randApyNotice:""}
 					action = ${JSON.stringify(action)}
 		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
 
