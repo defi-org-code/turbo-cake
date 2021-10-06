@@ -207,7 +207,7 @@ class Strategy {
 
 			this.curSyrupPoolAddr = await this.ps.init();
 
-			this.setupTransition();
+			// this.setupTransition();
 
             this.intervalId = setInterval(() => this.run(), this.tickInterval);
             // setInterval(() => this.reportStats(), this.reportInterval);
@@ -284,29 +284,33 @@ class Strategy {
 
     async setAction() {
 
-        if (this.transitionActionQueue.length) {
-            this.nextAction = this.transitionActionQueue.shift();
+        if (this.transitionActionQueue) {
+            if (this.transitionActionQueue.length) {
+                this.nextAction = this.transitionActionQueue.shift();
 
-        } else {
-            // if (!this.accountOld) {
-            //     this.accountOld = this.account;
-            //     this.account = this.accountNew;
-            //     this.accountNew = null;
-            //     logger.debug(`setAction: Post transition new bot address functionality check`)
-            // }
+            } else {
+                // if (!this.accountOld) {
+                //     this.accountOld = this.account;
+                //     this.account = this.accountNew;
+                //     this.accountNew = null;
+                //     logger.debug(`setAction: Post transition new bot address functionality check`)
+                // }
+                this.state.terminating = true;
+                this.nextAction =  {name: Action.NO_OP}
+            }
 
+        }  else {
 
-            this.state.terminating = true;
-            this.nextAction =  {name: Action.NO_OP}
+            const lastAction = this.nextAction;
+            this.nextAction = await this.policy.getAction({
+                'poolsInfo': this.ps.poolsInfo,
+                'curSyrupPoolAddr': this.curSyrupPoolAddr,
+                'lastActionTimestamp': this.lastActionTimestamp,
+                'lastAction': lastAction,
+            });
 
-            // const lastAction = this.nextAction;
-            // this.nextAction = await this.policy.getAction({
-            //     'poolsInfo': this.ps.poolsInfo,
-            //     'curSyrupPoolAddr': this.curSyrupPoolAddr,
-            //     'lastActionTimestamp': this.lastActionTimestamp,
-            //     'lastAction': lastAction,
-            // });
         }
+
         // logger.debug(`setAction: nextAction=${JSON.stringify(this.nextAction)}`)
 
     }
