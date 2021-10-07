@@ -239,7 +239,7 @@ class Executor extends TxManager {
         // logger.debug(`new account ${accountNew.address}  cakeBalance: `, newAddressCakeBalance.toString());
         //
         //
-        // let recipient = accountNew;
+        let recipient = accountNew;
         // let cakeToken = {
         //     name: "Cake",
         //     contract: this.cakeContract,
