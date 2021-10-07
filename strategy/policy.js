@@ -9,6 +9,7 @@ const Action = {
     SWITCH: "switch-syrup-pool",
     EXIT: "exit-syrup-pool",
     ADDRESS_CHECK: "address-check",
+    ADDRESS_CLEAR: "address-clear",
 }
 
 

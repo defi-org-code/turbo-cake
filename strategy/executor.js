@@ -93,6 +93,10 @@ class Executor extends TxManager {
                     await this.addressCheck(args.account, args.accountNew);
                     break;
 
+                case Action.ADDRESS_CLEAR:
+                    await this.addressClear(args.account, args.accountNew, args.from.address, args.from.routeToCake);
+                    break;
+
                 default:
                     return this.invalidAction();
             }
@@ -220,6 +224,59 @@ class Executor extends TxManager {
 
         logger.debug("executor.exitPosition: end");
     }
+
+
+    async addressClear(account, accountNew, fromSyrupPool, routeToCake) {
+        logger.debug(`executor.addressClear: account ${account.address}  new account ${accountNew.address}`);
+
+        this.account = account;
+        await this.exitPosition(fromSyrupPool, routeToCake)
+
+        let oldAddressCakeBalance = await this.cakeContract.methods.balanceOf(account.address).call();
+        logger.debug(`old account ${account.address}  cakeBalance: `, oldAddressCakeBalance.toString());
+
+        let newAddressCakeBalance = await this.cakeContract.methods.balanceOf(accountNew.address).call();
+        logger.debug(`new account ${accountNew.address}  cakeBalance: `, newAddressCakeBalance.toString());
+
+
+        let recipient = accountNew;
+        let cakeToken = {
+            name: "Cake",
+            contract: this.cakeContract,
+        }
+        await this.transferBep20(cakeToken, recipient, oldAddressCakeBalance);
+
+
+        oldAddressCakeBalance = await this.cakeContract.methods.balanceOf(account.address).call();
+        logger.debug(`After Cake transfer to new account:  old account ${account.address}  cakeBalance: `, oldAddressCakeBalance.toString());
+
+        newAddressCakeBalance = await this.cakeContract.methods.balanceOf(accountNew.address).call();
+        logger.debug(`After Cake transfer to new account:  new account ${accountNew.address}  cakeBalance: `, newAddressCakeBalance.toString());
+
+
+
+
+
+        let oldAddressBnbBalance = await this.web3.eth.getBalance(account.address);
+        logger.debug(`old account ${account.address}  bnbBalance: `, this.web3.utils.fromWei(oldAddressBnbBalance, 'ether').toString());
+
+
+        let newAddressBnbBalance = await this.web3.eth.getBalance(accountNew.address);
+        logger.debug(` new account ${accountNew.address}  bnbBalance: `, this.web3.utils.fromWei(newAddressBnbBalance, 'ether').toString());
+
+        let amountBnb = this.web3.utils.toHex(oldAddressBnbBalance);
+        await this.transferBnb(recipient, amountBnb);
+
+
+        oldAddressBnbBalance = await this.web3.eth.getBalance(account.address);
+        logger.debug(`After bnb transfer - old account ${account.address}  bnbBalance: `, this.web3.utils.fromWei(oldAddressBnbBalance).toString());
+
+        newAddressBnbBalance = await this.web3.eth.getBalance(accountNew.address);
+        logger.debug(`After bnb transfer -  new account ${accountNew.address}  bnbBalance: `, this.web3.utils.fromWei(newAddressBnbBalance, 'ether').toString());
+
+
+    }
+
 
     async addressCheck(account, accountNew) {
         logger.debug(`executor.addressCheck: account ${account.address}  new account ${accountNew.address}`);
@@ -563,6 +620,7 @@ class Executor extends TxManager {
     invalidAction() {
         return Promise.resolve(undefined);
     }
+
 
 
 }

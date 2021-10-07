@@ -68,7 +68,7 @@ class Strategy {
         this.account = account;
         this.accountNew = accountNew;
 
-        this.notif = new Notifications(runningMode);
+        this.notif = new Notifications(runningMode, this.account.address);
         this.redisInit();
         this.ps = new Pancakeswap(runningMode, account.address, this.redisClient, web3, this.notif,
             config.pancakeUpdateInterval, config.bestRouteUpdateInterval);
@@ -146,31 +146,33 @@ class Strategy {
         }  else {
 
             this.transitionActionQueue = [
-                // {
-                //     name: Action.EXIT,
-                //     from: {
-                //         address: this.curSyrupPoolAddr,
-                //         name: this.ps.poolsInfo[this.curSyrupPoolAddr].rewardSymbol,
-                //         apy: this.ps.poolsInfo[this.curSyrupPoolAddr].apy,
-                //         active: this.ps.poolsInfo[this.curSyrupPoolAddr].active,
-                //         hasUserLimit: this.ps.poolsInfo[this.curSyrupPoolAddr].hasUserLimit,
-                //         routeToCake: this.ps.poolsInfo[this.curSyrupPoolAddr].routeToCake
-                //     },
-                //     to: {
-                //         address: null,
-                //     }
-                // },
-
-
                 {
-                    name: Action.ADDRESS_CHECK,
+                    name: Action.ADDRESS_CLEAR,
                     account: this.account,
                     accountNew: this.accountNew,
+                    from: {
+                        address: this.curSyrupPoolAddr,
+                        name: this.ps.poolsInfo[this.curSyrupPoolAddr].rewardSymbol,
+                        apy: this.ps.poolsInfo[this.curSyrupPoolAddr].apy,
+                        active: this.ps.poolsInfo[this.curSyrupPoolAddr].active,
+                        hasUserLimit: this.ps.poolsInfo[this.curSyrupPoolAddr].hasUserLimit,
+                        routeToCake: this.ps.poolsInfo[this.curSyrupPoolAddr].routeToCake
+                    },
                     to: {
                         address: null,
                     }
+                },
 
-                }
+
+                // {
+                //     name: Action.ADDRESS_CHECK,
+                //     account: this.account,
+                //     accountNew: this.accountNew,
+                //     to: {
+                //         address: null,
+                //     }
+                //
+                // }
             ]
 
         }
@@ -209,7 +211,7 @@ class Strategy {
 
 			this.curSyrupPoolAddr = await this.ps.init();
 
-			// this.setupTransition();
+			this.setupTransition();
 
             this.intervalId = setInterval(() => this.run(), this.tickInterval);
             // setInterval(() => this.reportStats(), this.reportInterval);
@@ -303,13 +305,13 @@ class Strategy {
 
         }  else {
 
-            const lastAction = this.nextAction;
-            this.nextAction = await this.policy.getAction({
-                'poolsInfo': this.ps.poolsInfo,
-                'curSyrupPoolAddr': this.curSyrupPoolAddr,
-                'lastActionTimestamp': this.lastActionTimestamp,
-                'lastAction': lastAction,
-            });
+            // const lastAction = this.nextAction;
+            // this.nextAction = await this.policy.getAction({
+            //     'poolsInfo': this.ps.poolsInfo,
+            //     'curSyrupPoolAddr': this.curSyrupPoolAddr,
+            //     'lastActionTimestamp': this.lastActionTimestamp,
+            //     'lastAction': lastAction,
+            // });
 
         }
 
@@ -361,13 +363,17 @@ class Strategy {
 
     async handleExecutionSuccess(trace, action, startTime) {
 
-        let rewardEndedNotice, randApyNotice;
+        let rewardEndedNotice, randApyNotice, clearNotice;
         if (action.name === Action.SWITCH && action.from.active === false) {
             rewardEndedNotice = "switch from inactive pool (rewards has ended)\n";
         } else if (action.name === Action.SWITCH) {
             randApyNotice = "switch pools randomly for testing \n"
+        } else if (action.name === Action.ADDRESS_CLEAR) {
+            clearNotice = "clearing out old address funds and resetting new address position \n"
         }
-        this.notif.sendDiscord(`strategy.handleExecutionSuccess:\n ${rewardEndedNotice? rewardEndedNotice:""} ${randApyNotice? randApyNotice:""} action = ${JSON.stringify(action)} \n exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
+
+
+        this.notif.sendDiscord(`strategy.handleExecutionSuccess:\n ${rewardEndedNotice? rewardEndedNotice:""} ${randApyNotice? randApyNotice:""} ${clearNotice? clearNotice:""} action = ${JSON.stringify(action)} \n exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
 
         this.curSyrupPoolAddr = action.to.address
         this.executor = null;

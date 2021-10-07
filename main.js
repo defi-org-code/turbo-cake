@@ -57,12 +57,12 @@ async function main() {
 
     }
 
-    logger.debug(`[PID pid ${process.pid}] Checking new address via bot func: old address=${accountOld.address}, 
+    logger.debug(`[PID pid ${process.pid}] Clearing out old bot address: old address=${accountOld.address}, 
     new address=${accountNew.address},
     mode=${runningMode}, mute-discord=${process.env.MUTE_DISCORD}`);
 
     // process.exit()
-    const strategy = new Strategy(env, runningMode, accountNew, null, web3);
+    const strategy = new Strategy(env, runningMode, accountOld, accountNew, web3);
     await strategy.start();
 }
 
