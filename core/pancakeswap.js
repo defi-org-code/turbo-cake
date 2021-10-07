@@ -53,27 +53,7 @@ class Pancakeswap {
 
 		await this.update({'staked': 0, 'unstaked': 0})
 
-		const poolAddrToAdd = await this.addPoolExternalCommand()
-		if (poolAddrToAdd != null) {
-			await this.addToPoolsInfo(poolAddrToAdd)
-			logger.info(`external command add external pool ended successfully`)
-		}
-
  		logger.debug(`init ps ended successfully`)
-	}
-
-	async addPoolExternalCommand() {
-
-		let externalCommand = await this.redisClient.get(`command.${process.env.BOT_ID}`)
-
-		if (externalCommand === 'AddToPoolsInfo') {
-			logger.info(`external command ${externalCommand} detected`)
-			let externalCommandParams = await this.redisClient.get(`commandParams.${process.env.BOT_ID}`)
-			logger.info(`external command params: ${externalCommandParams}`)
-			return externalCommandParams
-		}
-
-		return null
 	}
 
     async update(totalBalance) {
@@ -446,39 +426,6 @@ class Pancakeswap {
 
 		await this.savePoolsInfo()
 		await this.saveLastBlockUpdate(blockNum)
-    }
-
-    async addToPoolsInfo(poolAddr) {
-
-		const smartChef = this.getContract(SMARTCHEF_INITIALIZABLE_ABI, poolAddr);
-		const rewardToken = await smartChef.methods.rewardToken().call()
-		const stakedToken = await smartChef.methods.stakedToken().call()
-		const hasUserLimit = await smartChef.methods.hasUserLimit().call()
-		const rewardPerBlock = await smartChef.methods.rewardPerBlock().call()
-		const bonusEndBlock = await smartChef.methods.bonusEndBlock().call()
-		const startBlock = await smartChef.methods.startBlock().call()
-
-		logger.debug(`poolAddr=${poolAddr}, bonusEndBlock=${bonusEndBlock}, rewardToken=${rewardToken}, stakedToken=${stakedToken}, hasUserLimit=${hasUserLimit}, ${hasUserLimit === true}`)
-
-		if (stakedToken !== CAKE_ADDRESS) {
-			return
-		}
-
-		const bep20 = this.getContract(BEP_20_ABI, rewardToken);
-		const symbol = await bep20.methods.symbol().call()
-		logger.debug(poolAddr, symbol, rewardToken, stakedToken)
-
-		this.poolsInfo[poolAddr] = {
-			'rewardToken': rewardToken,
-			'rewardSymbol': symbol,
-			'hasUserLimit': hasUserLimit,
-			'rewardPerBlock': rewardPerBlock,
-			'startBlock': startBlock,
-			'routeToCake': [rewardToken, BNB_ADDRESS, CAKE_ADDRESS],
-			'active': true, // default, will be set to false on setActivePools
-		}
-
-		await this.savePoolsInfo()
     }
 }
 
