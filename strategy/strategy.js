@@ -146,23 +146,39 @@ class Strategy {
         }  else {
 
             this.transitionActionQueue = [
+
                 {
-                    name: Action.ADDRESS_CLEAR,
-                    account: this.account,
-                    accountNew: this.accountNew,
+                    name: Action.EXIT,
                     from: {
-                        address: null,
-                        // this.curSyrupPoolAddr,
-                        // name: this.ps.poolsInfo[this.curSyrupPoolAddr].rewardSymbol,
-                        // apy: this.ps.poolsInfo[this.curSyrupPoolAddr].apy,
-                        // active: this.ps.poolsInfo[this.curSyrupPoolAddr].active,
-                        // hasUserLimit: this.ps.poolsInfo[this.curSyrupPoolAddr].hasUserLimit,
-                        // routeToCake: this.ps.poolsInfo[this.curSyrupPoolAddr].routeToCake
+                        address: this.curSyrupPoolAddr,
+                        name: this.ps.poolsInfo[this.curSyrupPoolAddr].rewardSymbol,
+                        apy: this.ps.poolsInfo[this.curSyrupPoolAddr].apy,
+                        active: this.ps.poolsInfo[this.curSyrupPoolAddr].active,
+                        hasUserLimit: this.ps.poolsInfo[this.curSyrupPoolAddr].hasUserLimit,
+                        routeToCake: this.ps.poolsInfo[this.curSyrupPoolAddr].routeToCake
                     },
                     to: {
                         address: null,
                     }
                 },
+
+                // {
+                //     name: Action.ADDRESS_CLEAR,
+                //     account: this.account,
+                //     accountNew: this.accountNew,
+                //     from: {
+                //         address: null,
+                //         // this.curSyrupPoolAddr,
+                //         // name: this.ps.poolsInfo[this.curSyrupPoolAddr].rewardSymbol,
+                //         // apy: this.ps.poolsInfo[this.curSyrupPoolAddr].apy,
+                //         // active: this.ps.poolsInfo[this.curSyrupPoolAddr].active,
+                //         // hasUserLimit: this.ps.poolsInfo[this.curSyrupPoolAddr].hasUserLimit,
+                //         // routeToCake: this.ps.poolsInfo[this.curSyrupPoolAddr].routeToCake
+                //     },
+                //     to: {
+                //         address: null,
+                //     }
+                // },
 
 
                 // {
