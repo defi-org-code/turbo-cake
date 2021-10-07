@@ -121,7 +121,7 @@ class Pancakeswap {
 		logger.debug('investInfo')
 		console.log(this.investInfo)
 
-		const apy = this.aprToApy(balanceCngPct.multipliedBy(this.BLOCKS_PER_DAY).toString() / blocksPeriod)
+		const apy = this.aprToApy(balanceCngPct.multipliedBy(this.BLOCKS_PER_YEAR).toString() / blocksPeriod)
 		logger.info(`Investment APY: ${apy}`)
 
 		// if (blocksPeriod < this.BLOCKS_PER_DAY) {
