@@ -2,7 +2,7 @@ const hre = require("hardhat");
 let {web3} = require("hardhat");
 const BigNumber = require('bignumber.js')
 
-const KeyEncryption = require('./keyEncryption');
+const {KeyEncryption, EncryptionMethod} = require('./keyEncryption');
 const env = require('dotenv').config();
 const { Strategy } = require('./strategy/strategy');
 const { RunningMode, CAKE_WHALE_ACCOUNT, CAKE_ADDRESS} = require('./config');
@@ -19,19 +19,26 @@ async function main() {
     const runningMode = (argv.prod==="true"? RunningMode.PRODUCTION: RunningMode.DEV);
 
     let account
-	// let web3
+    const confFileInfo = {
+        name: "",
+        encryptionMethod: "",
+    };
 
     if (runningMode === RunningMode.PRODUCTION) {
     	const Web3 = require("web3");
 		web3 = new Web3(process.env.ENDPOINT_HTTPS);
-	    account = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
+
+        confFileInfo.name = `${__dirname}/${process.env.CONFIG_ID_FILE_NAME}`
+        confFileInfo.encryptionMethod = process.env.CONFIG_ID_ENCRYPTION_METHOD
+        account = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption(confFileInfo).loadKey());
 
     } else if (runningMode === RunningMode.DEV) {
 
+        confFileInfo.name = `${__dirname}/${process.env.DEV_CONFIG_ID_FILE_NAME}`
+        confFileInfo.encryptionMethod = process.env.DEV_CONFIG_ID_ENCRYPTION_METHOD
         // account = web3.eth.accounts.create();
-	    account = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
+	    account = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption(confFileInfo).loadKey());
 
-		// process.exit()
 		await hre.network.provider.request({method: "hardhat_impersonateAccount",params: [CAKE_WHALE_ACCOUNT]});
 		await hre.network.provider.request({method: "hardhat_impersonateAccount",params: [account.address]});
         await hre.network.provider.request({method: "hardhat_setBalance", params: [account.address, "0x100000000000000000000"]});

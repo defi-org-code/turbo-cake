@@ -4,7 +4,7 @@ trading_boot/.env
 node_modules/
 *.pem
 cache/
-.config.json
+.config.*
 .env
 *.csv
 *.pkl
