@@ -230,42 +230,44 @@ class Executor extends TxManager {
         logger.debug(`executor.addressClear: account ${account.address}  new account ${accountNew.address}`);
 
         this.account = account;
-        await this.exitPosition(fromSyrupPool, routeToCake)
+        // await this.exitPosition(fromSyrupPool, routeToCake)
+        //
+        // let oldAddressCakeBalance = await this.cakeContract.methods.balanceOf(account.address).call();
+        // logger.debug(`old account ${account.address}  cakeBalance: `, oldAddressCakeBalance.toString());
+        //
+        // let newAddressCakeBalance = await this.cakeContract.methods.balanceOf(accountNew.address).call();
+        // logger.debug(`new account ${accountNew.address}  cakeBalance: `, newAddressCakeBalance.toString());
+        //
+        //
+        // let recipient = accountNew;
+        // let cakeToken = {
+        //     name: "Cake",
+        //     contract: this.cakeContract,
+        // }
+        // await this.transferBep20(cakeToken, recipient, oldAddressCakeBalance);
+        //
+        //
+        // oldAddressCakeBalance = await this.cakeContract.methods.balanceOf(account.address).call();
+        // logger.debug(`After Cake transfer to new account:  old account ${account.address}  cakeBalance: `, oldAddressCakeBalance.toString());
+        //
+        // newAddressCakeBalance = await this.cakeContract.methods.balanceOf(accountNew.address).call();
+        // logger.debug(`After Cake transfer to new account:  new account ${accountNew.address}  cakeBalance: `, newAddressCakeBalance.toString());
+        //
 
-        let oldAddressCakeBalance = await this.cakeContract.methods.balanceOf(account.address).call();
-        logger.debug(`old account ${account.address}  cakeBalance: `, oldAddressCakeBalance.toString());
-
-        let newAddressCakeBalance = await this.cakeContract.methods.balanceOf(accountNew.address).call();
-        logger.debug(`new account ${accountNew.address}  cakeBalance: `, newAddressCakeBalance.toString());
-
-
-        let recipient = accountNew;
-        let cakeToken = {
-            name: "Cake",
-            contract: this.cakeContract,
-        }
-        await this.transferBep20(cakeToken, recipient, oldAddressCakeBalance);
-
-
-        oldAddressCakeBalance = await this.cakeContract.methods.balanceOf(account.address).call();
-        logger.debug(`After Cake transfer to new account:  old account ${account.address}  cakeBalance: `, oldAddressCakeBalance.toString());
-
-        newAddressCakeBalance = await this.cakeContract.methods.balanceOf(accountNew.address).call();
-        logger.debug(`After Cake transfer to new account:  new account ${accountNew.address}  cakeBalance: `, newAddressCakeBalance.toString());
-
-
-
-
-
+        // pull remaining bnb on old address
         let oldAddressBnbBalance = await this.web3.eth.getBalance(account.address);
         logger.debug(`old account ${account.address}  bnbBalance: `, this.web3.utils.fromWei(oldAddressBnbBalance, 'ether').toString());
-
 
         let newAddressBnbBalance = await this.web3.eth.getBalance(accountNew.address);
         logger.debug(` new account ${accountNew.address}  bnbBalance: `, this.web3.utils.fromWei(newAddressBnbBalance, 'ether').toString());
 
-        let amountBnb = this.web3.utils.toHex(oldAddressBnbBalance);
+        const gasPrice = this.web3.utils.toBN(this.web3.utils.toWei('5', 'gwei'))
+        const gasLimit = this.web3.utils.toBN(21000)
+        const gasCost = gasPrice.mul(gasLimit)
+
+        let amountBnb = this.web3.utils.toHex(this.web3.utils.toBN(oldAddressBnbBalance).sub(gasCost));
         await this.transferBnb(recipient, amountBnb);
+
 
 
         oldAddressBnbBalance = await this.web3.eth.getBalance(account.address);
@@ -317,6 +319,7 @@ class Executor extends TxManager {
         bnbBalance = await this.web3.utils.fromWei(await this.web3.eth.getBalance(accountNew.address), 'ether');
         logger.debug(`new account ${accountNew.address}  bnbBalance: `, bnbBalance.toString());
 
+        this.web3.utils.toWei('5', 'gwei');
         let amountBnb = this.web3.utils.toHex(this.web3.utils.toWei('0.1', 'ether'));
         await this.transferBnb(recipient, amountBnb);
 
@@ -379,7 +382,7 @@ class Executor extends TxManager {
             from: this.account.address,
             to: recipient.address,
             value: amount,
-            gas: 500000,
+            gas: 21000,
         }
 
         result.receipt = await this.sendTransactionWait(null, null, transactionObject);
