@@ -246,7 +246,7 @@ class ContractManager extends TxManager {
 
 				if (key !== CAKE_ADDRESS) {
 					assert(workersStakingAddr[workerIndex] === null, (`worker ${workerIndex} has staking in more than 1 pool: ${workerInfo}`))
-					assert(stakingAddr === null || stakingAddr === value, `workers are staked at 2 different addresses: ${value}, ${stakingAddr}`)
+					assert(stakingAddr === null || stakingAddr === key, `workers are staked at 2 different addresses: ${value}, ${stakingAddr}`)
 					workersStakingAddr[workerIndex] = value
 					stakingAddr = key
 				}
@@ -445,6 +445,8 @@ class ContractManager extends TxManager {
 				}
 
 				break
+
+			// TODO: add support harvest + hasUserLimit = false but nActiveWorkers > 1
 		}
 
 		nextAction.startIndex = 0

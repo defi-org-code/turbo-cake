@@ -90,15 +90,15 @@ class Batcher extends TxManager {
                     break;
 
                 case Action.ENTER:
-                    await this.enterPosition(action.startIndex, action.endIndex, action.to.address);
+                    await this.enterPosition(workerIndex, workerIndex+1, action.to.address);
                     break;
 
                 case Action.HARVEST:
-                    await this.harvest(action.startIndex, action.endIndex, action.to.address, action.from.routeToCake);
+                    await this.harvest(workerIndex, workerIndex+1, action.to.address, action.from.routeToCake);
                     break;
 
                 case Action.EXIT:
-                    await this.exitPosition(action.startIndex, action.endIndex, action.from.address, action.from.routeToCake);
+                    await this.exitPosition(workerIndex, workerIndex+1, action.from.address, action.from.routeToCake);
                     break;
 
                 default:
@@ -135,19 +135,6 @@ class Batcher extends TxManager {
         logger.debug("batcher.enterPosition: end");
     }
 
-	async getGasEstimation(name, func) {
-		let reply = await this.redisClient.get(name)
-
-		if (reply == null) {
-			let gas = 2 * (await func.estimateGas())
-			logger.info(`setting gas estimation for ${name} to ${gas}`)
-			await this.redisClient.set(name, gas)
-			return gas
-		}
-
-		return Number(reply)
-	}
-
     async exitPosition(startIndex, endIndex, addr, routeToCake) {
         logger.debug(`batcher.exitPosition: exit pool ${addr}`);
 
@@ -155,7 +142,7 @@ class Batcher extends TxManager {
 		let multiplier = 0, deadline = Date.now() + this.swapTimeLimit; // TODO: multiplier
 		let swapParams = [ROUTER_ADDRESS, multiplier, routeToCake, deadline];
 
-		let estimatedGas = await this.getGasEstimation(`DoHardWorkExitGas.${process.env.BOT_ID}`, this.contractManager.methods.doHardWork([withdraw, swap, deposit, stakedPoolAddr, newPoolAddr, amount, startIndex, endIndex, swapParams]))
+		let estimatedGas = 2 * (await this.contractManager.methods.doHardWork([withdraw, swap, deposit, stakedPoolAddr, newPoolAddr, amount, startIndex, endIndex, swapParams]).estimateGas())
 		console.log(`estimatedGas: ${estimatedGas}`)
 
 		const tx = this.contractManager.methods.doHardWork([withdraw, swap, deposit, stakedPoolAddr, newPoolAddr, amount, startIndex, endIndex, swapParams]).encodeABI();
@@ -167,7 +154,7 @@ class Batcher extends TxManager {
     }
 
     async harvest(startIndex, endIndex, addr, routeToCake) {
-        logger.debug(`batcher.harvest: start pool ${addr}`);
+        logger.debug(`batcher.harvest: pool ${addr}`);
 
 		let withdraw=true, swap=true, deposit=true, stakedPoolAddr=addr, newPoolAddr=addr, amount=0;
 		let multiplier = 0, deadline = Date.now() + this.swapTimeLimit;
