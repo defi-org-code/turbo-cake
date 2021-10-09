@@ -326,7 +326,7 @@ class ContractManager extends TxManager {
 		logger.debug(`checking if need to add workers...`)
 
 		logger.info(`nExpectedWorkers=${nExpectedWorkers}, nWorkers=${this.nWorkers}`)
-		logger.info(`adding ${nExpectedWorkers-this.nWorkers} workers`)
+		// logger.info(`adding ${nExpectedWorkers-this.nWorkers} workers`)
 
 		for (let i=0; i < nExpectedWorkers - this.nWorkers; i++) {
 

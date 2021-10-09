@@ -98,7 +98,7 @@ contract Manager is ReentrancyGuard, IWorker {
 
 		for (uint16 i=params.startIndex; i< params.endIndex; i++) {
 
-			require (params.amount > IERC20(params.stakedToken).balanceOf(workers[i]), 'unexpected worker amount'); // TODO: remove restriction?
+//			require (params.amount > IERC20(params.stakedToken).balanceOf(workers[i]), 'unexpected worker amount'); // TODO: remove restriction?
 
 			amount = params.amount.sub(IERC20(params.stakedToken).balanceOf(workers[i]));
 
