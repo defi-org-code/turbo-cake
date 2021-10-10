@@ -292,10 +292,7 @@ class Strategy {
         if (action.name === Action.SWITCH && action.from.active === false) {
             rewardEndedNotice = "switch from inactive pool (rewards has ended)";
         }
-        this.notif.sendDiscord(`strategy.handleExecutionSuccess:
-                    ${rewardEndedNotice? rewardEndedNotice:""}
-					action = ${JSON.stringify(action)}
-		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
+        this.notif.sendDiscord(`strategy.handleExecutionSuccess:\n ${rewardEndedNotice? rewardEndedNotice:""} action = ${JSON.stringify(action)} \n exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
 
         this.curSyrupPoolAddr = action.to.address
         this.executor = null;
@@ -313,9 +310,7 @@ class Strategy {
     }
 
     async handleExecutionError(err, action, startTime) {
-        this.notif.sendDiscord(`strategy.handleExecutionError:
-					action = ${JSON.stringify(action)}
-		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
+        this.notif.sendDiscord(`strategy.handleExecutionError::\n action = ${JSON.stringify(action)} \n exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
 
         // this.nextAction = { name: Action.NO_OP,};
         // TODO: continue flow according to trace - executor.retry
