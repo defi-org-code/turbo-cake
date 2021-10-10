@@ -126,7 +126,7 @@ class Pancakeswap {
 		logger.info(`balance=${JSON.stringify(this.balance)}`)
 	}
 
-	async getInvestReport(curSyrupPoolAddr) {
+	async getInvestReport(curSyrupPoolAddr, harvestInterval) {
 
 		if(Object.keys(this.investInfo).length === 0) {
 			await this.getInvestInfo(curSyrupPoolAddr)
@@ -138,14 +138,19 @@ class Pancakeswap {
 		const startBalance = (new BigNumber(this.investInfo['startBalance'].staked)).plus(this.investInfo['startBalance'].unstaked)
 		const endBalance = (new BigNumber(this.balance.staked)).plus(this.balance.unstaked)
 		const balanceCngPct = this.changePct(startBalance, endBalance)
+
 		const blockNum = Number(await this.web3.eth.getBlockNumber())
 		const blocksPeriod = Number(blockNum - this.investInfo['startBlock'])
+		const numHarvests = Math.floor(blocksPeriod * this.AVG_BLOCK_SEC * 1000 / harvestInterval)  // harvestInterval in millis
+		const numHarvestsYearly = Math.floor(this.SECONDS_PER_DAY * 365 * 1000 / harvestInterval)
 
-		logger.debug(`getInvestReport: startBalance=${startBalance}, endBalance=${endBalance}, balanceCngPct=${balanceCngPct}, blockNum=${blockNum}, blocksPeriod=${blocksPeriod}`)
+		logger.debug(`getInvestReport: startBalance=${startBalance}, endBalance=${endBalance}, balanceCngPct=${balanceCngPct}, blockNum=${blockNum}, blocksPeriod=${blocksPeriod}, numHarvests=${numHarvests}`)
 		logger.debug('investInfo: ')
 		console.log(this.investInfo)
 
-		const apy = balanceCngPct.multipliedBy(this.BLOCKS_PER_YEAR).toString() / blocksPeriod
+		const returnRatio = endBalance.div(startBalance).precision(5).toNumber()
+		const apr = numHarvestsYearly * (Math.pow(returnRatio, 1/numHarvests) - 1)
+		const apy = this.aprToApy(apr, numHarvestsYearly )
 		logger.info(`Investment APY: ${apy}`)
 
 		if (blocksPeriod < this.BLOCKS_PER_DAY) {
@@ -153,7 +158,7 @@ class Pancakeswap {
 			return null
 		}
 
-		return {apy: apy, roi: balanceCngPct.toString(), roiBlockPeriod: blocksPeriod, roiDaysPeriod: blocksPeriod / this.BLOCKS_PER_DAY}
+		return {apy: apy, roi: balanceCngPct.toString(), roiBlockPeriod: blocksPeriod, roiDaysPeriod: blocksPeriod / this.BLOCKS_PER_DAY, numHarvests: numHarvests}
 	}
 
 	async getInvestInfo(curSyrupPoolAddr) {
