@@ -148,9 +148,9 @@ class Pancakeswap {
 		logger.debug('investInfo: ')
 		console.log(this.investInfo)
 
-		const returnRatio = endBalance.div(startBalance).precision(5).toNumber()
-		const apr = numHarvestsYearly * (Math.pow(returnRatio, 1/numHarvests) - 1)
-		const apy = this.aprToApy(apr, numHarvestsYearly )
+		const returnRatio = endBalance.div(startBalance)
+		const apr = new BigNumber(Math.pow(returnRatio.precision(15).toNumber(), 1/numHarvests) - 1).multipliedBy(numHarvestsYearly).precision(5).toNumber()
+		const apy = this.aprToApy(apr * 100, numHarvestsYearly )
 		logger.info(`Investment APY: ${apy}`)
 
 		if (blocksPeriod < this.BLOCKS_PER_DAY) {
