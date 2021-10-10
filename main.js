@@ -2,7 +2,7 @@ const hre = require("hardhat");
 let {web3} = require("hardhat");
 const BigNumber = require('bignumber.js')
 
-const {KeyEncryption, EncryptionMethod} = require('./keyEncryption');
+const {KeyEncryption} = require('./keyEncryption');
 const env = require('dotenv').config();
 const { Strategy } = require('./strategy/strategy');
 const { RunningMode, CAKE_WHALE_ACCOUNT, CAKE_ADDRESS} = require('./config');
@@ -54,7 +54,6 @@ async function main() {
 
     logger.debug(`[PID pid ${process.pid}] Starting Bot: address=${account.address}, mode=${runningMode}, mute-discord=${process.env.MUTE_DISCORD}`);
 
-    process.exit()
     const strategy = new Strategy(env, runningMode, account, web3);
     await strategy.start();
 }
