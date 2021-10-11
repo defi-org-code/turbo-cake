@@ -76,7 +76,7 @@ describe("DepositWithdrawTest", function () {
 		expect(res['amount']).to.equal(TRANSFER_BALANCE);
 
 		// workerContract = new web3.eth.Contract(workerAbi, worker);
-		// console.log(await workerContract.methods.getSmartChefCode().call())
+		// console.log(await workerContract.methods.getCodeHash().call())
 
 	}
 

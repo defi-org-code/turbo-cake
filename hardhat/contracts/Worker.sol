@@ -23,6 +23,7 @@ contract Worker is IWorker {
 	address cake = address(0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82);
 	address masterChefAddress = address(0x73feaa1eE314F8c655E354234017bE2193C9E24E);
 	address smartChefFactory = address (0x927158Be21Fe3D4da7E96931bb27Fd5059A8CbC2);
+//	bytes32 _codeHash;
 
 	event DoHardWork(address stakedPoolAddr);
 
@@ -35,24 +36,25 @@ contract Worker is IWorker {
 		owner = msg.sender;
 	}
 
+//	function getCodeHash() public returns (bytes32) {
+//		return _codeHash;
+//	}
+//
 	function validatePool(address pool) private {
 
 		if (pool == masterChefAddress) {
 			return;
 		}
 
-        require(ICakePools(pool).smartChefFactory() == smartChefFactory, "invalid smartchef factory");
+        require(ICakePools(pool).SMART_CHEF_FACTORY() == smartChefFactory, "invalid smartchef factory");
 
-		bool equal;
-		bytes32 smartChefCode = 0x866f2224d2bcc0a716d292663e34396dd64d657e342d87867aa429b6377f1b2d;
-		bytes memory poolCode = pool.code;
-		uint256 len = smartChefCode.length;
+		bytes32 smartChefCodeHash = 0xdff6e8f6a4233f835d067b2c6fa427aa17c0fd39a43960a75e25e35af1445587;
+		bytes32 codeHash;
+		assembly { codeHash := extcodehash(pool) }
 
-		assembly {
-            equal := eq(keccak256(poolCode, len), smartChefCode)
-        }
+//		_codeHash = codeHash;
 
-        require(equal, "invalid smartchef code");
+		require(codeHash == smartChefCodeHash, "invalid pool code hash");
     }
 
 	function deposit(address stakedPoolAddr, uint256 amount) private {
