@@ -22,6 +22,7 @@ interface ICakePools {
     ) external returns (uint[] memory amounts);
     function userInfo(address) external view returns (IWorker.UserInfo memory);
 	function getAmountsOut(uint amountIn, address[] calldata path) external view returns (uint[] memory amounts);
+	function SMART_CHEF_FACTORY() external returns (address);
 }
 
 

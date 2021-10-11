@@ -4,6 +4,19 @@
   "sourceName": "interfaces/ICakePools.sol",
   "abi": [
     {
+      "inputs": [],
+      "name": "SMART_CHEF_FACTORY",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "uint256",

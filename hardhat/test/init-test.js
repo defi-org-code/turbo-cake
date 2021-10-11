@@ -41,6 +41,7 @@ const manualCakePoolContract = new web3.eth.Contract(manualCakeAbi, manualCakePo
 const autoCakePoolContract = new web3.eth.Contract(autoCakeAbi, autoCakePoolAddr);
 
 const managerAbi = require('../artifacts/contracts/Manager.sol/Manager.json').abi
+const workerAbi = require('../artifacts/contracts/Worker.sol/Worker.json').abi
 
 const admin = accounts[0];
 const owner = accounts[1];
@@ -86,6 +87,7 @@ module.exports = {
 	admin, owner, unauthorized,
 	N_WORKERS, MAX_WORKERS, TRANSFER_BALANCE,
 	managerAbi,
+	workerAbi,
 	expect,
 	BigNumber,
 	init_test,

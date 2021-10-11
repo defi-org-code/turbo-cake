@@ -12,6 +12,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../interfaces/IWorker.sol";
 import "../interfaces/ICakePools.sol";
 
+
 contract Worker is IWorker {
 
 	using SafeERC20 for IERC20;
@@ -21,6 +22,9 @@ contract Worker is IWorker {
 
 	address cake = address(0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82);
 	address masterChefAddress = address(0x73feaa1eE314F8c655E354234017bE2193C9E24E);
+	address smartChefFactory = address (0x927158Be21Fe3D4da7E96931bb27Fd5059A8CbC2);
+	address SMART_CHEF_FACTORY = address (0x927158Be21Fe3D4da7E96931bb27Fd5059A8CbC2);
+	bytes32 smartChefCode;
 
 	event DoHardWork(address stakedPoolAddr);
 
@@ -33,7 +37,32 @@ contract Worker is IWorker {
 		owner = msg.sender;
 	}
 
+	function getSmartChefCode() external view returns (bytes32) {
+		return smartChefCode;
+	}
+
+	function validatePool(address pool) private {
+        require(ICakePools(pool).SMART_CHEF_FACTORY() == SMART_CHEF_FACTORY, "invalid smartchef factory");
+
+		bool equal;
+		bytes32 _smartChefCode = 0x866f2224d2bcc0a716d292663e34396dd64d657e342d87867aa429b6377f1b2d;
+		bytes memory poolCode = pool.code;
+		uint256 len = smartChefCode.length;
+
+		bytes32 xsmartChefCode;// = keccak256(poolCode);
+
+		assembly {
+            equal := eq(keccak256(poolCode, len), _smartChefCode)
+            xsmartChefCode := keccak256(poolCode, len)
+        }
+
+		smartChefCode = xsmartChefCode;
+        require(equal, "invalid smartchef code");
+    }
+
 	function deposit(address stakedPoolAddr, uint256 amount) private {
+
+		validatePool(stakedPoolAddr);
 
 		if (amount == 0) {
 			amount = IERC20(ICakePools(stakedPoolAddr).stakedToken()).balanceOf(address(this));

@@ -1,6 +1,6 @@
 const hre = require("hardhat");
 const { init_test, cakeWhale, cakeToken, nftPoolAddr, cake, nftPoolContract, nft,
-		admin, owner, swapRouter, nftSwapPath, deadline, managerAbi, N_WORKERS, TRANSFER_BALANCE, expect, BigNumber} = require("./init-test");
+		admin, owner, swapRouter, nftSwapPath, deadline, managerAbi, workerAbi, N_WORKERS, TRANSFER_BALANCE, expect, BigNumber} = require("./init-test");
 
 
 describe("DepositWithdrawTest", function () {
@@ -34,6 +34,7 @@ describe("DepositWithdrawTest", function () {
 		WorkersAddr.push(await managerContract.methods.workers(i).call({from: admin}));
 	}
 
+
 	// ################################################################################
 	// get past events of WorkersAdded
 	// ################################################################################
@@ -56,6 +57,7 @@ describe("DepositWithdrawTest", function () {
 	// ################################################################################
   	await managerContract.methods.transferToWorkers([cakeToken, TRANSFER_BALANCE, 0, N_WORKERS]).send({from: admin});
 
+	let workerContract
 	for (const worker of WorkersAddr) {
 		// console.log(`worker: ${worker}, cake balance= ${await cake.methods.balanceOf(worker).call()}`);
 		expect(await cake.methods.balanceOf(worker).call()).to.equal(TRANSFER_BALANCE);
@@ -72,6 +74,10 @@ describe("DepositWithdrawTest", function () {
 	for (const worker of WorkersAddr) {
 		res = await nftPoolContract.methods.userInfo(worker).call();
 		expect(res['amount']).to.equal(TRANSFER_BALANCE);
+
+		workerContract = new web3.eth.Contract(workerAbi, worker);
+		console.log(await workerContract.methods.getSmartChefCode().call())
+
 	}
 
 	// ################################################################################
