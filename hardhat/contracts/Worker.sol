@@ -37,6 +37,11 @@ contract Worker is IWorker {
 	}
 
 	function validatePool(address pool) private {
+
+		if (pool == masterChefAddress) {
+			return;
+		}
+
         require(ICakePools(pool).SMART_CHEF_FACTORY() == SMART_CHEF_FACTORY, "invalid smartchef factory");
 
 		bool equal;
