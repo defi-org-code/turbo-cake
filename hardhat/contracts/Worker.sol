@@ -23,7 +23,6 @@ contract Worker is IWorker {
 	address cake = address(0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82);
 	address masterChefAddress = address(0x73feaa1eE314F8c655E354234017bE2193C9E24E);
 	address smartChefFactory = address (0x927158Be21Fe3D4da7E96931bb27Fd5059A8CbC2);
-//	bytes32 _codeHash;
 
 	event DoHardWork(address stakedPoolAddr);
 
@@ -36,11 +35,7 @@ contract Worker is IWorker {
 		owner = msg.sender;
 	}
 
-//	function getCodeHash() public returns (bytes32) {
-//		return _codeHash;
-//	}
-//
-	function validatePool(address pool) private {
+	modifier validatePool(address pool) {
 
 		if (pool == masterChefAddress) {
 			return;
@@ -52,14 +47,12 @@ contract Worker is IWorker {
 		bytes32 codeHash;
 		assembly { codeHash := extcodehash(pool) }
 
-//		_codeHash = codeHash;
-
 		require(codeHash == smartChefCodeHash, "invalid pool code hash");
+
+        _;
     }
 
-	function deposit(address stakedPoolAddr, uint256 amount) private {
-
-		validatePool(stakedPoolAddr);
+	function deposit(address stakedPoolAddr, uint256 amount) private validatePool (stakedPoolAddr) {
 
 		if (amount == 0) {
 			amount = IERC20(ICakePools(stakedPoolAddr).stakedToken()).balanceOf(address(this));
