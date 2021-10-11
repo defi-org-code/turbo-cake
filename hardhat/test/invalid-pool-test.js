@@ -94,6 +94,6 @@ describe("Invalid-Pool-Test", function () {
 
 		expect(e.message).to.equal("VM Exception while processing transaction: reverted with reason string 'invalid smartchef factory'")
 	}
-	
+
   });
 });

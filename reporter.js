@@ -27,7 +27,9 @@ class Reporter {
 	send(metrics) {
 		this.graphiteClient.write(this.addPrefix(metrics, this.prefix), function(err) {
 		  // if err is null, your data was sent to graphite!
-		  console.log(err)
+		  if (err !== null) {
+			  console.log(`error sending data to graphite ${err}`)
+		  }
 		});
 	}
 }
