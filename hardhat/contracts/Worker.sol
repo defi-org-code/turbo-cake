@@ -23,7 +23,6 @@ contract Worker is IWorker {
 	address cake = address(0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82);
 	address masterChefAddress = address(0x73feaa1eE314F8c655E354234017bE2193C9E24E);
 	address smartChefFactory = address (0x927158Be21Fe3D4da7E96931bb27Fd5059A8CbC2);
-	address SMART_CHEF_FACTORY = address (0x927158Be21Fe3D4da7E96931bb27Fd5059A8CbC2);
 
 	event DoHardWork(address stakedPoolAddr);
 
@@ -42,7 +41,7 @@ contract Worker is IWorker {
 			return;
 		}
 
-        require(ICakePools(pool).SMART_CHEF_FACTORY() == SMART_CHEF_FACTORY, "invalid smartchef factory");
+        require(ICakePools(pool).smartChefFactory() == smartChefFactory, "invalid smartchef factory");
 
 		bool equal;
 		bytes32 smartChefCode = 0x866f2224d2bcc0a716d292663e34396dd64d657e342d87867aa429b6377f1b2d;
