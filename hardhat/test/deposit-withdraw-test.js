@@ -75,8 +75,8 @@ describe("DepositWithdrawTest", function () {
 		res = await nftPoolContract.methods.userInfo(worker).call();
 		expect(res['amount']).to.equal(TRANSFER_BALANCE);
 
-		workerContract = new web3.eth.Contract(workerAbi, worker);
-		console.log(await workerContract.methods.getSmartChefCode().call())
+		// workerContract = new web3.eth.Contract(workerAbi, worker);
+		// console.log(await workerContract.methods.getSmartChefCode().call())
 
 	}
 
