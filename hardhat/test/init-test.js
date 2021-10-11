@@ -21,14 +21,21 @@ const revvPoolAddr = "0x8aA5B2C67852ED5334c8A7F0b5eB0eF975106793";
 const manualCakePoolAddr = "0x73feaa1eE314F8c655E354234017bE2193C9E24E";
 const autoCakePoolAddr = "0xa80240Eb5d7E05d3F250cF000eEc0891d00b51CC";
 
+const swapRouter = "0x10ED43C718714eb63d5aA57B78B54704E256024E";
+
 const nftPoolAddr = '0x8d018823d13C56D62fFB795151a9e629C21E047b';
 const nftWhale = '0x3ddfa8ec3052539b6c9549f12cea2c295cff5296'
 const nftToken = '0x1fC9004eC7E5722891f5f38baE7678efCB11d34D'
 const nft = new web3.eth.Contract(cakeAbi, nftToken);
 const nftPoolContract = new web3.eth.Contract(nftPoolAbi, nftPoolAddr);
-
-const swapRouter = "0x10ED43C718714eb63d5aA57B78B54704E256024E";
 const nftSwapPath = [nftToken, wbnbToken, cakeToken];
+
+const betaPoolAddr = '0x6f660C58723922c6f866a058199FF4881019B4B5'
+const betaWhale = '0x38a466b5c0f1d09918fc8e795945bf3ad32d0080'
+const betaToken = '0xBe1a001FE942f96Eea22bA08783140B9Dcc09D28'
+const beta = new web3.eth.Contract(cakeAbi, betaToken);
+const betaPoolContract = new web3.eth.Contract(nftPoolAbi, betaPoolAddr);
+const betaSwapPath = [betaToken, wbnbToken, cakeToken];
 
 let deadline = Date.now() + 3600;
 
@@ -68,6 +75,9 @@ async function init_test() {
 	await hre.network.provider.request({method: "hardhat_impersonateAccount",params: [nftWhale]});
 	await hre.network.provider.request({method: "hardhat_setBalance", params: [nftWhale, "0x100000000000000000000"]});
 
+	await hre.network.provider.request({method: "hardhat_impersonateAccount",params: [betaWhale]});
+	await hre.network.provider.request({method: "hardhat_setBalance", params: [betaWhale, "0x100000000000000000000"]});
+
 	await hre.network.provider.request({method: "hardhat_impersonateAccount",params: [owner]});
 	await hre.network.provider.request({method: "hardhat_setBalance", params: [owner, "0x1000000000000000000000"]});
 
@@ -90,5 +100,6 @@ module.exports = {
 	workerAbi,
 	expect,
 	BigNumber,
+	betaPoolAddr, betaWhale, betaToken, beta, betaPoolContract, betaSwapPath, nftPoolAbi,
 	init_test,
 }
