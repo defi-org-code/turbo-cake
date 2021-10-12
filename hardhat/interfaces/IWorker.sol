@@ -4,34 +4,34 @@ pragma solidity ^0.8.0;
 
 interface IWorker {
 
-	struct SwapParams {
-		address swapRouter;
-        uint256 multiplier;
-        address[] path;
-        uint256 deadline;
+	struct SwapParams { // should be removed
+		address swapRouter; // whitelist + changed by trezor or add validation
+        uint256 multiplier; // remove use hardcoded value
+        address[] path; // whitelisted - can be controlled by trezor
+        uint256 deadline; // remove - use hardcoded?
 	}
 
 	struct DoHardWorkParams {
-		bool withdraw;
-		bool swap;
-		bool deposit;
+		bool withdraw;// remove
+		bool swap;// remove
+		bool deposit;// remove
 		address stakedPoolAddr;
-		address newPoolAddr;
+		address newPoolAddr;// remove
 		uint256 amount;
 		uint16 startIndex;
 		uint16 endIndex;
-		SwapParams swapParams;
+		SwapParams swapParams;//remove
 	}
 
 	struct TransferWorkersParams {
-		address stakedToken;
+		address stakedToken; // remove - should be cake
 		uint256 amount;
 		uint16 startIndex;
 		uint16 endIndex;
 	}
 
 	struct TransferMngParams {
-		address token;
+		address token; // remove - should be cake
 		uint256 amount;
 		uint16 startIndex;
 		uint16 endIndex;

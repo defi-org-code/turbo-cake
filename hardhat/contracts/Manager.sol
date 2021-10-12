@@ -51,6 +51,7 @@ contract Manager is ReentrancyGuard, IWorker {
      * restricted
      * --------------------------------------------------------------------------------------------- */
 
+	// control by trezor
 	function addWorkers(uint16 numWorkersToAdd) external restricted {
 
 		uint256 n = workers.length + numWorkersToAdd;
@@ -77,6 +78,7 @@ contract Manager is ReentrancyGuard, IWorker {
 		return _workers;
 	}
 
+	// remove this function + had support to deposit, withdraw, harvest
 	function doHardWork(DoHardWorkParams calldata params) external restricted {
 
 		require ((params.endIndex <= workers.length) && (params.startIndex < params.endIndex), "Invalid start or end index");
@@ -88,6 +90,7 @@ contract Manager is ReentrancyGuard, IWorker {
 		emit DoHardWork(params.startIndex, params.endIndex, params.stakedPoolAddr, params.newPoolAddr);
 	}
 
+	// remove stakedToken
 	function transferToWorkers(TransferWorkersParams calldata params) external restricted {
 
 		uint256 amount;
@@ -107,6 +110,7 @@ contract Manager is ReentrancyGuard, IWorker {
 		emit TransferToWorkers(params.startIndex, params.endIndex, params.amount, params.stakedToken);
 	}
 
+	// remove token
 	function transferToManager(TransferMngParams calldata params) external restricted {
 
 		for (uint16 i=params.startIndex; i< params.endIndex; i++) {
@@ -116,6 +120,7 @@ contract Manager is ReentrancyGuard, IWorker {
 		emit TransferToManager(params.startIndex, params.endIndex, params.token);
 	}
 
+	// remove token
 	function transferToOwner(address stakedToken) external restricted {
 
 		uint256 amount = IERC20(stakedToken).balanceOf(address(this));

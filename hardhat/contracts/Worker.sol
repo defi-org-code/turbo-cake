@@ -53,6 +53,8 @@ contract Worker is IWorker {
     }
 
 	function deposit(address stakedPoolAddr, uint256 amount) private validatePool (stakedPoolAddr) {
+		// TODO: change stakedToken to cake
+		// remove amount and use all balance?
 
 		if (amount == 0) {
 			amount = IERC20(ICakePools(stakedPoolAddr).stakedToken()).balanceOf(address(this));
@@ -69,6 +71,9 @@ contract Worker is IWorker {
 	}
 
 	function withdraw(address stakedPoolAddr, uint256 amount) private {
+
+		// TODO: add validatePool modifier?
+		//
 
 		UserInfo memory userInfo;
 		if (stakedPoolAddr == masterChefAddress) {
@@ -92,6 +97,11 @@ contract Worker is IWorker {
 	}
 
 	function swap(address stakedPoolAddr, SwapParams calldata params) private {
+		// TODO: remove SwapParams
+		// add validatePool modifier on stakedPoolAddr or new verifier on swapRouter
+		// swap router - hardcoded and can be changed by trezor (whitelist)
+		// path - whitelist
+		// multiplier, deadline - hardcoded
 
 		uint256 amountIn = IERC20(ICakePools(stakedPoolAddr).rewardToken()).balanceOf(address(this));
 
@@ -107,6 +117,7 @@ contract Worker is IWorker {
 	}
 
 	function doHardWork(DoHardWorkParams calldata params) external onlyOwner {
+		// TODO: separate functions: withdraw, deposit, harvest
 
 		// here we have only cakes (rewards + staked)
 		if (params.withdraw) {  // newStakedPoolAddr != stakedPoolAddr
@@ -128,7 +139,7 @@ contract Worker is IWorker {
 	}
 
 	function transferToManager(uint256 amount, address token) external onlyOwner {
-
+		// TODO: token - should be cake
 		if (amount == 0) {
 			amount = IERC20(token).balanceOf(address(this));
 		}
