@@ -116,6 +116,20 @@ contract Manager is ReentrancyGuard, IWorker {
 //		emit DoHardWork(startIndex, endIndex, params.stakedPoolAddr, params.newPoolAddr);
 	}
 
+	function harvest(address poolAddr, uint16 pathId, uint16 startIndex, uint16 endIndex) external restricted validatePool(poolAddr) {
+
+		require ((endIndex <= workers.length) && (startIndex < endIndex), "Invalid start or end index");
+
+		for (uint16 i=startIndex; i < endIndex; i++) {
+			Worker(workers[i]).withdraw(poolAddr, true);
+			Worker(workers[i]).swap(poolAddr, pathId);
+			Worker(workers[i]).deposit(poolAddr);
+		}
+
+		// TODO: event
+//		emit DoHardWork(startIndex, endIndex, params.stakedPoolAddr, params.newPoolAddr);
+	}
+
 	function transferToWorkers(uint256 amount, uint16 startIndex, uint16 endIndex) external restricted {
 
 		uint256 amount;
