@@ -6,7 +6,7 @@ import "./IWorker.sol";
 
 
 interface ICakePools {
-
+	// separate if
 	function deposit(uint256) external;
 	function enterStaking(uint256) external;
 	function withdraw(uint256) external;

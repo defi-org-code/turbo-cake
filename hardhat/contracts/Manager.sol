@@ -3,10 +3,10 @@ pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 
-import "@openzeppelin/contracts/utils/math/Math.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";// TODO: remove no need in solidity 8
+import "@openzeppelin/contracts/utils/math/SafeMath.sol"; // TODO: remove no need in solidity 8
 import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol"; // TODO: remove
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -28,11 +28,12 @@ contract Manager is ReentrancyGuard, IWorker {
     address public immutable owner;
     address public admin;
 	address [] public workers;
+	// add path
 
 	// TODO: improve events params
 	event SetAdmin(address newAdmin);
 	event WorkersAdded(uint256 nWorkers);
-	event DoHardWork(uint16 startIndex, uint16 endIndex, address indexed stakedPoolAddr, address indexed newPoolAddr);
+	event DoHardWork(uint16 startIndex, uint16 endIndex, address indexed poolAddr);
 	event TransferToWorkers(uint16 startIndex, uint16 endIndex, uint256 indexed amount);
 	event TransferToManager(uint16 indexed startIndex, uint16 indexed endIndex);
 	event TransferToOwner(uint256 amount);
@@ -50,18 +51,20 @@ contract Manager is ReentrancyGuard, IWorker {
 	modifier validatePool(address pool) {
 
 		if (pool == masterChefAddress) {
-			return;
+			_;
 		}
+		else {
 
-        require(ICakePools(pool).SMART_CHEF_FACTORY() == smartChefFactory, "invalid smartchef factory");
+	        require(ICakePools(pool).SMART_CHEF_FACTORY() == smartChefFactory, "invalid smartchef factory");
 
-		bytes32 smartChefCodeHash = 0xdff6e8f6a4233f835d067b2c6fa427aa17c0fd39a43960a75e25e35af1445587;
-		bytes32 codeHash;
-		assembly { codeHash := extcodehash(pool) }
+			bytes32 smartChefCodeHash = 0xdff6e8f6a4233f835d067b2c6fa427aa17c0fd39a43960a75e25e35af1445587;
+			bytes32 codeHash;
+			assembly { codeHash := extcodehash(pool) }
 
-		require(codeHash == smartChefCodeHash, "invalid pool code hash");
+			require(codeHash == smartChefCodeHash, "invalid pool code hash");
 
-        _;
+	        _;
+		}
     }
 
     constructor(address _owner, address _admin) {
@@ -99,21 +102,19 @@ contract Manager is ReentrancyGuard, IWorker {
 			Worker(workers[i]).deposit(poolAddr);
 		}
 
-		// TODO: event
-//		emit DoHardWork(startIndex, endIndex, params.stakedPoolAddr, params.newPoolAddr);
+//		emit DoHardWork(startIndex, endIndex, poolAddr);
 	}
 
-	function withdraw(address poolAddr, bool withdrawRewardsOnly, uint16 pathId, uint16 startIndex, uint16 endIndex) external restricted validatePool(poolAddr) {
+	function withdraw(address poolAddr, uint16 pathId, uint16 startIndex, uint16 endIndex) external restricted validatePool(poolAddr) {
 
 		require ((endIndex <= workers.length) && (startIndex < endIndex), "Invalid start or end index");
 
 		for (uint16 i=startIndex; i < endIndex; i++) {
-			Worker(workers[i]).withdraw(poolAddr, withdrawRewardsOnly);
-			Worker(workers[i]).swap(poolAddr, pathId);
+			Worker(workers[i]).withdraw(poolAddr, false);
+			Worker(workers[i]).swap(poolAddr, path[pathId]);
 		}
 
-		// TODO: event
-//		emit DoHardWork(startIndex, endIndex, params.stakedPoolAddr, params.newPoolAddr);
+//		emit DoHardWork(startIndex, endIndex, poolAddr);
 	}
 
 	function harvest(address poolAddr, uint16 pathId, uint16 startIndex, uint16 endIndex) external restricted validatePool(poolAddr) {
@@ -122,7 +123,7 @@ contract Manager is ReentrancyGuard, IWorker {
 
 		for (uint16 i=startIndex; i < endIndex; i++) {
 			Worker(workers[i]).withdraw(poolAddr, true);
-			Worker(workers[i]).swap(poolAddr, pathId);
+			Worker(workers[i]).swap(poolAddr, path[pathId]);
 			Worker(workers[i]).deposit(poolAddr);
 		}
 
@@ -135,19 +136,20 @@ contract Manager is ReentrancyGuard, IWorker {
 		uint256 amount;
 		uint256 balance = IERC20(cake).balanceOf(address(this));
 
+		// add require endIndex > startIndex
 		require(workers.length >= endIndex - startIndex, "invalid workers indices");
-		require(params.amount * (endIndex - startIndex) <= balance, "Insufficient funds for all workers");
+		require(amount * (endIndex - startIndex) <= balance, "Insufficient funds for all workers");
 
 		for (uint16 i=startIndex; i< endIndex; i++) {
 
-			amount = params.amount.sub(IERC20(cake).balanceOf(workers[i]));
-			require(amount <= params.amount, "unexpected worker amount");
+			amount = amount.sub(IERC20(cake).balanceOf(workers[i]));
+			require(amount <= amount, "unexpected worker amount"); // fix amount <= amount
 
 			IERC20(cake).safeTransfer(workers[i], amount);
 		}
 
 		// TODO: event
-		emit TransferToWorkers(startIndex, endIndex, params.amount);
+		emit TransferToWorkers(startIndex, endIndex, amount);
 	}
 
 	function transferToManager(uint16 startIndex, uint16 endIndex) external restricted {
@@ -172,6 +174,8 @@ contract Manager is ReentrancyGuard, IWorker {
     /* ---------------------------------------------------------------------------------------------
      * only owner
      * --------------------------------------------------------------------------------------------- */
+     // add path
+
 	function addWorkers(uint16 numWorkersToAdd) external onlyOwner {
 
 		uint256 n = workers.length + numWorkersToAdd;

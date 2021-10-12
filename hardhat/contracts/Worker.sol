@@ -1,13 +1,13 @@
 //SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.0; // TODO: use 0.8.6
 
 import "hardhat/console.sol";
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol"; // TODO: remove no need in solidity 8
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";// TODO: remove no need in solidity 8
 
 import "../interfaces/IWorker.sol";
 import "../interfaces/ICakePools.sol";
@@ -16,7 +16,7 @@ import "../interfaces/ICakePools.sol";
 contract Worker is IWorker {
 
 	using SafeERC20 for IERC20;
-    using SafeMath for uint256;
+    using SafeMath for uint256;// TODO: remove no need in solidity 8
 
     address public immutable owner;
 
@@ -37,20 +37,21 @@ contract Worker is IWorker {
 	}
 
 	function deposit(address poolAddr) external onlyOwner {
-
+		// make func clearer
 		amount = IERC20(cake).balanceOf(address(this));
 
+		IERC20(cake).approve(poolAddr,amount);
+
 		if (poolAddr == masterChefAddress) {
-			IERC20(cake).approve(poolAddr,amount);
 			ICakePools(poolAddr).enterStaking(amount);
 		}
 		else {
-			IERC20(cake).approve(poolAddr,amount);
 			ICakePools(poolAddr).deposit(amount);
 		}
 	}
 
 	function withdraw(address poolAddr, bool withdrawRewardsOnly) external onlyOwner {
+		// make func clearer
 
 		UserInfo memory userInfo;
 		uint256 amount = 0;
@@ -75,12 +76,10 @@ contract Worker is IWorker {
 		}
 	}
 
-	function swap(address poolAddr, uint16 pathId) external onlyOwner {
-		// TODO: remove SwapParams
-		// add validatePool modifier on poolAddr or new verifier on swapRouter
-		// swap router - hardcoded and can be changed by trezor (whitelist)
-		// path - whitelist
+	function swap(address poolAddr, uint16 path) external onlyOwner {
+		// consider move to manager
 		// multiplier, deadline - hardcoded
+		// update swapRouter from trezor
 
 		uint256 amountIn = IERC20(ICakePools(poolAddr).rewardToken()).balanceOf(address(this));
 
@@ -88,11 +87,15 @@ contract Worker is IWorker {
 			return;
 		}
 
-        uint256 [] memory amounts = ICakePools(swapRouter).getAmountsOut(amountIn, path[pathId]);
-		uint256 amountOutMin = amounts[amounts.length-1].mul(params.multiplier).div(100);
+		// talk with tal: oracle or amountOutMin
+		// add harvest stats -> bot monitoring
+		// remove contracts from the bot
+//        uint256 [] memory amounts = ICakePools(swapRouter).getAmountsOut(amountIn, path);
+//		uint256 amountOutMin = amounts[amounts.length-1].mul(params.multiplier).div(100);
+		uint256 amountOutMin = 0; // TODO: move to bot?
 
 		IERC20(ICakePools(poolAddr).rewardToken()).approve(swapRouter,amountIn);
-		ICakePools(swapRouter).swapExactTokensForTokens(amountIn, amountOutMin, params.path, address(this), params.deadline);
+		ICakePools(swapRouter).swapExactTokensForTokens(amountIn, amountOutMin, path, address(this), params.deadline);
 	}
 
 	function transferToManager() external onlyOwner {
