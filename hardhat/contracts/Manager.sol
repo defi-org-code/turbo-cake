@@ -70,21 +70,8 @@ contract Manager is ReentrancyGuard, IWorker {
     }
 
     /* ---------------------------------------------------------------------------------------------
-     * restricted
+     * view
      * --------------------------------------------------------------------------------------------- */
-
-	// control by trezor
-	function addWorkers(uint16 numWorkersToAdd) external onlyOwner {
-
-		uint256 n = workers.length + numWorkersToAdd;
-
-		for (uint256 i=workers.length; i < n; i++) {
-			Worker worker = new Worker();
-			workers.push(address(worker));
-		}
-
-		emit WorkersAdded(workers.length);
-	}
 
 	function getNWorkers() external view returns (uint256) {
 		return workers.length;
@@ -100,24 +87,28 @@ contract Manager is ReentrancyGuard, IWorker {
 		return _workers;
 	}
 
-	function deposit(address poolAddr, uint256 amount, uint16 startIndex, uint16 endIndex) external restricted validatePool(poolAddr) {
+    /* ---------------------------------------------------------------------------------------------
+     * restricted
+     * --------------------------------------------------------------------------------------------- */
+
+	function deposit(address poolAddr, uint16 startIndex, uint16 endIndex) external restricted validatePool(poolAddr) {
 
 		require ((endIndex <= workers.length) && (startIndex < endIndex), "Invalid start or end index");
 
 		for (uint16 i=startIndex; i < endIndex; i++) {
-			Worker(workers[i]).deposit(poolAddr, amount);
+			Worker(workers[i]).deposit(poolAddr);
 		}
 
 		// TODO: event
 //		emit DoHardWork(startIndex, endIndex, params.stakedPoolAddr, params.newPoolAddr);
 	}
 
-	function withdraw(address poolAddr, uint256 amount, uint16 startIndex, uint16 endIndex) external restricted validatePool(poolAddr) {
+	function withdraw(address poolAddr, bool withdrawRewardsOnly, uint16 startIndex, uint16 endIndex) external restricted validatePool(poolAddr) {
 
 		require ((endIndex <= workers.length) && (startIndex < endIndex), "Invalid start or end index");
 
 		for (uint16 i=startIndex; i < endIndex; i++) {
-			Worker(workers[i]).withdraw(poolAddr, amount);
+			Worker(workers[i]).withdraw(poolAddr, withdrawRewardsOnly);
 		}
 
 		// TODO: event
@@ -129,7 +120,7 @@ contract Manager is ReentrancyGuard, IWorker {
 		require ((endIndex <= workers.length) && (startIndex < endIndex), "Invalid start or end index");
 
 		for (uint16 i=startIndex; i < endIndex; i++) {
-			Worker(workers[i]).withdraw(poolAddr, 0);
+			Worker(workers[i]).withdraw(poolAddr, true);
 			Worker(workers[i]).swap(poolAddr, 0/*TODO swap params*/);
 		}
 
@@ -153,6 +144,7 @@ contract Manager is ReentrancyGuard, IWorker {
 			IERC20(cake).safeTransfer(workers[i], amount);
 		}
 
+		// TODO: event
 		emit TransferToWorkers(startIndex, endIndex, params.amount);
 	}
 
@@ -178,6 +170,17 @@ contract Manager is ReentrancyGuard, IWorker {
     /* ---------------------------------------------------------------------------------------------
      * only owner
      * --------------------------------------------------------------------------------------------- */
+	function addWorkers(uint16 numWorkersToAdd) external onlyOwner {
+
+		uint256 n = workers.length + numWorkersToAdd;
+
+		for (uint256 i=workers.length; i < n; i++) {
+			Worker worker = new Worker();
+			workers.push(address(worker));
+		}
+
+		emit WorkersAdded(workers.length);
+	}
 
     function setAdmin(address newAdmin) external onlyOwner {
         admin = newAdmin;

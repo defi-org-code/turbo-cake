@@ -23,8 +23,10 @@ contract Worker is IWorker {
 	address cake = address(0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82);
 	address masterChefAddress = address(0x73feaa1eE314F8c655E354234017bE2193C9E24E);
 	address smartChefFactory = address (0x927158Be21Fe3D4da7E96931bb27Fd5059A8CbC2);
+	address [] swapRouter = [0x0];
+	address [] swapRouter = [0x0];
 
-	event DoHardWork(address stakedPoolAddr);
+	event DoHardWork(address poolAddr);
 
 	modifier onlyOwner() {
         require(msg.sender == owner, "onlyOwner");
@@ -35,90 +37,63 @@ contract Worker is IWorker {
 		owner = msg.sender;
 	}
 
-	function deposit(address stakedPoolAddr, uint256 amount) private validatePool (stakedPoolAddr) {
-		// TODO: change stakedToken to cake
-		// remove amount and use all balance?
+	function deposit(address poolAddr) external onlyOwner {
 
-		if (amount == 0) {
-			amount = IERC20(ICakePools(stakedPoolAddr).stakedToken()).balanceOf(address(this));
-		}
+		amount = IERC20(cake).balanceOf(address(this));
 
-		if (stakedPoolAddr == masterChefAddress) {
-			IERC20(cake).approve(stakedPoolAddr,amount);
-			ICakePools(stakedPoolAddr).enterStaking(amount);
+		if (poolAddr == masterChefAddress) {
+			IERC20(cake).approve(poolAddr,amount);
+			ICakePools(poolAddr).enterStaking(amount);
 		}
 		else {
-			IERC20(ICakePools(stakedPoolAddr).stakedToken()).approve(stakedPoolAddr,amount);
-			ICakePools(stakedPoolAddr).deposit(amount);
+			IERC20(cake).approve(poolAddr,amount);
+			ICakePools(poolAddr).deposit(amount);
 		}
 	}
 
-	function withdraw(address stakedPoolAddr, uint256 amount) private {
-
-		// TODO: add validatePool modifier?
-		//
+	function withdraw(address poolAddr, bool withdrawRewardsOnly) external onlyOwner {
 
 		UserInfo memory userInfo;
-		if (stakedPoolAddr == masterChefAddress) {
+		uint256 amount = 0;
 
-			if (amount != 0) {
-				userInfo = IMasterchef(stakedPoolAddr).userInfo(0, address(this));
+		if (poolAddr == masterChefAddress) {
+
+			if (withdrawRewardsOnly == false) {
+				userInfo = IMasterchef(poolAddr).userInfo(0, address(this));
 				amount = userInfo.amount;
 			}
 
-			ICakePools(stakedPoolAddr).leaveStaking(amount);
+			ICakePools(poolAddr).leaveStaking(amount);
 		}
 		else {
 
-			if (amount != 0) {
-				userInfo = ICakePools(stakedPoolAddr).userInfo(address(this));
+			if (withdrawRewardsOnly == false) {
+				userInfo = ICakePools(poolAddr).userInfo(address(this));
 				amount = userInfo.amount;
 			}
 
-			ICakePools(stakedPoolAddr).withdraw(amount);
+			ICakePools(poolAddr).withdraw(amount);
 		}
 	}
 
-	function swap(address stakedPoolAddr, SwapParams calldata params) private {
+	function swap(address poolAddr, uint16 pathId, uint16 swapRouterId) external onlyOwner {
 		// TODO: remove SwapParams
-		// add validatePool modifier on stakedPoolAddr or new verifier on swapRouter
+		// add validatePool modifier on poolAddr or new verifier on swapRouter
 		// swap router - hardcoded and can be changed by trezor (whitelist)
 		// path - whitelist
 		// multiplier, deadline - hardcoded
 
-		uint256 amountIn = IERC20(ICakePools(stakedPoolAddr).rewardToken()).balanceOf(address(this));
+		uint256 amountIn = IERC20(ICakePools(poolAddr).rewardToken()).balanceOf(address(this));
 
 		if (amountIn == 0) {
 			return;
 		}
 
-        uint256 [] memory amounts = ICakePools(params.swapRouter).getAmountsOut(amountIn, params.path);
+        uint256 [] memory amounts = ICakePools(swapRouter[swapRouterId]).getAmountsOut(amountIn, path[pathId]);
 		uint256 amountOutMin = amounts[amounts.length-1].mul(params.multiplier).div(100);
 
-		IERC20(ICakePools(stakedPoolAddr).rewardToken()).approve(params.swapRouter,amountIn);
+		IERC20(ICakePools(poolAddr).rewardToken()).approve(params.swapRouter,amountIn);
 		ICakePools(params.swapRouter).swapExactTokensForTokens(amountIn, amountOutMin, params.path, address(this), params.deadline);
-	}
-
-	function doHardWork(DoHardWorkParams calldata params) external onlyOwner {
-		// TODO: separate functions: withdraw, deposit, harvest
-
-		// here we have only cakes (rewards + staked)
-		if (params.withdraw) {  // newStakedPoolAddr != stakedPoolAddr
-			// unstake all cakes
-			withdraw(params.stakedPoolAddr, params.amount);
-		}
-
-		// our reward token might be cake, in this case no need to swap
-		if (params.swap) {
-			swap(params.stakedPoolAddr, params.swapParams);
-		}
-
-		if (params.deposit) {
-			// stake all cakes in staking pool
-			deposit(params.newPoolAddr, params.amount);
-		}
-
-		emit DoHardWork(params.stakedPoolAddr);
 	}
 
 	function transferToManager() external onlyOwner {
