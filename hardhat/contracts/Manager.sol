@@ -103,13 +103,13 @@ contract Manager is ReentrancyGuard, IWorker {
 //		emit DoHardWork(startIndex, endIndex, params.stakedPoolAddr, params.newPoolAddr);
 	}
 
-	function withdraw(address poolAddr, bool withdrawRewardsOnly, uint16 startIndex, uint16 endIndex) external restricted validatePool(poolAddr) {
+	function withdraw(address poolAddr, bool withdrawRewardsOnly, uint16 pathId, uint16 startIndex, uint16 endIndex) external restricted validatePool(poolAddr) {
 
 		require ((endIndex <= workers.length) && (startIndex < endIndex), "Invalid start or end index");
 
 		for (uint16 i=startIndex; i < endIndex; i++) {
 			Worker(workers[i]).withdraw(poolAddr, withdrawRewardsOnly);
-			Worker(workers[i]).swap(poolAddr, 0/*TODO swap params*/);
+			Worker(workers[i]).swap(poolAddr, pathId);
 		}
 
 		// TODO: event

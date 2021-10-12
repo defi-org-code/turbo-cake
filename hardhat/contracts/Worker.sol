@@ -23,8 +23,7 @@ contract Worker is IWorker {
 	address cake = address(0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82);
 	address masterChefAddress = address(0x73feaa1eE314F8c655E354234017bE2193C9E24E);
 	address smartChefFactory = address (0x927158Be21Fe3D4da7E96931bb27Fd5059A8CbC2);
-	address [] swapRouter = [0x0];
-	address [] swapRouter = [0x0];
+	address swapRouter = address (0x10ED43C718714eb63d5aA57B78B54704E256024E);
 
 	event DoHardWork(address poolAddr);
 
@@ -76,7 +75,7 @@ contract Worker is IWorker {
 		}
 	}
 
-	function swap(address poolAddr, uint16 pathId, uint16 swapRouterId) external onlyOwner {
+	function swap(address poolAddr, uint16 pathId) external onlyOwner {
 		// TODO: remove SwapParams
 		// add validatePool modifier on poolAddr or new verifier on swapRouter
 		// swap router - hardcoded and can be changed by trezor (whitelist)
@@ -89,11 +88,11 @@ contract Worker is IWorker {
 			return;
 		}
 
-        uint256 [] memory amounts = ICakePools(swapRouter[swapRouterId]).getAmountsOut(amountIn, path[pathId]);
+        uint256 [] memory amounts = ICakePools(swapRouter).getAmountsOut(amountIn, path[pathId]);
 		uint256 amountOutMin = amounts[amounts.length-1].mul(params.multiplier).div(100);
 
-		IERC20(ICakePools(poolAddr).rewardToken()).approve(params.swapRouter,amountIn);
-		ICakePools(params.swapRouter).swapExactTokensForTokens(amountIn, amountOutMin, params.path, address(this), params.deadline);
+		IERC20(ICakePools(poolAddr).rewardToken()).approve(swapRouter,amountIn);
+		ICakePools(swapRouter).swapExactTokensForTokens(amountIn, amountOutMin, params.path, address(this), params.deadline);
 	}
 
 	function transferToManager() external onlyOwner {
