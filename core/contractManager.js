@@ -353,7 +353,7 @@ class ContractManager extends TxManager {
 		}
 
 		await this.setManagerBalance()
-		const amount = (new BigNumber(this.managerBalance).dividedBy(endIndex-startIndex)).toString()
+		const amount = (new BigNumber(this.managerBalance).dividedBy(endIndex-startIndex)).toFixed(0).toString()
 		logger.info(`transferToWorkers: amount=${amount}, startIndex=${startIndex}, endIndex=${endIndex}`)
 
 		if (amount === '0') {
