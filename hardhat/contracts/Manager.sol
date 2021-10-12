@@ -13,12 +13,17 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./Worker.sol";
 import "../interfaces/IWorker.sol";
+import "../interfaces/ICakePools.sol";
 
 
 contract Manager is ReentrancyGuard, IWorker {
 
 	using SafeERC20 for IERC20;
     using SafeMath for uint256;
+
+	address cake = address(0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82);
+	address masterChefAddress = address(0x73feaa1eE314F8c655E354234017bE2193C9E24E);
+	address smartChefFactory = address (0x927158Be21Fe3D4da7E96931bb27Fd5059A8CbC2);
 
     address public immutable owner;
     address public admin;
@@ -28,8 +33,8 @@ contract Manager is ReentrancyGuard, IWorker {
 	event SetAdmin(address newAdmin);
 	event WorkersAdded(uint256 nWorkers);
 	event DoHardWork(uint16 startIndex, uint16 endIndex, address indexed stakedPoolAddr, address indexed newPoolAddr);
-	event TransferToWorkers(uint16 startIndex, uint16 endIndex, uint256 indexed amount, address indexed stakedToken);
-	event TransferToManager(uint16 indexed startIndex, uint16 indexed endIndex, address indexed token);
+	event TransferToWorkers(uint16 startIndex, uint16 endIndex, uint256 indexed amount);
+	event TransferToManager(uint16 indexed startIndex, uint16 indexed endIndex);
 	event TransferToOwner(uint256 amount);
 
 	modifier restricted() {
@@ -39,6 +44,23 @@ contract Manager is ReentrancyGuard, IWorker {
 
 	modifier onlyOwner() {
         require(msg.sender == owner, "onlyOwner");
+        _;
+    }
+
+	modifier validatePool(address pool) {
+
+		if (pool == masterChefAddress) {
+			return;
+		}
+
+        require(ICakePools(pool).SMART_CHEF_FACTORY() == smartChefFactory, "invalid smartchef factory");
+
+		bytes32 smartChefCodeHash = 0xdff6e8f6a4233f835d067b2c6fa427aa17c0fd39a43960a75e25e35af1445587;
+		bytes32 codeHash;
+		assembly { codeHash := extcodehash(pool) }
+
+		require(codeHash == smartChefCodeHash, "invalid pool code hash");
+
         _;
     }
 
@@ -52,7 +74,7 @@ contract Manager is ReentrancyGuard, IWorker {
      * --------------------------------------------------------------------------------------------- */
 
 	// control by trezor
-	function addWorkers(uint16 numWorkersToAdd) external restricted {
+	function addWorkers(uint16 numWorkersToAdd) external onlyOwner {
 
 		uint256 n = workers.length + numWorkersToAdd;
 
@@ -78,54 +100,77 @@ contract Manager is ReentrancyGuard, IWorker {
 		return _workers;
 	}
 
-	// remove this function + had support to deposit, withdraw, harvest
-	function doHardWork(DoHardWorkParams calldata params) external restricted {
+	function deposit(address poolAddr, uint256 amount, uint16 startIndex, uint16 endIndex) external restricted validatePool(poolAddr) {
 
-		require ((params.endIndex <= workers.length) && (params.startIndex < params.endIndex), "Invalid start or end index");
+		require ((endIndex <= workers.length) && (startIndex < endIndex), "Invalid start or end index");
 
-		for (uint16 i=params.startIndex; i < params.endIndex; i++) {
-			Worker(workers[i]).doHardWork(params);
+		for (uint16 i=startIndex; i < endIndex; i++) {
+			Worker(workers[i]).deposit(poolAddr, amount);
 		}
 
-		emit DoHardWork(params.startIndex, params.endIndex, params.stakedPoolAddr, params.newPoolAddr);
+		// TODO: event
+//		emit DoHardWork(startIndex, endIndex, params.stakedPoolAddr, params.newPoolAddr);
 	}
 
-	// remove stakedToken
-	function transferToWorkers(TransferWorkersParams calldata params) external restricted {
+	function withdraw(address poolAddr, uint256 amount, uint16 startIndex, uint16 endIndex) external restricted validatePool(poolAddr) {
+
+		require ((endIndex <= workers.length) && (startIndex < endIndex), "Invalid start or end index");
+
+		for (uint16 i=startIndex; i < endIndex; i++) {
+			Worker(workers[i]).withdraw(poolAddr, amount);
+		}
+
+		// TODO: event
+//		emit DoHardWork(startIndex, endIndex, params.stakedPoolAddr, params.newPoolAddr);
+	}
+
+	function harvest(address poolAddr, uint16 startIndex, uint16 endIndex) external restricted validatePool(poolAddr) {
+
+		require ((endIndex <= workers.length) && (startIndex < endIndex), "Invalid start or end index");
+
+		for (uint16 i=startIndex; i < endIndex; i++) {
+			Worker(workers[i]).withdraw(poolAddr, 0);
+			Worker(workers[i]).swap(poolAddr, 0/*TODO swap params*/);
+		}
+
+		// TODO: event
+//		emit DoHardWork(startIndex, endIndex, params.stakedPoolAddr, params.newPoolAddr);
+	}
+
+	function transferToWorkers(uint256 amount, uint16 startIndex, uint16 endIndex) external restricted {
 
 		uint256 amount;
-		uint256 balance = IERC20(params.stakedToken).balanceOf(address(this));
+		uint256 balance = IERC20(cake).balanceOf(address(this));
 
-		require(workers.length >= params.endIndex - params.startIndex, "invalid workers indices");
-		require(params.amount * (params.endIndex - params.startIndex) <= balance, "Insufficient funds for all workers");
+		require(workers.length >= endIndex - startIndex, "invalid workers indices");
+		require(params.amount * (endIndex - startIndex) <= balance, "Insufficient funds for all workers");
 
-		for (uint16 i=params.startIndex; i< params.endIndex; i++) {
+		for (uint16 i=startIndex; i< endIndex; i++) {
 
-			amount = params.amount.sub(IERC20(params.stakedToken).balanceOf(workers[i]));
+			amount = params.amount.sub(IERC20(cake).balanceOf(workers[i]));
 			require(amount <= params.amount, "unexpected worker amount");
 
-			IERC20(params.stakedToken).safeTransfer(workers[i], amount);
+			IERC20(cake).safeTransfer(workers[i], amount);
 		}
 
-		emit TransferToWorkers(params.startIndex, params.endIndex, params.amount, params.stakedToken);
+		emit TransferToWorkers(startIndex, endIndex, params.amount);
 	}
 
-	// remove token
-	function transferToManager(TransferMngParams calldata params) external restricted {
+	function transferToManager(uint16 startIndex, uint16 endIndex) external restricted {
 
-		for (uint16 i=params.startIndex; i< params.endIndex; i++) {
-				Worker(workers[i]).transferToManager(params.amount, params.token);
+		for (uint16 i=startIndex; i< endIndex; i++) {
+				Worker(workers[i]).transferToManager();
 		}
 
-		emit TransferToManager(params.startIndex, params.endIndex, params.token);
+		// TODO: event
+		emit TransferToManager(startIndex, endIndex);
 	}
 
-	// remove token
-	function transferToOwner(address stakedToken) external restricted {
+	function transferToOwner() external restricted {
 
-		uint256 amount = IERC20(stakedToken).balanceOf(address(this));
+		uint256 amount = IERC20(cake).balanceOf(address(this));
 
-		IERC20(stakedToken).safeTransfer(owner, amount);
+		IERC20(cake).safeTransfer(owner, amount);
 
 		emit TransferToOwner(amount);
 	}

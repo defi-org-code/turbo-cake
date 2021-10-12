@@ -35,23 +35,6 @@ contract Worker is IWorker {
 		owner = msg.sender;
 	}
 
-	modifier validatePool(address pool) {
-
-		if (pool == masterChefAddress) {
-			return;
-		}
-
-        require(ICakePools(pool).SMART_CHEF_FACTORY() == smartChefFactory, "invalid smartchef factory");
-
-		bytes32 smartChefCodeHash = 0xdff6e8f6a4233f835d067b2c6fa427aa17c0fd39a43960a75e25e35af1445587;
-		bytes32 codeHash;
-		assembly { codeHash := extcodehash(pool) }
-
-		require(codeHash == smartChefCodeHash, "invalid pool code hash");
-
-        _;
-    }
-
 	function deposit(address stakedPoolAddr, uint256 amount) private validatePool (stakedPoolAddr) {
 		// TODO: change stakedToken to cake
 		// remove amount and use all balance?
@@ -138,11 +121,10 @@ contract Worker is IWorker {
 		emit DoHardWork(params.stakedPoolAddr);
 	}
 
-	function transferToManager(uint256 amount, address token) external onlyOwner {
-		// TODO: token - should be cake
-		if (amount == 0) {
-			amount = IERC20(token).balanceOf(address(this));
-		}
+	function transferToManager() external onlyOwner {
+		uint256 amount;
+
+		amount = IERC20(cake).balanceOf(address(this));
 
 		IERC20(token).safeTransfer(owner, amount);
 	}
