@@ -109,6 +109,9 @@ contract Worker is IWorker {
 			return;
 		}
 
+		// talk with tal: oracle or amountOutMin
+		// add harvest stats -> bot monitoring
+		// remove contracts from the bot
         uint256 [] memory amounts = ICakePools(params.swapRouter).getAmountsOut(amountIn, params.path);
 		uint256 amountOutMin = amounts[amounts.length-1].mul(params.multiplier).div(100);
 

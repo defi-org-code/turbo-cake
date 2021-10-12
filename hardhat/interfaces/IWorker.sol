@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 interface IWorker {
 
 	struct SwapParams { // should be removed
-		address swapRouter; // whitelist + changed by trezor or add validation
+		address swapRouter; // verify only 1 router exist
         uint256 multiplier; // remove use hardcoded value
         address[] path; // whitelisted - can be controlled by trezor
         uint256 deadline; // remove - use hardcoded?
