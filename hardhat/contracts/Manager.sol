@@ -1,8 +1,8 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+//import "@openzeppelin/contracts/utils/Address.sol";
+//import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./Worker.sol";
@@ -59,13 +59,13 @@ contract Manager  {
 		}
 		else {
 
-	        require(ISmartChef(pool).SMART_CHEF_FACTORY() == smartChefFactory, "invalid smartchef factory");
+	        require(ISmartChef(pool).SMART_CHEF_FACTORY() == smartChefFactory, "POOL0");
 
 			bytes32 smartChefCodeHash = 0xdff6e8f6a4233f835d067b2c6fa427aa17c0fd39a43960a75e25e35af1445587;
 			bytes32 codeHash;
 			assembly { codeHash := extcodehash(pool) }
 
-			require(codeHash == smartChefCodeHash, "invalid pool code hash");
+			require(codeHash == smartChefCodeHash, "POOL1");
 
 	        _;
 		}
@@ -100,7 +100,7 @@ contract Manager  {
 
 	function deposit(address poolAddr, uint16 startIndex, uint16 endIndex) external restricted validatePool(poolAddr) {
 
-		require ((endIndex <= workers.length) && (startIndex < endIndex), "Invalid start or end index");
+		require ((endIndex <= workers.length) && (startIndex < endIndex), "IDX");
 
 		uint256 amount;
 
@@ -122,8 +122,8 @@ contract Manager  {
 
 	function withdraw(address poolAddr, uint16 pathId, uint16 startIndex, uint16 endIndex) external restricted validatePool(poolAddr) {
 
-		require (pathId < path.length, "pathId exceeds path array size");
-		require ((endIndex <= workers.length) && (startIndex < endIndex), "Invalid start or end index");
+		require (pathId < path.length, "IDX0");
+		require ((endIndex <= workers.length) && (startIndex < endIndex), "IDX1");
 
 		uint256 amountIn;
 
@@ -156,8 +156,8 @@ contract Manager  {
 
 	function harvest(address poolAddr, uint16 pathId, uint16 startIndex, uint16 endIndex) external restricted validatePool(poolAddr) {
 
-		require (pathId < path.length, "pathId exceeds path array size");
-		require ((endIndex <= workers.length) && (startIndex < endIndex), "Invalid start or end index");
+		require (pathId < path.length, "PTH");
+		require ((endIndex <= workers.length) && (startIndex < endIndex), "IDX");
 
 		uint256 amount;
 		uint256 amountIn;
@@ -197,14 +197,13 @@ contract Manager  {
 		uint256 transferAmount = amount;
 		uint256 balance = IERC20(cake).balanceOf(address(this));
 
-		require(endIndex > startIndex, "endIndex should be bigger than startIndex");
-		require(workers.length >= endIndex - startIndex, "Insufficient workers");
-		require(amount * (endIndex - startIndex) <= balance, "Insufficient funds for all workers");
+		require((endIndex > startIndex) && (workers.length >= endIndex - startIndex), "IDX0");
+		require(amount * (endIndex - startIndex) <= balance, "IDX1");
 
 		for (uint16 i=startIndex; i< endIndex; i++) {
 
 			transferAmount -= IERC20(cake).balanceOf(workers[i]);
-			require(transferAmount <= amount, "unexpected worker amount");
+			require(transferAmount <= amount, "WRK");
 
 			IERC20(cake).safeTransfer(workers[i], amount);
 		}
@@ -215,8 +214,10 @@ contract Manager  {
 
 	function transferToManager(uint16 startIndex, uint16 endIndex) external restricted {
 
+		uint256 amount;
 		for (uint16 i=startIndex; i< endIndex; i++) {
-				Worker(workers[i]).transferToManager();
+				amount = IERC20(cake).balanceOf(workers[i]);
+				Worker(workers[i]).transferToManager(amount);
 		}
 
 		// TODO: event

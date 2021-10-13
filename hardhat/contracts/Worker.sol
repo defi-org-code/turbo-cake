@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0; // TODO: use 0.8.6
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+//import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "../interfaces/IPancakeInterfaces.sol";
@@ -64,11 +64,7 @@ contract Worker {
 		ISwapRouter(swapRouter).swapExactTokensForTokens(amountIn, amountOutMin, path, address(this), block.timestamp + deadline);
 	}
 
-	function transferToManager() external onlyOwner {
-		uint256 amount;
-
-		amount = IERC20(cake).balanceOf(address(this));
-
+	function transferToManager(uint256 amount) external onlyOwner {
 		IERC20(cake).safeTransfer(owner, amount);
 	}
 
