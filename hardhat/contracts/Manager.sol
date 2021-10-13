@@ -32,7 +32,7 @@ contract Manager  {
     address public immutable owner;
     address public admin;
 	address [] public workers;
-	address public path = [[address(0x927158Be21Fe3D4da7E96931bb27Fd5059A8CbC2)]]; // TODO: update + move?
+	address [][] public path = [[address(0x927158Be21Fe3D4da7E96931bb27Fd5059A8CbC2)]]; // TODO: update + move?
 
 	// TODO: improve events params
 	event SetAdmin(address newAdmin);
@@ -41,11 +41,6 @@ contract Manager  {
 	event TransferToWorkers(uint16 startIndex, uint16 endIndex, uint256 indexed amount);
 	event TransferToManager(uint16 indexed startIndex, uint16 indexed endIndex);
 	event TransferToOwner(uint256 amount);
-
-	struct UserInfo {
-        uint256 amount;
-        uint256 rewardDebt;
-    }
 
 	modifier restricted() {
         require(msg.sender == owner || msg.sender == admin, "restricted");
@@ -130,10 +125,10 @@ contract Manager  {
 		require (pathId < path.length, "pathId exceeds path array size");
 		require ((endIndex <= workers.length) && (startIndex < endIndex), "Invalid start or end index");
 
-		UserInfo userInfo;
 		uint256 amountIn;
 
 		if (poolAddr == masterChefAddress) {
+			IMasterChef.UserInfo memory userInfo;
 			for (uint16 i=startIndex; i < endIndex; i++) {
 				// withdraw
 				userInfo = IMasterChef(poolAddr).userInfo(0, workers[i]);
@@ -142,6 +137,7 @@ contract Manager  {
 		}
 		else {
 			address rewardToken = ISmartChef(poolAddr).rewardToken();
+			ISmartChef.UserInfo memory userInfo;
 
 			for (uint16 i=startIndex; i < endIndex; i++) {
 				// withdraw
@@ -164,6 +160,7 @@ contract Manager  {
 		require ((endIndex <= workers.length) && (startIndex < endIndex), "Invalid start or end index");
 
 		uint256 amount;
+		uint256 amountIn;
 
 		if (poolAddr == masterChefAddress) {
 			for (uint16 i=startIndex; i < endIndex; i++) {
@@ -251,7 +248,7 @@ contract Manager  {
 		emit WorkersAdded(workers.length);
 	}
 
-    function addPath(address [] newPath) external onlyOwner {
+    function addPath(address[] calldata newPath) external onlyOwner {
         path.push(newPath);
 //        emit SetAdmin(newAdmin); // TODO
     }

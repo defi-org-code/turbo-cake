@@ -48,7 +48,7 @@ contract Worker {
 		ISmartChef(poolAddr).withdraw(amount);
 	}
 
-	function swap(address rewardToken, uint16 path, uint256 amountIn) external onlyOwner {
+	function swap(address rewardToken, address[] calldata path, uint256 amountIn) external onlyOwner {
 		// consider move to manager
 		// multiplier, deadline - hardcoded
 		// update swapRouter from trezor
@@ -69,7 +69,7 @@ contract Worker {
 
 		amount = IERC20(cake).balanceOf(address(this));
 
-		IERC20(token).safeTransfer(owner, amount);
+		IERC20(cake).safeTransfer(owner, amount);
 	}
 
 }
