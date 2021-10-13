@@ -25,14 +25,22 @@ contract Manager  {
 
 	using SafeERC20 for IERC20;
 
-	address cake = address(0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82);
-	address masterChefAddress = address(0x73feaa1eE314F8c655E354234017bE2193C9E24E);
-	address smartChefFactory = address(0x927158Be21Fe3D4da7E96931bb27Fd5059A8CbC2);
+	address cake = address (0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82);
+	address masterChefAddress = address (0x73feaa1eE314F8c655E354234017bE2193C9E24E);
+	address smartChefFactory = address (0x927158Be21Fe3D4da7E96931bb27Fd5059A8CbC2);
+
+	address bnb = address (0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c);
+	address busd = address (0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56);
+	address busdt = address (0x55d398326f99059fF775485246999027B3197955);
+	address usdc = address (0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d);
+	address eth = address (0x2170Ed0880ac9A755fd29B2688956BD959F933F8);
 
     address public immutable owner;
     address public admin;
 	address [] public workers;
-	address [][] public path = [[address(0x927158Be21Fe3D4da7E96931bb27Fd5059A8CbC2)]]; // TODO: update + move?
+//	address [][] public path = [[address(bnb), address(cake)], [address(busd), address(cake)], [address(busdt), address(cake)],
+//								[address(usdc), address(cake)], [address(eth), address(bnb), address(cake)]];
+	address [][] public path = [[address(bnb), address(cake)], [address(busd), address(cake)], [address(busdt), address(cake)], [address(usdc), address(cake)], [address(eth), address(bnb)]];
 
 	// TODO: improve events params
 	event SetAdmin(address newAdmin);

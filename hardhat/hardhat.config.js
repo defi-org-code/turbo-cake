@@ -1,6 +1,7 @@
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-web3");
 require("hardhat-gas-reporter");
+require('hardhat-contract-sizer');
 
 // const { mnemonic } = require('./secrets.json');
 
@@ -70,6 +71,12 @@ module.exports = {
 
 	mocha: {
     	timeout: 75000
-  	}
+  	},
+  	contractSizer: {
+	  alphaSort: true,
+	  disambiguatePaths: false,
+	  runOnCompile: true,
+	  strict: true,
+	}
 
 };
