@@ -1,8 +1,6 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-//import "@openzeppelin/contracts/utils/Address.sol";
-//import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./Worker.sol";
@@ -38,9 +36,7 @@ contract Manager  {
     address public immutable owner;
     address public admin;
 	address [] public workers;
-//	address [][] public path = [[address(bnb), address(cake)], [address(busd), address(cake)], [address(busdt), address(cake)],
-//								[address(usdc), address(cake)], [address(eth), address(bnb), address(cake)]];
-	address [][] public path = [[address(bnb), address(cake)], [address(busd), address(cake)], [address(busdt), address(cake)], [address(usdc), address(cake)], [address(eth), address(bnb)]];
+	address [][] public path;
 
 	// TODO: improve events params
 	event SetAdmin(address newAdmin);
@@ -79,9 +75,13 @@ contract Manager  {
 		}
     }
 
-    constructor(address _owner, address _admin) {
+    constructor(address _owner, address _admin, address [][] memory _path) {
         owner = _owner;
         admin = _admin;
+
+        for (uint16 i=0; i<_path.length; i++) {
+            path.push(_path[i]);
+        }
     }
 
     /* ---------------------------------------------------------------------------------------------
@@ -92,14 +92,15 @@ contract Manager  {
 		return workers.length;
 	}
 
-	function getWorkers(uint16 startIndex, uint16 endIndex) external view returns (address [] memory) {
-		address [] memory _workers = new address [] (endIndex-startIndex);
+	function generatePath(uint16 pathId, address rewardToken) private restricted view returns (address [] memory) {
 
-		for (uint16 i=0; i<endIndex-startIndex; i++) {
-			_workers[i] = workers[startIndex+i];
+		address [] memory fullPath;
+		fullPath[0] = rewardToken;
+		for (uint16 i=1; i< path[pathId].length; i++) {
+			fullPath[i] = path[pathId][i];
 		}
 
-		return _workers;
+		return fullPath;
 	}
 
     /* ---------------------------------------------------------------------------------------------
@@ -144,8 +145,10 @@ contract Manager  {
 			}
 		}
 		else {
+
 			address rewardToken = ISmartChef(poolAddr).rewardToken();
 			ISmartChef.UserInfo memory userInfo;
+			address [] memory fullPath = generatePath(pathId, rewardToken);
 
 			for (uint16 i=startIndex; i < endIndex; i++) {
 				// withdraw
@@ -154,7 +157,7 @@ contract Manager  {
 				// swap
 				amountIn = IERC20(rewardToken).balanceOf(workers[i]);
 				if (amountIn != 0) {
-					Worker(workers[i]).swap(rewardToken, path[pathId], amountIn);
+					Worker(workers[i]).swap(rewardToken, fullPath, amountIn);
 				}
 			}
 		}
@@ -181,6 +184,7 @@ contract Manager  {
 		}
 		else {
 			address rewardToken = ISmartChef(poolAddr).rewardToken();
+			address [] memory fullPath = generatePath(pathId, rewardToken);
 
 			for (uint16 i=startIndex; i < endIndex; i++) {
 				// withdraw
@@ -188,7 +192,7 @@ contract Manager  {
 				// swap
 				amountIn = IERC20(rewardToken).balanceOf(workers[i]);
 				if (amountIn != 0) {
-					Worker(workers[i]).swap(rewardToken, path[pathId], amountIn);
+					Worker(workers[i]).swap(rewardToken, fullPath, amountIn);
 				}
 				// deposit
 				amount = IERC20(cake).balanceOf(workers[i]);
