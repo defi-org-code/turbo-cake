@@ -1,22 +1,15 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0; // TODO: use 0.8.6
 
-import "hardhat/console.sol";
-
-import "@openzeppelin/contracts/access/Ownable.sol"; // TODO: remove no need in solidity 8
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";// TODO: remove no need in solidity 8
 
-import "../interfaces/IWorker.sol";
-import "../interfaces/ICakePools.sol";
+import "../interfaces/IPancakeInterfaces.sol";
 
 
-contract Worker is IWorker {
+contract Worker {
 
 	using SafeERC20 for IERC20;
-    using SafeMath for uint256;// TODO: remove no need in solidity 8
 
     address public immutable owner;
 
@@ -26,6 +19,11 @@ contract Worker is IWorker {
 	address swapRouter = address (0x10ED43C718714eb63d5aA57B78B54704E256024E);
 
 	event DoHardWork(address poolAddr);
+
+	struct UserInfo {
+        uint256 amount;
+        uint256 rewardDebt;
+    }
 
 	modifier onlyOwner() {
         require(msg.sender == owner, "onlyOwner");
@@ -43,10 +41,10 @@ contract Worker is IWorker {
 		IERC20(cake).approve(poolAddr,amount);
 
 		if (poolAddr == masterChefAddress) {
-			ICakePools(poolAddr).enterStaking(amount);
+			IMasterchef(poolAddr).enterStaking(amount);
 		}
 		else {
-			ICakePools(poolAddr).deposit(amount);
+			ISmartChef(poolAddr).deposit(amount);
 		}
 	}
 
@@ -63,16 +61,16 @@ contract Worker is IWorker {
 				amount = userInfo.amount;
 			}
 
-			ICakePools(poolAddr).leaveStaking(amount);
+			IMasterchef(poolAddr).leaveStaking(amount);
 		}
 		else {
 
 			if (withdrawRewardsOnly == false) {
-				userInfo = ICakePools(poolAddr).userInfo(address(this));
+				userInfo = ISmartChef(poolAddr).userInfo(address(this));
 				amount = userInfo.amount;
 			}
 
-			ICakePools(poolAddr).withdraw(amount);
+			ISmartChef(poolAddr).withdraw(amount);
 		}
 	}
 
@@ -81,7 +79,7 @@ contract Worker is IWorker {
 		// multiplier, deadline - hardcoded
 		// update swapRouter from trezor
 
-		uint256 amountIn = IERC20(ICakePools(poolAddr).rewardToken()).balanceOf(address(this));
+		uint256 amountIn = IERC20(ISmartChef(poolAddr).rewardToken()).balanceOf(address(this));
 
 		if (amountIn == 0) {
 			return;
@@ -90,12 +88,12 @@ contract Worker is IWorker {
 		// talk with tal: oracle or amountOutMin
 		// add harvest stats -> bot monitoring
 		// remove contracts from the bot
-//        uint256 [] memory amounts = ICakePools(swapRouter).getAmountsOut(amountIn, path);
+//        uint256 [] memory amounts = ISmartChef(swapRouter).getAmountsOut(amountIn, path);
 //		uint256 amountOutMin = amounts[amounts.length-1].mul(params.multiplier).div(100);
 		uint256 amountOutMin = 0; // TODO: move to bot?
 
-		IERC20(ICakePools(poolAddr).rewardToken()).approve(swapRouter,amountIn);
-		ICakePools(swapRouter).swapExactTokensForTokens(amountIn, amountOutMin, path, address(this), params.deadline);
+		IERC20(ISmartChef(poolAddr).rewardToken()).approve(swapRouter,amountIn);
+		ISwapRouter(swapRouter).swapExactTokensForTokens(amountIn, amountOutMin, path, address(this), params.deadline);
 	}
 
 	function transferToManager() external onlyOwner {
