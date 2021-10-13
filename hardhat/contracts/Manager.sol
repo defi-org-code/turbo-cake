@@ -17,6 +17,9 @@ import "../interfaces/IPancakeInterfaces.sol";
 // others:
 // ---------------------------------
 // deadline on worker
+// events
+// test emergency
+//
 
 
 contract Manager  {
@@ -92,7 +95,7 @@ contract Manager  {
 		return workers.length;
 	}
 
-	function generatePath(uint16 pathId, address rewardToken) private restricted view returns (address [] memory) {
+	function generatePath(uint16 pathId, address rewardToken) private view returns (address [] memory) {
 
 		address [] memory fullPath;
 		fullPath[0] = rewardToken;
@@ -271,6 +274,7 @@ contract Manager  {
         emit SetAdmin(newAdmin);
     }
 
+	// TODO: test
 	function emergencyFunctionCall(address target, bytes memory data) external onlyOwner {
         Address.functionCall(target, data);
     }
