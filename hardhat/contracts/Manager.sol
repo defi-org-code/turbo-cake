@@ -8,6 +8,18 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./Worker.sol";
 import "../interfaces/IPancakeInterfaces.sol";
 
+// TODO:
+// ---------------------------------
+// discuss with tal:
+// ---------------------------------
+// sandwich attack on swap
+// remove support to manual cake
+
+// ---------------------------------
+// others:
+// ---------------------------------
+// deadline on worker
+
 
 contract Manager  {
 
@@ -20,7 +32,7 @@ contract Manager  {
     address public immutable owner;
     address public admin;
 	address [] public workers;
-	address public path = [address(0x927158Be21Fe3D4da7E96931bb27Fd5059A8CbC2)]; // TODO: update
+	address public path = [[address(0x927158Be21Fe3D4da7E96931bb27Fd5059A8CbC2)]]; // TODO: update + move?
 
 	// TODO: improve events params
 	event SetAdmin(address newAdmin);
@@ -29,6 +41,11 @@ contract Manager  {
 	event TransferToWorkers(uint16 startIndex, uint16 endIndex, uint256 indexed amount);
 	event TransferToManager(uint16 indexed startIndex, uint16 indexed endIndex);
 	event TransferToOwner(uint256 amount);
+
+	struct UserInfo {
+        uint256 amount;
+        uint256 rewardDebt;
+    }
 
 	modifier restricted() {
         require(msg.sender == owner || msg.sender == admin, "restricted");
@@ -90,8 +107,19 @@ contract Manager  {
 
 		require ((endIndex <= workers.length) && (startIndex < endIndex), "Invalid start or end index");
 
-		for (uint16 i=startIndex; i < endIndex; i++) {
-			Worker(workers[i]).deposit(poolAddr);
+		uint256 amount;
+
+		if (poolAddr == masterChefAddress) {
+			for (uint16 i=startIndex; i < endIndex; i++) {
+				amount = IERC20(cake).balanceOf(workers[i]);
+				Worker(workers[i]).depositMasterChef(poolAddr, amount);
+			}
+		}
+		else {
+			for (uint16 i=startIndex; i < endIndex; i++) {
+				amount = IERC20(cake).balanceOf(workers[i]);
+				Worker(workers[i]).depositSmartChef(poolAddr, amount);
+			}
 		}
 
 //		emit DoHardWork(startIndex, endIndex, poolAddr);
@@ -99,11 +127,32 @@ contract Manager  {
 
 	function withdraw(address poolAddr, uint16 pathId, uint16 startIndex, uint16 endIndex) external restricted validatePool(poolAddr) {
 
+		require (pathId < path.length, "pathId exceeds path array size");
 		require ((endIndex <= workers.length) && (startIndex < endIndex), "Invalid start or end index");
 
-		for (uint16 i=startIndex; i < endIndex; i++) {
-			Worker(workers[i]).withdraw(poolAddr, false);
-			Worker(workers[i]).swap(poolAddr, path[pathId]);
+		UserInfo userInfo;
+		uint256 amountIn;
+
+		if (poolAddr == masterChefAddress) {
+			for (uint16 i=startIndex; i < endIndex; i++) {
+				// withdraw
+				userInfo = IMasterChef(poolAddr).userInfo(0, workers[i]);
+				Worker(workers[i]).withdrawMasterChef(poolAddr, userInfo.amount);
+			}
+		}
+		else {
+			address rewardToken = ISmartChef(poolAddr).rewardToken();
+
+			for (uint16 i=startIndex; i < endIndex; i++) {
+				// withdraw
+				userInfo = ISmartChef(poolAddr).userInfo(workers[i]);
+				Worker(workers[i]).withdrawSmartChef(poolAddr, userInfo.amount);
+				// swap
+				amountIn = IERC20(rewardToken).balanceOf(workers[i]);
+				if (amountIn != 0) {
+					Worker(workers[i]).swap(rewardToken, path[pathId], amountIn);
+				}
+			}
 		}
 
 //		emit DoHardWork(startIndex, endIndex, poolAddr);
@@ -111,12 +160,35 @@ contract Manager  {
 
 	function harvest(address poolAddr, uint16 pathId, uint16 startIndex, uint16 endIndex) external restricted validatePool(poolAddr) {
 
+		require (pathId < path.length, "pathId exceeds path array size");
 		require ((endIndex <= workers.length) && (startIndex < endIndex), "Invalid start or end index");
 
-		for (uint16 i=startIndex; i < endIndex; i++) {
-			Worker(workers[i]).withdraw(poolAddr, true);
-			Worker(workers[i]).swap(poolAddr, path[pathId]);
-			Worker(workers[i]).deposit(poolAddr);
+		uint256 amount;
+
+		if (poolAddr == masterChefAddress) {
+			for (uint16 i=startIndex; i < endIndex; i++) {
+				// withdraw
+				Worker(workers[i]).withdrawMasterChef(poolAddr, 0);
+				// deposit
+				amount = IERC20(cake).balanceOf(workers[i]);
+				Worker(workers[i]).depositMasterChef(poolAddr, amount);
+			}
+		}
+		else {
+			address rewardToken = ISmartChef(poolAddr).rewardToken();
+
+			for (uint16 i=startIndex; i < endIndex; i++) {
+				// withdraw
+				Worker(workers[i]).withdrawSmartChef(poolAddr, 0);
+				// swap
+				amountIn = IERC20(rewardToken).balanceOf(workers[i]);
+				if (amountIn != 0) {
+					Worker(workers[i]).swap(rewardToken, path[pathId], amountIn);
+				}
+				// deposit
+				amount = IERC20(cake).balanceOf(workers[i]);
+				Worker(workers[i]).depositSmartChef(poolAddr, amount);
+			}
 		}
 
 		// TODO: event
