@@ -21,6 +21,7 @@ import "../interfaces/IPancakeInterfaces.sol";
 // change tests
 // test emergency
 // review hacks
+// generatePath any better way to copy path?
 
 
 contract Manager  {
@@ -98,7 +99,7 @@ contract Manager  {
 
 	function generatePath(uint16 pathId, address rewardToken) private view returns (address [] memory) {
 
-		address [] memory fullPath;
+		address [] memory fullPath = new address [] (path[pathId].length) ;
 		fullPath[0] = rewardToken;
 		for (uint16 i=1; i< path[pathId].length; i++) {
 			fullPath[i] = path[pathId][i];
@@ -183,7 +184,7 @@ contract Manager  {
 				Worker(workers[i]).withdrawMasterChef(0);
 				// deposit
 				amount = IERC20(cake).balanceOf(workers[i]);
-				Worker(workers[i]).depositMasterChef(poolAddr, amount);
+				Worker(workers[i]).depositMasterChef(amount);
 			}
 		}
 		else {
