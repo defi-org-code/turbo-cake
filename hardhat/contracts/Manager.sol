@@ -16,13 +16,15 @@ import "../interfaces/IPancakeInterfaces.sol";
 // ---------------------------------
 // others:
 // ---------------------------------
-// deadline on worker
 // move userInfo struct from interface?
 // events
 // change tests
 // test emergency
 // review hacks
 // generatePath any better way to copy path?
+// separate contracts from bot
+// send email with list of open issues
+
 
 
 contract Manager  {
@@ -45,9 +47,6 @@ contract Manager  {
 	address [][] public path;
 
 	// TODO: improve events params
-	event SetAdmin(address newAdmin);
-	event WorkersAdded(uint256 nWorkers);
-	event DoHardWork(uint16 startIndex, uint16 endIndex, address indexed poolAddr);
 	event TransferToWorkers(uint16 startIndex, uint16 endIndex, uint256 indexed amount);
 	event TransferToManager(uint16 indexed startIndex, uint16 indexed endIndex);
 	event TransferToOwner(uint256 amount);
@@ -100,10 +99,11 @@ contract Manager  {
 
 	function generatePath(uint16 pathId, address rewardToken) private view returns (address [] memory) {
 
-		address [] memory fullPath = new address [] (path[pathId].length) ;
+		address [] memory fullPath = new address [] (path[pathId].length + 1);
 		fullPath[0] = rewardToken;
-		for (uint16 i=1; i< path[pathId].length; i++) {
-			fullPath[i] = path[pathId][i];
+
+		for (uint16 i=0; i< path[pathId].length; i++) {
+			fullPath[i+1] = path[pathId][i];
 		}
 
 		return fullPath;
@@ -113,7 +113,7 @@ contract Manager  {
      * restricted
      * --------------------------------------------------------------------------------------------- */
 
-	function deposit(address poolAddr, uint16 startIndex, uint16 endIndex) external restricted validatePool(poolAddr) {
+	function deposit(uint16 startIndex, uint16 endIndex, address poolAddr) external restricted validatePool(poolAddr) {
 
 		require ((endIndex <= workers.length) && (startIndex < endIndex), "IDX");
 
@@ -136,10 +136,10 @@ contract Manager  {
 			}
 		}
 
-//		emit DoHardWork(startIndex, endIndex, poolAddr);
+//		emit Deposit(startIndex, endIndex, poolAddr);
 	}
 
-	function withdraw(address poolAddr, uint16 pathId, uint16 startIndex, uint16 endIndex) external restricted validatePool(poolAddr) {
+	function withdraw(uint16 startIndex, uint16 endIndex, address poolAddr, uint16 pathId) external restricted validatePool(poolAddr) {
 
 		require (pathId < path.length, "PTH");
 		require ((endIndex <= workers.length) && (startIndex < endIndex), "IDX");
@@ -172,10 +172,10 @@ contract Manager  {
 			}
 		}
 
-//		emit DoHardWork(startIndex, endIndex, poolAddr);
+//		emit Withdraw(startIndex, endIndex, poolAddr);
 	}
 
-	function harvest(address poolAddr, uint16 pathId, uint16 startIndex, uint16 endIndex) external restricted validatePool(poolAddr) {
+	function harvest(uint16 startIndex, uint16 endIndex, address poolAddr, uint16 pathId) external restricted validatePool(poolAddr) {
 
 		require (pathId < path.length, "PTH");
 		require ((endIndex <= workers.length) && (startIndex < endIndex), "IDX");
@@ -215,10 +215,10 @@ contract Manager  {
 		}
 
 		// TODO: event
-//		emit DoHardWork(startIndex, endIndex, params.stakedPoolAddr, params.newPoolAddr);
+//		emit Harvest(startIndex, endIndex, poolAddr);
 	}
 
-	function transferToWorkers(uint256 amount, uint16 startIndex, uint16 endIndex) external restricted {
+	function transferToWorkers(uint16 startIndex, uint16 endIndex, uint256 amount) external restricted {
 
 		uint256 transferAmount = amount;
 		uint256 balance = IERC20(cake).balanceOf(address(this));
@@ -271,18 +271,14 @@ contract Manager  {
 			Worker worker = new Worker();
 			workers.push(address(worker));
 		}
-
-		emit WorkersAdded(workers.length);
 	}
 
     function addPath(address[] calldata newPath) external onlyOwner {
         path.push(newPath);
-//        emit SetAdmin(newAdmin); // TODO
     }
 
     function setAdmin(address newAdmin) external onlyOwner {
         admin = newAdmin;
-        emit SetAdmin(newAdmin);
     }
 
 	// TODO: test
