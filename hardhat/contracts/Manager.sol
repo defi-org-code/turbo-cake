@@ -18,8 +18,9 @@ import "../interfaces/IPancakeInterfaces.sol";
 // ---------------------------------
 // deadline on worker
 // events
+// change tests
 // test emergency
-//
+// review hacks
 
 
 contract Manager  {
@@ -119,7 +120,7 @@ contract Manager  {
 		if (poolAddr == masterChefAddress) {
 			for (uint16 i=startIndex; i < endIndex; i++) {
 				amount = IERC20(cake).balanceOf(workers[i]);
-				Worker(workers[i]).depositMasterChef(poolAddr, amount);
+				Worker(workers[i]).depositMasterChef(amount);
 			}
 		}
 		else {
@@ -144,7 +145,7 @@ contract Manager  {
 			for (uint16 i=startIndex; i < endIndex; i++) {
 				// withdraw
 				userInfo = IMasterChef(poolAddr).userInfo(0, workers[i]);
-				Worker(workers[i]).withdrawMasterChef(poolAddr, userInfo.amount);
+				Worker(workers[i]).withdrawMasterChef(userInfo.amount);
 			}
 		}
 		else {
@@ -179,7 +180,7 @@ contract Manager  {
 		if (poolAddr == masterChefAddress) {
 			for (uint16 i=startIndex; i < endIndex; i++) {
 				// withdraw
-				Worker(workers[i]).withdrawMasterChef(poolAddr, 0);
+				Worker(workers[i]).withdrawMasterChef(0);
 				// deposit
 				amount = IERC20(cake).balanceOf(workers[i]);
 				Worker(workers[i]).depositMasterChef(poolAddr, amount);

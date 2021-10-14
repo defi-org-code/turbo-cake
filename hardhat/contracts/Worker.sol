@@ -30,9 +30,9 @@ contract Worker {
 		owner = msg.sender;
 	}
 
-	function depositMasterChef(address poolAddr, uint256 amount) external onlyOwner {
-		IERC20(cake).approve(poolAddr,amount);
-		IMasterChef(poolAddr).enterStaking(amount);
+	function depositMasterChef(uint256 amount) external onlyOwner {
+		IERC20(cake).approve(masterChefAddress,amount);
+		IMasterChef(masterChefAddress).enterStaking(amount);
 	}
 
 	function depositSmartChef(address poolAddr, uint256 amount) external onlyOwner {
@@ -40,8 +40,8 @@ contract Worker {
 		ISmartChef(poolAddr).deposit(amount);
 	}
 
-	function withdrawMasterChef(address poolAddr, uint256 amount) external onlyOwner {
-		IMasterChef(poolAddr).leaveStaking(amount);
+	function withdrawMasterChef(uint256 amount) external onlyOwner {
+		IMasterChef(masterChefAddress).leaveStaking(amount);
 	}
 
 	function withdrawSmartChef(address poolAddr, uint256 amount) external onlyOwner {
