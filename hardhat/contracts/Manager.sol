@@ -12,7 +12,7 @@ import "../interfaces/IPancakeInterfaces.sol";
 // ---------------------------------
 // sandwich attack on swap
 // remove support to manual cake
-// malicious on bot + manipulate pancake to add new rug pool: withdraw all
+// malicious on bot + manipulate pancake to add new rug pool: can steal rewards only
 
 // ---------------------------------
 // others:
@@ -69,14 +69,15 @@ contract Manager  {
 		}
 		else {
 
-	        require(ISmartChef(pool).SMART_CHEF_FACTORY() == smartChefFactory, "PL0");
-	        require(ISmartChef(pool).stakedToken() == cake, "PL1");
+	        require(ISmartChef(pool).SMART_CHEF_FACTORY() == smartChefFactory, "VPL0");
+	        require(ISmartChef(pool).stakedToken() == cake, "VPL1");
+	        require(ISmartChef(pool).bonusEndBlock() > block.number, "VPL2");
 
 			bytes32 smartChefCodeHash = 0xdff6e8f6a4233f835d067b2c6fa427aa17c0fd39a43960a75e25e35af1445587;
 			bytes32 codeHash;
 			assembly { codeHash := extcodehash(pool) }
 
-			require(codeHash == smartChefCodeHash, "PL2");
+			require(codeHash == smartChefCodeHash, "VPL3");
 
 	        _;
 		}

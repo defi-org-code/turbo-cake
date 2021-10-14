@@ -48,8 +48,8 @@ contract Worker {
 	}
 
 	function swap(address rewardToken, address[] calldata path, uint256 amountIn) external onlyOwner {
+		require (rewardToken != cake, "SWP");
 		// consider move to manager
-		// multiplier, deadline - hardcoded
 		// update swapRouter from trezor
 
 		// talk with tal: oracle or amountOutMin
