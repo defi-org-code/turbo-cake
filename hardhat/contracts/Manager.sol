@@ -17,6 +17,7 @@ import "../interfaces/IPancakeInterfaces.sol";
 // others:
 // ---------------------------------
 // deadline on worker
+// move userInfo struct from interface?
 // events
 // change tests
 // test emergency
@@ -121,13 +122,17 @@ contract Manager  {
 		if (poolAddr == masterChefAddress) {
 			for (uint16 i=startIndex; i < endIndex; i++) {
 				amount = IERC20(cake).balanceOf(workers[i]);
-				Worker(workers[i]).depositMasterChef(amount);
+				if (amount != 0) {
+					Worker(workers[i]).depositMasterChef(amount);
+				}
 			}
 		}
 		else {
 			for (uint16 i=startIndex; i < endIndex; i++) {
 				amount = IERC20(cake).balanceOf(workers[i]);
-				Worker(workers[i]).depositSmartChef(poolAddr, amount);
+				if (amount != 0) {
+					Worker(workers[i]).depositSmartChef(poolAddr, amount);
+				}
 			}
 		}
 
@@ -136,8 +141,8 @@ contract Manager  {
 
 	function withdraw(address poolAddr, uint16 pathId, uint16 startIndex, uint16 endIndex) external restricted validatePool(poolAddr) {
 
-		require (pathId < path.length, "IDX0");
-		require ((endIndex <= workers.length) && (startIndex < endIndex), "IDX1");
+		require (pathId < path.length, "PTH");
+		require ((endIndex <= workers.length) && (startIndex < endIndex), "IDX");
 
 		uint256 amountIn;
 
@@ -184,7 +189,9 @@ contract Manager  {
 				Worker(workers[i]).withdrawMasterChef(0);
 				// deposit
 				amount = IERC20(cake).balanceOf(workers[i]);
-				Worker(workers[i]).depositMasterChef(amount);
+				if (amount != 0) {
+					Worker(workers[i]).depositMasterChef(amount);
+				}
 			}
 		}
 		else {
@@ -201,7 +208,9 @@ contract Manager  {
 				}
 				// deposit
 				amount = IERC20(cake).balanceOf(workers[i]);
-				Worker(workers[i]).depositSmartChef(poolAddr, amount);
+				if (amount != 0) {
+					Worker(workers[i]).depositSmartChef(poolAddr, amount);
+				}
 			}
 		}
 
