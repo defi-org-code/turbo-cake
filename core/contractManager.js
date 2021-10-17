@@ -353,8 +353,8 @@ class ContractManager extends TxManager {
 		}
 
 		await this.setManagerBalance()
-		const amount = (new BigNumber(this.managerBalance).dividedBy(endIndex-startIndex)).toFixed(0).toString()
-		logger.info(`transferToWorkers: amount=${amount}, startIndex=${startIndex}, endIndex=${endIndex}`)
+		const amount = (new BigNumber(this.managerBalance).dividedBy(endIndex-startIndex)).integerValue(BigNumber.ROUND_FLOOR).toString()
+		logger.info(`transferToWorkers: amount=${amount}, startIndex=${startIndex}, endIndex=${endIndex}, managerBalance=${this.managerBalance}`)
 
 		if (amount === '0') {
 			logger.info(`no available funds to transfer to workers`)

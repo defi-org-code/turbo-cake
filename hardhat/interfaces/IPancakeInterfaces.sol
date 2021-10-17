@@ -14,6 +14,7 @@ interface ISmartChef {
 	function withdraw(uint256) external;
     function rewardToken() external returns (address);
     function stakedToken() external returns (address);
+    function bonusEndBlock() external returns (uint256);
     function userInfo(address) external view returns (UserInfo memory);
 	function getAmountsOut(uint amountIn, address[] calldata path) external view returns (uint[] memory amounts);
 	function SMART_CHEF_FACTORY() external returns (address);

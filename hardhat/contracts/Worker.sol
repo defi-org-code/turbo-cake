@@ -11,7 +11,7 @@ contract Worker {
 
 	using SafeERC20 for IERC20;
 
-    address public immutable owner;
+    address public immutable manager;
 
 	address cake = address(0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82);
 	address masterChefAddress = address(0x73feaa1eE314F8c655E354234017bE2193C9E24E);
@@ -20,34 +20,34 @@ contract Worker {
 
 	event DoHardWork(address poolAddr);
 
-	modifier onlyOwner() {
-        require(msg.sender == owner, "onlyOwner");
+	modifier onlyManager() {
+        require(msg.sender == manager, "onlyManager");
         _;
     }
 
 	constructor() {
-		owner = msg.sender;
+		manager = msg.sender;
 	}
 
-	function depositMasterChef(uint256 amount) external onlyOwner {
+	function depositMasterChef(uint256 amount) external onlyManager {
 		IERC20(cake).approve(masterChefAddress,amount);
 		IMasterChef(masterChefAddress).enterStaking(amount);
 	}
 
-	function depositSmartChef(address poolAddr, uint256 amount) external onlyOwner {
+	function depositSmartChef(address poolAddr, uint256 amount) external onlyManager {
 		IERC20(cake).approve(poolAddr,amount);
 		ISmartChef(poolAddr).deposit(amount);
 	}
 
-	function withdrawMasterChef(uint256 amount) external onlyOwner {
+	function withdrawMasterChef(uint256 amount) external onlyManager {
 		IMasterChef(masterChefAddress).leaveStaking(amount);
 	}
 
-	function withdrawSmartChef(address poolAddr, uint256 amount) external onlyOwner {
+	function withdrawSmartChef(address poolAddr, uint256 amount) external onlyManager {
 		ISmartChef(poolAddr).withdraw(amount);
 	}
 
-	function swap(address rewardToken, address[] calldata path, uint256 amountIn) external onlyOwner {
+	function swap(address rewardToken, address[] calldata path, uint256 amountIn) external onlyManager {
 		require (rewardToken != cake, "SWP");
 		// consider move to manager
 		// update swapRouter from trezor
@@ -63,8 +63,8 @@ contract Worker {
 		ISwapRouter(swapRouter).swapExactTokensForTokens(amountIn, amountOutMin, path, address(this), block.timestamp);
 	}
 
-	function transferToManager(uint256 amount) external onlyOwner {
-		IERC20(cake).safeTransfer(owner, amount);
+	function transferToManager(uint256 amount) external onlyManager {
+		IERC20(cake).safeTransfer(manager, amount);
 	}
 
 }

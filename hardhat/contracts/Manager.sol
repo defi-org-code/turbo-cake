@@ -11,21 +11,21 @@ import "../interfaces/IPancakeInterfaces.sol";
 // discuss with tal:
 // ---------------------------------
 // sandwich attack on swap
-// remove support to manual cake
+// remove support to manual cake?
 // malicious on bot + manipulate pancake to add new rug pool: can steal rewards only
+// increase security by using additional server and separate deposit/withdraw/harvest from bot control (transfers)
 
 // ---------------------------------
 // others:
 // ---------------------------------
+// review potential hacks
 // move userInfo struct from interface?
 // events
 // change tests
 // test emergency
-// review hacks
 // generatePath any better way to copy path?
 // separate contracts from bot
 // send email with list of open issues
-
 
 
 contract Manager  {
@@ -70,14 +70,15 @@ contract Manager  {
 		else {
 
 	        require(ISmartChef(pool).SMART_CHEF_FACTORY() == smartChefFactory, "VPL0");
-	        require(ISmartChef(pool).stakedToken() == cake, "VPL1");
-	        require(ISmartChef(pool).bonusEndBlock() > block.number, "VPL2");
+	        require(ISmartChef(pool).rewardToken() != cake, "VPL1"); //
+	        require(ISmartChef(pool).stakedToken() == cake, "VPL2");
+	        require(ISmartChef(pool).bonusEndBlock() > block.number, "VPL3");
 
 			bytes32 smartChefCodeHash = 0xdff6e8f6a4233f835d067b2c6fa427aa17c0fd39a43960a75e25e35af1445587;
 			bytes32 codeHash;
 			assembly { codeHash := extcodehash(pool) }
 
-			require(codeHash == smartChefCodeHash, "VPL3");
+			require(codeHash == smartChefCodeHash, "VPL4");
 
 	        _;
 		}
@@ -110,6 +111,28 @@ contract Manager  {
 		}
 
 		return fullPath;
+	}
+
+    /* ---------------------------------------------------------------------------------------------
+     * helpers
+     * --------------------------------------------------------------------------------------------- */
+
+	function safeSwap(address worker, address [] memory fullPath, address rewardToken) private {
+		// cake balance is expected to grow
+		uint256 cakeBalance;
+		uint256 newCakeBalance;
+		uint256 amountIn;
+
+		amountIn = IERC20(rewardToken).balanceOf(worker);
+
+		if (amountIn == 0) {
+			return;
+		}
+
+		cakeBalance = IERC20(cake).balanceOf(worker);
+		Worker(worker).swap(rewardToken, fullPath, amountIn);
+		newCakeBalance = IERC20(cake).balanceOf(worker);
+		require (newCakeBalance > cakeBalance, "CKB"); // cake balance is expected to grow
 	}
 
     /* ---------------------------------------------------------------------------------------------
@@ -147,8 +170,6 @@ contract Manager  {
 		require (pathId < path.length, "PTH");
 		require ((endIndex <= workers.length) && (startIndex < endIndex), "IDX");
 
-		uint256 amountIn;
-
 		if (poolAddr == masterChefAddress) {
 			IMasterChef.UserInfo memory userInfo;
 			for (uint16 i=startIndex; i < endIndex; i++) {
@@ -168,10 +189,7 @@ contract Manager  {
 				userInfo = ISmartChef(poolAddr).userInfo(workers[i]);
 				Worker(workers[i]).withdrawSmartChef(poolAddr, userInfo.amount);
 				// swap
-				amountIn = IERC20(rewardToken).balanceOf(workers[i]);
-				if (amountIn != 0) {
-					Worker(workers[i]).swap(rewardToken, fullPath, amountIn);
-				}
+				safeSwap(workers[i], fullPath, rewardToken);
 			}
 		}
 
@@ -184,7 +202,6 @@ contract Manager  {
 		require ((endIndex <= workers.length) && (startIndex < endIndex), "IDX");
 
 		uint256 amount;
-		uint256 amountIn;
 
 		if (poolAddr == masterChefAddress) {
 			for (uint16 i=startIndex; i < endIndex; i++) {
@@ -205,10 +222,7 @@ contract Manager  {
 				// withdraw
 				Worker(workers[i]).withdrawSmartChef(poolAddr, 0);
 				// swap
-				amountIn = IERC20(rewardToken).balanceOf(workers[i]);
-				if (amountIn != 0) {
-					Worker(workers[i]).swap(rewardToken, fullPath, amountIn);
-				}
+				safeSwap(workers[i], fullPath, rewardToken);
 				// deposit
 				amount = IERC20(cake).balanceOf(workers[i]);
 				if (amount != 0) {
@@ -234,7 +248,7 @@ contract Manager  {
 			transferAmount -= IERC20(cake).balanceOf(workers[i]);
 			require(transferAmount <= amount, "WRK");
 
-			IERC20(cake).safeTransfer(workers[i], amount);
+			IERC20(cake).safeTransfer(workers[i], transferAmount);
 		}
 
 		// TODO: event
