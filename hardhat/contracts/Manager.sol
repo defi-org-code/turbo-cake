@@ -6,27 +6,6 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./Worker.sol";
 import "../interfaces/IPancakeInterfaces.sol";
 
-// TODO:
-// ---------------------------------
-// discuss with tal:
-// ---------------------------------
-// sandwich attack on swap
-// remove support to manual cake?
-// malicious on bot + manipulate pancake to add new rug pool: can steal rewards only
-// increase security by using additional server and separate deposit/withdraw/harvest from bot control (transfers)
-
-// ---------------------------------
-// others:
-// ---------------------------------
-// review potential hacks
-// move userInfo struct from interface?
-// events
-// change tests
-// test emergency
-// generatePath any better way to copy path?
-// separate contracts from bot
-// send email with list of open issues
-
 
 contract Manager  {
 
