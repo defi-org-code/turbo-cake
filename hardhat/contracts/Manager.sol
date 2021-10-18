@@ -220,11 +220,13 @@ contract Manager  {
 		uint256 balance = IERC20(cake).balanceOf(address(this));
 
 		require((endIndex > startIndex) && (workers.length >= endIndex - startIndex), "IDX0");
-		require(amount * (endIndex - startIndex) <= balance, "IDX1");
+		require(amount * (endIndex - startIndex) <= balance, "IDX1"); // TODO: remove
 
 		for (uint16 i=startIndex; i< endIndex; i++) {
 
+			// TODO: init transfer amount
 			transferAmount -= IERC20(cake).balanceOf(workers[i]);
+			// TODO: rebalance in this case: transfer to manager and back to worker
 			require(transferAmount <= amount, "WRK");
 
 			IERC20(cake).safeTransfer(workers[i], transferAmount);
