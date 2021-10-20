@@ -213,7 +213,6 @@ class ContractManager extends TxManager {
 
 	validateWorkers() {
 
-		// validate all workers have the same staking addr and return this addr
 		if (Object.keys(this.workersBalanceInfo).length === 0) {
 
 			assert(this.nActiveWorkers === 0, `workers are out of sync: nActiveWorkers=${this.nActiveWorkers} while there is no active workersBalanceInfo`)
@@ -354,7 +353,7 @@ class ContractManager extends TxManager {
 
 		await this.setManagerBalance()
 		const amount = (new BigNumber(this.managerBalance).dividedBy(endIndex-startIndex)).integerValue(BigNumber.ROUND_FLOOR).toString()
-		logger.info(`transferToWorkers: amount=${amount}, startIndex=${startIndex}, endIndex=${endIndex}`)
+		logger.info(`transferToWorkers: amount=${amount}, startIndex=${startIndex}, endIndex=${endIndex}, managerBalance=${this.managerBalance}`)
 
 		if (amount === '0') {
 			logger.info(`no available funds to transfer to workers`)
