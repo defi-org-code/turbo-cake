@@ -15,9 +15,6 @@ const {Logger} = require('./logger')
 const logger = new Logger('main')
 const Notifications = require('./notifications');
 
-const managerAbi = require('./hardhat/artifacts/contracts/Manager.sol/Manager.json').abi
-const managerBytecode = require('./hardhat/artifacts/contracts/Manager.sol/Manager.json').bytecode
-
 
 async function main() {
 
