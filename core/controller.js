@@ -151,7 +151,7 @@ class Controller {
 			await this.ps.getInvestInfo(this.curSyrupPoolAddr, blockNum)
 
             this.scheduleNextRun();
-            // setInterval(() => this.reportStats(), this.reportInterval);
+
 
         } catch (e) {
             this.notif.sendDiscord(`[ERROR] unhandled error: ${e}`);

@@ -1,17 +1,17 @@
 const Influx = require('./influx');
 const {VERSION} = require('./core/params')
-const env = require('dotenv').config();
+require('dotenv').config();
 
 
 class Reporter {
 
 	constructor(runningMode) {
-		this.influxClient = new Influx('TurboCake', VERSION);
-		this.prefix = `${runningMode}.${process.env.BOT_ID}.${VERSION}`
+		this.influxClient = new Influx('turbo-cake', VERSION);
+		this.measurement = `${runningMode}.${process.env.BOT_ID}`
 	}
 
 	async send(fields, tags={}) {
-		this.influxClient.report(this.prefix, fields, tags)
+		this.influxClient.report(this.measurement, fields, tags)
 	}
 }
 

@@ -1,7 +1,7 @@
 const {InfluxDB} = require('@influxdata/influxdb-client')
 const os = require("os");
 const hostname = os.hostname();
-const org = 'xorbs'
+const org = 'Orbs'
 
 const {Point} = require('@influxdata/influxdb-client')
 require('dotenv').config();
@@ -20,7 +20,7 @@ class Influx {
 	report(measurementName, fields, tags= {}) {
 
 		const writeApi = this.client.getWriteApi(org, this.bucket);
-		writeApi.useDefaultTags({hostname: hostname, version: this.version, botId: process.env.BOT_ID, botAddress: process.env.BOT_ADDRESS});
+		writeApi.useDefaultTags({hostname: hostname, version: this.version, botId: process.env.BOT_ID});
 
 		const point = new Point(measurementName);
 
@@ -43,8 +43,6 @@ class Influx {
 
 }
 
-
-// new Influx('UniV3Bot', '1.0.0').writePoint('nameTest2', {fieldTest2: '6'}, {tokenId: '1'});
 
 module.exports = Influx;
 
