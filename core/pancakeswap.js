@@ -13,6 +13,8 @@ BigNumber.config({POW_PRECISION: 100, EXPONENTIAL_AT: 1e+9})
 const {Logger} = require('../logger')
 const logger = new Logger('pancakeswap')
 
+const {assert} = require('../helpers')
+
 
 class Pancakeswap {
 
@@ -108,7 +110,7 @@ class Pancakeswap {
 			return null
 		}
 
-		if (blockNum === null) {
+		if ((blockNum === null) || (curSyrupPoolAddr === null)) {
 			return null
 		}
 
@@ -124,10 +126,6 @@ class Pancakeswap {
 		const apy = this.aprToApy(balanceCngPct.multipliedBy(this.BLOCKS_PER_YEAR).toString() / blocksPeriod)
 		logger.info(`Investment APY: ${apy}`)
 
-		// if (blocksPeriod < this.BLOCKS_PER_DAY) {
-		// 	logger.info(`ignoring report for blocksPeriod < 1 day`)
-		// 	return null
-		// }
 		return {apy: apy, roi: balanceCngPct.toString(), roiBlockPeriod: blocksPeriod, roiDaysPeriod: blocksPeriod / this.BLOCKS_PER_DAY,
 				stakedCakeBalance: totalBalance.staked.dividedBy(1e18).toString(), unstakedCakeBalance: totalBalance.unstaked.dividedBy(1e18).toString(), poolAddr: curSyrupPoolAddr, poolTvl: await this.getPoolTvl(curSyrupPoolAddr), blockNum: blockNum}
 	}
@@ -176,6 +174,7 @@ class Pancakeswap {
 	}
 
 	async getPoolTvl(addr) {
+		assert (addr != null, `pool addr is null, can npt fetch pool tvl`)
 		return await this.cakeContract.methods.balanceOf(addr).call();
 	}
 
