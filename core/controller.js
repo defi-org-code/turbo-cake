@@ -184,7 +184,8 @@ class Controller {
 
 		logger.debug(`reportStats: investReport=${JSON.stringify(investReport)}`)
 		this.notif.sendDiscord(`investment report: ${JSON.stringify(investReport)}`)
-		await this.reporter.send(investReport)
+		await this.reporter.send('stats', investReport)
+		await this.reporter.send('poolsApy', await this.ps.getPoolsApyReport())
 	}
 
     redisInit() {
@@ -204,7 +205,7 @@ class Controller {
 		let nextAction
         let startTime = Date.now();
         logger.info(`controller started`)
-		await this.reporter.send({ping: 1})
+		await this.reporter.send('stats', {ping: 1})
 
         try {
             await this.ps.update(this.contractManager.balance);

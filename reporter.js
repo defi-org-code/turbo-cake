@@ -7,11 +7,11 @@ class Reporter {
 
 	constructor(runningMode) {
 		this.influxClient = new Influx('turbo-cake', VERSION);
-		this.measurement = `${runningMode}.${process.env.BOT_ID}`
+		this.measurementPrefix = `${runningMode}.${process.env.BOT_ID}.`
 	}
 
-	async send(fields, tags={}) {
-		this.influxClient.report(this.measurement, fields, tags)
+	async send(measurement, fields, tags={}) {
+		this.influxClient.report(this.measurementPrefix + measurement, fields, tags)
 	}
 }
 

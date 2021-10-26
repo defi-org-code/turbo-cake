@@ -132,6 +132,22 @@ class Pancakeswap {
 				stakedCakeBalance: totalBalance.staked.dividedBy(1e18).toString(), unstakedCakeBalance: totalBalance.unstaked.dividedBy(1e18).toString(), poolAddr: curSyrupPoolAddr, poolTvl: await this.getPoolTvl(curSyrupPoolAddr), blockNum: blockNum}
 	}
 
+	async getPoolsApyReport() {
+
+		let apyDict = {}
+
+		for (const poolAddr of Object.keys(this.poolsInfo)) {
+
+			if ((this.poolsInfo[poolAddr]['active'] === false) || (this.poolsInfo[poolAddr]['apy'] === null)) {
+				continue
+			}
+
+			apyDict[this.poolsInfo[poolAddr]['rewardSymbol']] = this.poolsInfo[poolAddr]['apy']
+		}
+
+		return apyDict
+	}
+
 	async getInvestInfo(curSyrupPoolAddr, blockNum) {
 		let reply = await this.redisClient.get(`investInfo.${process.env.BOT_ID}`)
 
