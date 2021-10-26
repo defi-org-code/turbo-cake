@@ -130,7 +130,7 @@ class Pancakeswap {
 		// }
 
 		return {apy: apy, roi: balanceCngPct.toString(), roiBlockPeriod: blocksPeriod, roiDaysPeriod: blocksPeriod / this.BLOCKS_PER_DAY,
-				balance: totalBalance, poolAddr: curSyrupPoolAddr, poolTvl: await this.getPoolTvl(curSyrupPoolAddr), blockNum: blockNum}
+				stakedBalance: totalBalance.staked.toString(), unstakedBalance: totalBalance.unstaked.toString(), poolAddr: curSyrupPoolAddr, poolTvl: await this.getPoolTvl(curSyrupPoolAddr), blockNum: blockNum}
 	}
 
 	async getInvestInfo(curSyrupPoolAddr, blockNum) {

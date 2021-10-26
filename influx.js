@@ -20,7 +20,7 @@ class Influx {
 	report(measurementName, fields, tags= {}) {
 
 		const writeApi = this.client.getWriteApi(org, this.bucket);
-		writeApi.useDefaultTags({hostname: hostname, version: this.version, botId: process.env.BOT_ID});
+		writeApi.useDefaultTags({hostname: hostname, version: this.version});
 
 		const point = new Point(measurementName);
 
