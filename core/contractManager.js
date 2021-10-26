@@ -304,6 +304,10 @@ class ContractManager extends TxManager {
 			return false
 		}
 
+		if (this.managerBalance > 0) {
+			return true
+		}
+
 		let hasUserLimit = poolsInfo[poolAddr].hasUserLimit
 
 		if (!hasUserLimit) {
