@@ -150,6 +150,9 @@ class Controller {
 			const blockNum = await this.web3.eth.getBlockNumber()
 			await this.ps.getInvestInfo(this.curSyrupPoolAddr, blockNum)
 
+        	const harvestBlockNum = Number(await this.web3.eth.getBlockNumber()) // TODO: FIXME better estimation
+        	await this.reportStats(harvestBlockNum)
+
             this.scheduleNextRun();
 
 

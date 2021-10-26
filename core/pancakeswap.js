@@ -128,9 +128,9 @@ class Pancakeswap {
 		// 	logger.info(`ignoring report for blocksPeriod < 1 day`)
 		// 	return null
 		// }
-
+		const normBalance = totalBalance.dividedBy(1e18)
 		return {apy: apy, roi: balanceCngPct.toString(), roiBlockPeriod: blocksPeriod, roiDaysPeriod: blocksPeriod / this.BLOCKS_PER_DAY,
-				stakedBalance: totalBalance.staked.toString(), unstakedBalance: totalBalance.unstaked.toString(), poolAddr: curSyrupPoolAddr, poolTvl: await this.getPoolTvl(curSyrupPoolAddr), blockNum: blockNum}
+				stakedCakeBalance: totalBalance.staked.dividedBy(1e18).toString(), unstakedCakeBalance: totalBalance.unstaked.dividedBy(1e18).toString(), poolAddr: curSyrupPoolAddr, poolTvl: await this.getPoolTvl(curSyrupPoolAddr), blockNum: blockNum}
 	}
 
 	async getInvestInfo(curSyrupPoolAddr, blockNum) {
