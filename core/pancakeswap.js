@@ -58,9 +58,10 @@ class Pancakeswap {
  		logger.debug(`init ps ended successfully`)
 	}
 
-    async update(totalBalance) {
+    async update(totalBalance, stakingAddr) {
 
 		this.totalBalance = totalBalance
+		this.stakingAddr = stakingAddr
 
 		await this.fetchPools();
 		await this.setActivePools()
@@ -238,10 +239,6 @@ class Pancakeswap {
 
 	async getTokenCakeRate(poolAddr, amountIn) {
 
-		if (this.poolsInfo[poolAddr]['rewardToken'] === CAKE_ADDRESS) {
-			return 1
-		}
-
 		let res;
 		// TODO: check and verify calculations
 		// TODO: pool EMA
@@ -254,16 +251,19 @@ class Pancakeswap {
 	async poolApy(poolAddr) {
 
 		let poolTvl = await this.getPoolTvl(poolAddr)
-		// logger.info(`poolTvl before: ${poolTvl}`)
-		// account for bot staking in tvl
-		poolTvl = new BigNumber(poolTvl).plus(new BigNumber(this.totalBalance.unstaked)).plus(new BigNumber(this.totalBalance.staked))
+		// assuming all workers are staked in the same pool
+		if (this.stakingAddr === poolAddr) {
+			poolTvl = new BigNumber(poolTvl).plus(new BigNumber(this.totalBalance.unstaked))
+		} else {
+			poolTvl = new BigNumber(poolTvl).plus(new BigNumber(this.totalBalance.unstaked)).plus(new BigNumber(this.totalBalance.staked))
+		}
 
 		const rewardPerBlock = new BigNumber(this.poolsInfo[poolAddr]['rewardPerBlock'])
 
 		// estimate token cake rate based on daily rewards (max harvest period)
 		const rewardForDay = rewardPerBlock.multipliedBy(this.BLOCKS_PER_DAY)
 		const tokenCakeRate = await this.getTokenCakeRate(poolAddr, rewardForDay)
-		// logger.debug(`poolAddr=${poolAddr}, rewardPerBlock=${rewardPerBlock.toString()}, tokenCakeRate=${tokenCakeRate}, poolTvl=${poolTvl.toString()}`)
+		logger.debug(`poolAddr=${poolAddr}, rewardPerBlock=${rewardPerBlock.toString()}, tokenCakeRate=${tokenCakeRate}, poolTvl=${poolTvl.toString()}`)
 		// console.log(this.totalBalance)
 
 		const rewardForYear = rewardPerBlock.multipliedBy(this.BLOCKS_PER_YEAR)

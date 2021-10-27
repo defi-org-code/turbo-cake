@@ -208,7 +208,7 @@ class Controller {
 		await this.reporter.send('stats', {ping: 1})
 
         try {
-            await this.ps.update(this.contractManager.balance);
+            await this.ps.update(this.contractManager.balance, this.curSyrupPoolAddr);
 
             nextAction = await this.getAction();
 
