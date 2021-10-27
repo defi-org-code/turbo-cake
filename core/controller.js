@@ -185,7 +185,7 @@ class Controller {
 		logger.debug(`reportStats: investReport=${JSON.stringify(investReport)}`)
 		this.notif.sendDiscord(`investment report: ${JSON.stringify(investReport)}`)
 		await this.reporter.send('stats', investReport)
-		await this.reporter.send('poolsApy', await this.ps.getPoolsApyReport())
+		await this.reporter.send('poolsApy', await this.ps.getPoolsApyReport(this.curSyrupPoolAddr))
 	}
 
     redisInit() {

@@ -130,9 +130,13 @@ class Pancakeswap {
 				stakedCakeBalance: totalBalance.staked.dividedBy(1e18).toString(), unstakedCakeBalance: totalBalance.unstaked.dividedBy(1e18).toString(), poolAddr: curSyrupPoolAddr, poolTvl: await this.getPoolTvl(curSyrupPoolAddr), blockNum: blockNum}
 	}
 
-	async getPoolsApyReport() {
+	async getPoolsApyReport(curSyrupPoolAddr) {
 
 		let apyDict = {}
+
+		if (curSyrupPoolAddr != null) {
+			apyDict['active-pool'] =  this.poolsInfo[curSyrupPoolAddr]['apy']
+		}
 
 		for (const poolAddr of Object.keys(this.poolsInfo)) {
 
