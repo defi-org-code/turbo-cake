@@ -193,7 +193,6 @@ class Pancakeswap {
 
 	async updateBestRoute() {
 		let res, amount
-		let bestRes = new BigNumber(0)
 
 		for (const poolAddr of Object.keys(this.poolsInfo)) {
 
@@ -204,6 +203,8 @@ class Pancakeswap {
 			const rewardPerBlock = new BigNumber(this.poolsInfo[poolAddr]['rewardPerBlock'])
 			// estimate route based on daily rewards
 			const rewardForDay = rewardPerBlock.multipliedBy(this.BLOCKS_PER_DAY)
+
+			let bestRes = new BigNumber(0)
 
 			for (let route of ROUTES_TO_CAKE) {
 
@@ -216,6 +217,8 @@ class Pancakeswap {
 				}
 
 				amount = new BigNumber(res[res.length-1])
+
+				// console.log(`poolAddr ${poolAddr}: route: ${route}, amount ${amount}`)
 
 				if (amount.gt(bestRes)) {
 					bestRes = amount
@@ -447,7 +450,7 @@ class Pancakeswap {
 					'hasUserLimit': hasUserLimit,
 					'rewardPerBlock': rewardPerBlock,
 					'startBlock': startBlock,
-					'routeToCake': [rewardToken, BNB_ADDRESS, CAKE_ADDRESS],
+					'routeToCake': null,
 					'active': true, // default, will be set to false on setActivePools
 				}
 
