@@ -1,4 +1,4 @@
-const {WORKER_START_BALANCE, WORKER_END_BALANCE, OWNER_ADDRESS, TRANSFER_BATCH_SIZE, DEV_RAND_FAILURES} = require("../config");
+const {WORKER_START_BALANCE, WORKER_END_BALANCE, OWNER_ADDRESS, TRANSFER_BATCH_SIZE, DEV_RAND_FAILURES, MIN_AMOUNT_FOR_REBALANCE} = require("../config");
 const Contract = require('web3-eth-contract') // workaround for web3 leakage
 const {CAKE_ABI, SMARTCHEF_INITIALIZABLE_ABI} = require('../abis')
 const {Action} = require("./policy");
@@ -304,7 +304,8 @@ class ContractManager extends TxManager {
 			return false
 		}
 
-		if (this.managerBalance > 0) {
+		if (new BigNumber(this.managerBalance).gt(MIN_AMOUNT_FOR_REBALANCE)) {
+			logger.info(`manager balance = ${this.managerBalance}, sending rebalance signal ...`)
 			return true
 		}
 

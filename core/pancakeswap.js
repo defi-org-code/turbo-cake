@@ -191,42 +191,46 @@ class Pancakeswap {
 		return 100 * ((1 + apr / 100 / n) ** (n*t) - 1)
 	}
 
-	async updateBestRoute() {
+	async updateSingleRoute(poolAddr) {
 		let res, amount, bestRes
 
-		// logger.info(`updateBestRoute: `)
-		for (const poolAddr of Object.keys(this.poolsInfo)) {
+		if (this.poolsInfo[poolAddr]['active'] === false) {
+			return
+		}
 
-			if (this.poolsInfo[poolAddr]['active'] === false) {
+		const rewardPerBlock = new BigNumber(this.poolsInfo[poolAddr]['rewardPerBlock'])
+		// estimate route based on daily rewards
+		// const rewardForDay = rewardPerBlock.multipliedBy(this.BLOCKS_PER_DAY)
+
+		bestRes = new BigNumber(0)
+
+		for (let route of ROUTES_TO_CAKE) {
+
+			route = [this.poolsInfo[poolAddr]['rewardToken']].concat(route)
+			try {
+				res = await this.routerV2Contract.methods.getAmountsOut(rewardPerBlock, route).call()
+			}
+			catch (e) {
 				continue
 			}
 
-			const rewardPerBlock = new BigNumber(this.poolsInfo[poolAddr]['rewardPerBlock'])
-			// estimate route based on daily rewards
-			// const rewardForDay = rewardPerBlock.multipliedBy(this.BLOCKS_PER_DAY)
+			amount = new BigNumber(res[res.length-1])
 
-			bestRes = new BigNumber(0)
+			// console.log(`poolAddr ${poolAddr}: route: ${route}, amount ${amount.toString()}, bestRes ${bestRes.toString()}`)
 
-			for (let route of ROUTES_TO_CAKE) {
-
-				route = [this.poolsInfo[poolAddr]['rewardToken']].concat(route)
-				try {
-					res = await this.routerV2Contract.methods.getAmountsOut(rewardPerBlock, route).call()
-				}
-				catch (e) {
-					continue
-				}
-
-				amount = new BigNumber(res[res.length-1])
-
-				// console.log(`poolAddr ${poolAddr}: route: ${route}, amount ${amount.toString()}, bestRes ${bestRes.toString()}`)
-
-				if (amount.gt(bestRes)) {
-					bestRes = amount
-					this.poolsInfo[poolAddr]['routeToCake'] = route
-					logger.debug(`setting ${this.poolsInfo[poolAddr]['rewardSymbol']} (addr=${poolAddr}) best route to ${route}`)
-				}
+			if (amount.gt(bestRes)) {
+				bestRes = amount
+				this.poolsInfo[poolAddr]['routeToCake'] = route
+				logger.debug(`setting ${this.poolsInfo[poolAddr]['rewardSymbol']} (addr=${poolAddr}) best route to ${route}`)
 			}
+		}
+	}
+
+	async updateBestRoute() {
+
+		// logger.info(`updateBestRoute: `)
+		for (const poolAddr of Object.keys(this.poolsInfo)) {
+			await this.updateSingleRoute(poolAddr)
 		}
 
 		logger.debug('updateBestRoute ended')
@@ -246,6 +250,10 @@ class Pancakeswap {
 		let res;
 		// TODO: check and verify calculations
 		// TODO: pool EMA
+		if (this.poolsInfo[poolAddr]['routeToCake'] == null) {
+			await this.updateSingleRoute(poolAddr)
+		}
+
 		res = await this.routerV2Contract.methods.getAmountsOut(amountIn, this.poolsInfo[poolAddr]['routeToCake']).call()
 
 		// logger.debug(`getTokenCakeRate: poolAddr=${poolAddr}, res=${res}, amountIn=${amountIn.toString()}, rate=${(new BigNumber(res[res.length-1]).dividedBy(amountIn)).toString()}`)
