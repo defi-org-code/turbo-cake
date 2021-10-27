@@ -1,6 +1,6 @@
 const {getPastEventsLoop} = require('../bscFetcher')
 const {SMARTCHEF_FACTORY_ABI, CAKE_ABI, BEP_20_ABI, SMARTCHEF_INITIALIZABLE_ABI,  ROUTER_V2_ABI} = require('../abis')
-const {MASTER_CHEF_ADDRESS, SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS, BNB_ADDRESS, ROUTER_V2_ADDRESS, ROUTES_TO_CAKE} = require('./params')
+const {MASTER_CHEF_ADDRESS, SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS, BNB_ADDRESS, BUSD_ADDRESS, ROUTER_V2_ADDRESS, ROUTES_TO_CAKE} = require('./params')
 const nodeFetch = require("node-fetch")
 const Contract = require('web3-eth-contract') // workaround for web3 leakage
 
@@ -126,8 +126,12 @@ class Pancakeswap {
 		const apy = this.aprToApy(balanceCngPct.multipliedBy(this.BLOCKS_PER_YEAR).toString() / blocksPeriod)
 		logger.info(`Investment APY: ${apy}`)
 
+		const cakeUsdRate = await this.getCakeUSDRate()
+		const balanceUsd = totalBalance.staked.plus(totalBalance.unstaked).dividedBy(1e18).multipliedBy(cakeUsdRate)
+
 		return {apy: apy, roi: balanceCngPct.toString(), roiBlockPeriod: blocksPeriod, roiDaysPeriod: blocksPeriod / this.BLOCKS_PER_DAY,
-				stakedCakeBalance: totalBalance.staked.dividedBy(1e18).toString(), unstakedCakeBalance: totalBalance.unstaked.dividedBy(1e18).toString(), poolAddr: curSyrupPoolAddr, poolTvl: await this.getPoolTvl(curSyrupPoolAddr), blockNum: blockNum}
+				balanceUsd: balanceUsd, stakedCakeBalance: totalBalance.staked.dividedBy(1e18).toString(), unstakedCakeBalance: totalBalance.unstaked.dividedBy(1e18).toString(),
+				poolAddr: curSyrupPoolAddr, poolTvl: await this.getPoolTvl(curSyrupPoolAddr), blockNum: blockNum}
 	}
 
 	async getPoolsApyReport(curSyrupPoolAddr) {
@@ -221,6 +225,15 @@ class Pancakeswap {
 		}
 
 		logger.debug('updateBestRoute ended')
+	}
+
+	async getCakeUSDRate() {
+
+		let res;
+		const amountIn = new BigNumber(100e18)
+		res = await this.routerV2Contract.methods.getAmountsOut(amountIn, [CAKE_ADDRESS, BUSD_ADDRESS]).call()
+
+		return (new BigNumber(res[res.length-1]).dividedBy(amountIn)).toString()
 	}
 
 	async getTokenCakeRate(poolAddr, amountIn) {
