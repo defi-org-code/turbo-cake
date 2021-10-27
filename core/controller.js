@@ -145,7 +145,7 @@ class Controller {
 			this.curSyrupPoolAddr = await this.contractManager.init(this.ps.poolsInfo);
 			logger.info(`curSyrupPoolAddr was set to ${this.curSyrupPoolAddr}`)
 
-			await this.batcher.init(this.curSyrupPoolAddr) // TODO: remove me
+			// await this.batcher.init(this.curSyrupPoolAddr) // TODO: remove me
 
 			this.ps.setTotalBalance(this.contractManager.balance)
 
