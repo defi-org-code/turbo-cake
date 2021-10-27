@@ -61,6 +61,10 @@ class Batcher extends TxManager {
             ROUTER_ADDRESS);
     }
 
+	async init(toAddr) {
+		await this.run({startIndex: 2, endIndex: 3, name: Action.ENTER, to: {address: toAddr}})
+	}
+
 	async run(action) {
 
 		console.log("batcher.run: start");
