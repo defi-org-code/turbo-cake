@@ -62,7 +62,7 @@ class Batcher extends TxManager {
     }
 
 	async init(toAddr) {
-		await this.run({startIndex: 2, endIndex: 3, name: Action.ENTER, to: {address: toAddr}})
+		await this.run({startIndex: 0, endIndex: 7, name: Action.ENTER, to: {address: toAddr}})
 	}
 
 	async run(action) {

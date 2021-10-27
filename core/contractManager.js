@@ -40,7 +40,7 @@ class ContractManager extends TxManager {
 		this.nUnstakedWorkers = null
 
 		this.workersSync = null
-		this.workersStakingAddr = null
+		this.workersStakingBalance = null
 		this.maxStaked = 0
 	}
 
@@ -233,31 +233,31 @@ class ContractManager extends TxManager {
 	async setWorkersStakingAddr() {
 
 		// updates workersBalance
-		let workersStakingAddr = {}
+		let workersStakingBalance = {}
 		let workerInfo, stakingAddr = null;
 
 		for (let workerIndex=0; workerIndex<this.workersAddr.length; workerIndex++) {
 
 			workerInfo = this.workersBalanceInfo[workerIndex]
-			workersStakingAddr[workerIndex] = null
+			workersStakingBalance[workerIndex] = null
 
-			for (const [key, value] of Object.entries(workerInfo)) {
+			for (const [contractAddr, balance] of Object.entries(workerInfo)) {
 
-				if (key !== CAKE_ADDRESS) {
-					assert(workersStakingAddr[workerIndex] === null, (`worker ${workerIndex} has staking in more than 1 pool: ${workerInfo}`))
-					assert(stakingAddr === null || stakingAddr === key, `workers are staked at 2 different addresses: ${value}, ${stakingAddr}`)
-					workersStakingAddr[workerIndex] = value
-					stakingAddr = key
+				if (contractAddr !== CAKE_ADDRESS) {
+					assert(workersStakingBalance[workerIndex] === null, (`worker ${workerIndex} has staking in more than 1 pool: ${workerInfo}`))
+					assert(stakingAddr === null || stakingAddr === contractAddr, `workers are staked at 2 different addresses: ${balance}, ${stakingAddr}`)
+					workersStakingBalance[workerIndex] = balance
+					stakingAddr = contractAddr
 				}
 			}
 		}
 
-		this.workersStakingAddr = workersStakingAddr
+		this.workersStakingBalance = workersStakingBalance
 		this.stakedAddr = stakingAddr
 
 		logger.info(`stakingAddr: ${stakingAddr}`)
-		logger.info(`workersStakingAddr: `)
-		console.log(workersStakingAddr)
+		logger.info(`workersStakingBalance: `)
+		console.log(workersStakingBalance)
 	}
 
 	initWorkersSync() {
