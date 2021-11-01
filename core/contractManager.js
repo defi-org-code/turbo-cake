@@ -48,6 +48,7 @@ class ContractManager extends TxManager {
 
 		await this.validateAddr()
 		// await this.transferToManager(0, 0, 7)
+		await this.addWorkers(5) // TODO: remove me
 		await this.setNWorkers()
 		await this.setWorkersBalanceInfo(poolsInfo)
 		// await this.transferRewardsToManager()
@@ -59,7 +60,6 @@ class ContractManager extends TxManager {
 		// this.initWorkersSync()
 		await this.setWorkersStakingAddr()
 
-		await this.addWorkers(5) // TODO: remove me
 
 		return this.stakedAddr
 	}
@@ -192,6 +192,9 @@ class ContractManager extends TxManager {
 		}
 
 		this.workersBalance = workersBalance
+		logger.info('setWorkersBalance: ')
+		console.log(this.workersBalance)
+
 	}
 
 	setNActiveWorkers() {
@@ -358,9 +361,9 @@ class ContractManager extends TxManager {
 
 	async transferToWorkers(startIndex, endIndex) {
 
-		if ((this.runningMode === RunningMode.DEV) && DEV_RAND_FAILURES) {
+		if ((this.runningMode === RunningMode.DEV) && (DEV_RAND_FAILURES !== 0)) {
 			logger.warning(`RANDOM failure mode is on ...`)
-			assert (getRandomInt(3) !== 0, `transferToWorkers: simulating random failure`)
+			assert (getRandomInt(DEV_RAND_FAILURES) !== 0, `transferToWorkers: simulating random failure`)
 		}
 
 		await this.setManagerBalance()
@@ -393,9 +396,9 @@ class ContractManager extends TxManager {
 			return
 		}
 
-		if ((this.runningMode === RunningMode.DEV) && DEV_RAND_FAILURES) {
+		if ((this.runningMode === RunningMode.DEV) && (DEV_RAND_FAILURES !== 0)) {
 			logger.warning(`RANDOM failure mode is on ...`)
-			assert (getRandomInt(3) !== 0, `transferToManager: simulating random failure`)
+			assert (getRandomInt(DEV_RAND_FAILURES) !== 0, `transferToManager: simulating random failure`)
 		}
 
 		let _endIndex
@@ -437,7 +440,7 @@ class ContractManager extends TxManager {
 		for (let [workerIndex, workerBalance] of Object.entries(this.workersBalance)) {
 
 			if ((workerBalance.staked === '0') && (workerBalance.unstaked === '0')) {
-				workersId.push(workerIndex)
+				workersId.push(Number(workerIndex))
 			}
 		}
 
@@ -456,7 +459,7 @@ class ContractManager extends TxManager {
 		for (let [workerIndex, workerBalance] of Object.entries(this.workersBalance)) {
 
 			if (workerBalance.unstaked !== '0') {
-				workersId.push(workerIndex)
+				workersId.push(Number(workerIndex))
 			}
 		}
 
@@ -475,12 +478,13 @@ class ContractManager extends TxManager {
 		for (let [workerIndex, workerBalance] of Object.entries(this.workersBalance)) {
 
 			if (workerBalance.staked !== '0') {
-				workersId.push(workerIndex)
+				workersId.push(Number(workerIndex))
 			}
 		}
 
 		return workersId
 	}
+
 	getFullWorkers() {
 
 		/*
@@ -493,7 +497,7 @@ class ContractManager extends TxManager {
 		for (let [workerIndex, workerBalance] of Object.entries(this.workersBalance)) {
 
 			if (new BigNumber(workerBalance.unstaked).gt(WORKER_END_BALANCE)) {
-				fullWorkersId.push(workerIndex)
+				fullWorkersId.push(Number(workerIndex))
 			}
 		}
 
@@ -513,9 +517,9 @@ class ContractManager extends TxManager {
 			return
 		}
 
-		if ((this.runningMode === RunningMode.DEV) && DEV_RAND_FAILURES) {
+		if ((this.runningMode === RunningMode.DEV) && (DEV_RAND_FAILURES !== 0)) {
 			logger.warning(`RANDOM failure mode is on ...`)
-			assert (getRandomInt(3) !== 0, `transferAllCakesToWorker0: simulating random failure`)
+			assert (getRandomInt(DEV_RAND_FAILURES) !== 0, `transferAllCakesToWorker0: simulating random failure`)
 		}
 
 		const startIndex = 0, endIndex = 1
@@ -550,13 +554,13 @@ class ContractManager extends TxManager {
 			return
 		}
 
-		if ((this.runningMode === RunningMode.DEV) && DEV_RAND_FAILURES) {
+		if ((this.runningMode === RunningMode.DEV) && (DEV_RAND_FAILURES !== 0)) {
 			logger.warning(`RANDOM failure mode is on ...`)
-			assert (getRandomInt(3) !== 0, `transferToWorkers: simulating random failure`)
+			assert (getRandomInt(DEV_RAND_FAILURES) !== 0, `transferToWorkers: simulating random failure`)
 		}
 
-		let nWorkers = Math.ceil(Number((this.managerBalance.dividedBy(WORKER_START_BALANCE)).toString()))
-		assert (nWorkers < workersId.length, `nWorkers = ${nWorkers} >= workersId.length = ${workersId.length}, can not send cakes to workers`)
+		let nWorkers = Math.ceil(Number((new BigNumber(this.managerBalance).dividedBy(WORKER_START_BALANCE)).toString()))
+		assert (nWorkers <= workersId.length, `nWorkers = ${nWorkers} >= workersId.length = ${workersId.length}, can not send cakes to workers`)
 
 		const amount = (new BigNumber(this.managerBalance).dividedBy(nWorkers)).integerValue(BigNumber.ROUND_FLOOR).toString()
 		logger.info(`transferToWorkers: amount=${amount}, managerBalance=${this.managerBalance}`)
@@ -572,12 +576,12 @@ class ContractManager extends TxManager {
 				endIndex = startIndex + 1
 			}
 
+			logger.info(`transferToWorkers: startIndex=${startIndex}, endIndex=${endIndex}, nWorkers=${nWorkers}: `)
 			nWorkers -= (endIndex-startIndex)
 
 			const tx = await this.manager.methods.transferToWorkers([CAKE_ADDRESS, amount, startIndex, endIndex]).encodeABI()
 			const res = await this.sendTransactionWait(tx, this.manager.options.address)
 
-			logger.info(`transferToWorkers: startIndex=${startIndex}, endIndex=${endIndex}, nWorkers=${nWorkers}: `)
 			console.log(res)
 
 			if (nWorkers <= 0) {
@@ -604,9 +608,9 @@ class ContractManager extends TxManager {
 			return
 		}
 
-		if ((this.runningMode === RunningMode.DEV) && DEV_RAND_FAILURES) {
+		if ((this.runningMode === RunningMode.DEV) && (DEV_RAND_FAILURES !== 0)) {
 			logger.warning(`RANDOM failure mode is on ...`)
-			assert (getRandomInt(3) !== 0, `transferCakesFromWorkersToMng: simulating random failure`)
+			assert (getRandomInt(DEV_RAND_FAILURES) !== 0, `transferCakesFromWorkersToMng: simulating random failure`)
 		}
 
 		let startIndex = workersId[0]
@@ -620,12 +624,12 @@ class ContractManager extends TxManager {
 				endIndex = startIndex + 1
 			}
 
+			logger.info(`transferCakesFromWorkersToMng: startIndex=${startIndex}, endIndex=${endIndex}, nWorkersToProcess=${nWorkersToProcess}: `)
 			nWorkersToProcess -= (endIndex-startIndex)
 
 			const tx = await this.manager.methods.transferToManager([CAKE_ADDRESS, 0, startIndex, endIndex]).encodeABI()
 			const res = await this.sendTransactionWait(tx, this.manager.options.address)
 
-			logger.info(`transferCakesFromWorkersToMng: startIndex=${startIndex}, endIndex=${endIndex}, nWorkersToProcess=${nWorkersToProcess}: `)
 			console.log(res)
 
 			if (nWorkersToProcess <= 0) {
@@ -636,7 +640,7 @@ class ContractManager extends TxManager {
 			startIndex = endIndex
 		}
 
-		logger.info(`transferred cakes successfully to ${workersId.length} workers`)
+		logger.info(`transferred cakes successfully from ${workersId.length} workers`)
 	}
 
 	async prepareEnter(hasUserLimit) {
@@ -664,7 +668,7 @@ class ContractManager extends TxManager {
 
 		if ((unstakedWorkersId.length === 1) && (unstakedWorkersId[0] === 0)) {
 			logger.info(`only worker[0] has cake balance != 0, ready to enter pool`)
-			return
+			return [0]
 
 		} else if ((unstakedWorkersId.length > 1) && (unstakedWorkersId[0] === 0)) {
 			// remove worker 0 from unstakedWorkersId

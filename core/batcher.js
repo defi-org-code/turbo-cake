@@ -121,7 +121,7 @@ class Batcher extends TxManager {
                     return this.invalidAction();
             }
 
-            this.successCnt += 1;
+            this.successCnt += (endIndex-startIndex);
             logger.debug("batcher.run: action completed successfully");
 
         } catch (err) {
@@ -218,7 +218,7 @@ class Batcher extends TxManager {
 
     async handleExecutionResult(startIndex, endIndex) {
 		this.workersCnt += (endIndex-startIndex)
-		logger.info(`handleExecutionResult: startIndex=${startIndex}, endIndex=${endIndex}, totalWorkers=${this.totalWorkers}`)
+		logger.info(`handleExecutionResult: startIndex=${startIndex}, endIndex=${endIndex}, workersCnt=${this.workersCnt}, totalWorkers=${this.totalWorkers}`)
 
 		if (this.workersCnt === this.totalWorkers) {
 

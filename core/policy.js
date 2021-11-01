@@ -167,6 +167,7 @@ class GreedyPolicy extends Policy {
 		// logger.debug(`now=${Date.now()},lastActionTimestamp=${args.lastActionTimestamp},harvestInterval=${this.harvestInterval},eval=${Date.now() - args.lastActionTimestamp}`)
 		if (args.availableCakesForStaking) {
 
+			logger.info(`availableCakesForStaking = ${args.availableCakesForStaking} completing enter position to all workers ...`)
             return {
                 name: Action.ENTER,
                 from: {address: null},
