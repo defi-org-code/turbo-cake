@@ -420,6 +420,10 @@ class ContractManager extends TxManager {
 		console.log(res)
 	}
 
+	availableCakesForStaking() {
+		return (this.getUnstakedWorkers() !== [])
+	}
+
 	getEmptyWorkers() {
 		/*
 		* workersBalance should be updated
@@ -477,11 +481,39 @@ class ContractManager extends TxManager {
 
 	}
 
-	async transferCakesToEmptyWorkers(emptyWorkersId) {
+	async transferAllCakesToWorker0() {
 		/*
-		* transfer from manager to empty workers
-		* workers that has cake balance are ignored
-		* some workers might have different amount than the amount transferred in this function (any amount > 0, but it should be close to amount)
+		* transfer all cakes from manager to worker 0
+		*/
+
+		await this.setManagerBalance()
+
+		if (this.managerBalance.toString() === '0') {
+			logger.info(`manager balance is 0, nothing to transfer to worker`)
+			return
+		}
+
+		if ((this.runningMode === RunningMode.DEV) && DEV_RAND_FAILURES) {
+			logger.warning(`RANDOM failure mode is on ...`)
+			assert (getRandomInt(3) !== 0, `transferAllCakesToWorker0: simulating random failure`)
+		}
+
+		const startIndex = 0, endIndex = 1, amount = 0
+		const tx = await this.manager.methods.transferToWorkers([CAKE_ADDRESS, amount, startIndex, endIndex]).encodeABI()
+		const res = await this.sendTransactionWait(tx, this.manager.options.address)
+
+		logger.info(`transferAllCakesToWorker0: `)
+		console.log(res)
+
+		logger.info(`transferred all cakes successfully to worker 0`)
+	}
+
+	async transferCakesToWorkers(emptyWorkersId) {
+		/*
+		* calculate number of workers needed to transfer WORKER_START_BALANCE
+		* and transfer from manager to empty workers from given list (there might be empty workers that will stay empty)
+		* empty workers are workers with cake balance = 0 and staked balance also 0
+		* some workers might have different amount than the amount transferred in this function (any amount > 0, but it should be close to WORKER_START_BALANCE)
 		*/
 
 		if (emptyWorkersId === []) {
@@ -588,51 +620,53 @@ class ContractManager extends TxManager {
 	async prepareEnter(hasUserLimit) {
 
 		if (hasUserLimit) {
-			await this.prepareEnterWithUserLimit()
+			return await this.prepareEnterWithUserLimit()
 		} else {
-			await this.prepareEnterWithoutUserLimit()
+			return await this.prepareEnterWithoutUserLimit()
 		}
 	}
 
 	async prepareEnterWithoutUserLimit() {
 		/*
-		* assuming all rewards were converted to cakes
-		* create a list of full workers
-		* transfer cakes from full workers to manager
-		* transfer cakes from manager to workers if needed
-		* extract workers indices to batcher in order to enter pool
-		* after this function manager should have zero cake balance and all cakes transferred to workers
-		* returns all indices of workers with cakes
+		* transfer all cakes from workers that are not worker[0] to manager
+		* than transfer all cakes from manager to worker[0]
+		* returns worker[0] index
 		*/
 
 		// fetch and update workers cake balance and set workersBalance object
 		await this.fetchWorkersCakeBalance()
 		this.setWorkersBalance()
 
-		// transfer cakes from full workers to manager
-		let fullWorkersId = this.getFullWorkers()
-		await this.transferCakesFromWorkersToMng(fullWorkersId)
+		// get list of all unstaked workers
+		let unstakedWorkersId = this.getUnstakedWorkers()
 
-		// get empty workers list, calc amount to transfer to each worker and transfer cakes from manager to empty workers
-		const emptyWorkersId = this.getEmptyWorkers()
-		await this.transferCakesToEmptyWorkers(emptyWorkersId)
+		if ((unstakedWorkersId.length === 1) && (unstakedWorkersId[0] === 0)) {
+			logger.info(`only worker[0] has cake balance != 0, ready to enter pool`)
+			return
 
-		// fetch and update workers cake balance and set workersBalance object
-		await this.fetchWorkersCakeBalance()
-		this.setWorkersBalance()
+		} else if ((unstakedWorkersId.length > 1) && (unstakedWorkersId[0] === 0)) {
+			// remove worker 0 from unstakedWorkersId
+			logger.info(`removing worker[0] from unstakedWorkersId, no need to transfer cakes from worker[0] to manager in order to enter pool`)
+			unstakedWorkersId.shift()
+		}
 
-		return this.getUnstakedWorkers()
+		// worker 0 was removed from unstakedWorkersId
+		await this.transferCakesFromWorkersToMng(unstakedWorkersId)
+
+		await this.transferAllCakesToWorker0()
+
+		return [0]
 	}
 
 	async prepareEnterWithUserLimit() {
 		/*
 		* assuming all rewards were converted to cakes
 		* create a list of full workers
-		* transfer cakes from full workers to manager
+		* transfer cakes from full workers to manager (staked workers or not-full workers are unaffected)
 		* transfer cakes from manager to workers if needed
 		* extract workers indices to batcher in order to enter pool
 		* after this function manager should have zero cake balance and all cakes transferred to workers
-		* returns all indices of workers with cakes
+		* returns all indices of workers with unstaked cakes
 		*/
 
 		// fetch and update workers cake balance and set workersBalance object
@@ -645,7 +679,7 @@ class ContractManager extends TxManager {
 
 		// get empty workers list, calc amount to transfer to each worker and transfer cakes from manager to empty workers
 		const emptyWorkersId = this.getEmptyWorkers()
-		await this.transferCakesToEmptyWorkers(emptyWorkersId)
+		await this.transferCakesToWorkers(emptyWorkersId)
 
 		// fetch and update workers cake balance and set workersBalance object
 		await this.fetchWorkersCakeBalance()
@@ -659,37 +693,16 @@ class ContractManager extends TxManager {
 		logger.info(`nWorkers=${this.nWorkers}, nActiveWorkers=${this.nActiveWorkers}, nextAction =>`)
 		console.log(nextAction)
 
-		let nExpectedWorkers;
-		let workerIndices
-
 		switch (nextAction.name) {
 
 			case Action.NO_OP:
-				return nextAction
-
-			case Action.ENTER:
-
-				workerIndices = await this.prepareEnter(nextAction.to.hasUserLimit)
-
-				// if (nextAction.to.hasUserLimit === true) {
-				//
-				// 	workerIndices = await this.prepareEnter()
-				//
-				// } else {
-				//
-				// 	await this.transferToManager(0, 1, this.nActiveWorkers)
-				// 	await this.addWorkers(1)
-				// 	this.nActiveWorkers = 1
-				// 	await this.transferToWorkers(0,  this.nActiveWorkers)
-				// }
-
 				break
 
-			// TODO: add support harvest + hasUserLimit = false but nActiveWorkers > 1
+			case Action.ENTER:
+				nextAction.workerIndices = await this.prepareEnter(nextAction.to.hasUserLimit)
+				break
 		}
 
-		nextAction.startIndex = 0
-		nextAction.endIndex = this.nActiveWorkers
 		return nextAction
 	}
 

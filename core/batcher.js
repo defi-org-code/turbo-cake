@@ -3,6 +3,7 @@ const {TxManager} = require("./txManager");
 const {
     CAKE_ADDRESS, MASTER_CHEF_ADDRESS, ROUTER_ADDRESS,
 } = require('./params')
+const {DO_HARD_WORK_BATCH_SIZE} = require('../config')
 
 const {
     MASTERCHEF_ABI,
@@ -52,29 +53,46 @@ class Batcher extends TxManager {
             ROUTER_ADDRESS);
     }
 
-	async init(toAddr) {
-		await this.run({startIndex: 0, endIndex: 7, name: Action.ENTER, to: {address: toAddr}})
-	}
+	// async init(toAddr) {
+	// 	await this.run({startIndex: 0, endIndex: 7, name: Action.ENTER, to: {address: toAddr}})
+	// }
 
 	async run(action) {
 
 		console.log("batcher.run: start");
 
+		const workerIndices = action.workerIndices
+
         this.workersCnt = 0
-        this.totalWorkers = action.endIndex - action.startIndex
+        this.totalWorkers = workerIndices.length
         this.successCnt = 0
 
-		for (let i=action.startIndex; i < action.endIndex; i++) {
-			console.log(`batcher.run: start worker ${i}`);
-			// setTimeout(async () => await this.worker(action), 0)
-			await this.worker(i, action)
-		}
+		let startIndex = workerIndices[0]
+		let endIndex
+		let nWorkersToProcess = workerIndices.length
 
+		while (true) {
+
+			endIndex = Math.min(startIndex + DO_HARD_WORK_BATCH_SIZE, startIndex + nWorkersToProcess)
+			if (endIndex !== workerIndices[endIndex-1]+1) {
+				endIndex = startIndex + 1
+			}
+
+			nWorkersToProcess -= (endIndex-startIndex)
+
+			await this.worker(startIndex, endIndex, action)
+
+			if (nWorkersToProcess <= 0) {
+				break
+			}
+
+			startIndex = endIndex
+		}
 	}
 
-    async worker(workerIndex, action) {
+    async worker(startIndex, endIndex, action) {
 
-        logger.debug(`batcher.worker[${workerIndex}]: action: `);
+        logger.debug(`batcher.worker startIndex=${startIndex}, endIndex=${endIndex}: action: `);
         console.log(action)
 
         try {
@@ -85,15 +103,15 @@ class Batcher extends TxManager {
                     break;
 
                 case Action.ENTER:
-                    await this.enterPosition(workerIndex, workerIndex+1, action.to.address);
+                    await this.enterPosition(startIndex, endIndex, action.to.address);
                     break;
 
                 case Action.HARVEST:
-                    await this.harvest(workerIndex, workerIndex+1, action.to.address, action.from.routeToCake);
+                    await this.harvest(startIndex, endIndex, action.to.address, action.from.routeToCake);
                     break;
 
                 case Action.EXIT:
-                    await this.exitPosition(workerIndex, workerIndex+1, action.from.address, action.from.routeToCake);
+                    await this.exitPosition(startIndex, endIndex, action.from.address, action.from.routeToCake);
                     break;
 
                 default:

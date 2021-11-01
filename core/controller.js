@@ -237,7 +237,8 @@ class Controller {
             'lastActionTimestamp': this.lastActionTimestamp,
             'lastAction': lastAction,
             'balance': this.contractManager.balance,
-            'rebalance': this.contractManager.shouldRebalance(this.ps.poolsInfo, this.curSyrupPoolAddr)
+            'rebalance': this.contractManager.shouldRebalance(this.ps.poolsInfo, this.curSyrupPoolAddr),
+            'availableCakesForStaking': this.contractManager.availableCakesForStaking()
         });
 
         return this.nextAction

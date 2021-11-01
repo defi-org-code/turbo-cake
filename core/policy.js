@@ -165,6 +165,14 @@ class GreedyPolicy extends Policy {
 		}
 
 		// logger.debug(`now=${Date.now()},lastActionTimestamp=${args.lastActionTimestamp},harvestInterval=${this.harvestInterval},eval=${Date.now() - args.lastActionTimestamp}`)
+		if (args.availableCakesForStaking) {
+
+            return {
+                name: Action.ENTER,
+                from: {address: null},
+                to: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy, active: args.poolsInfo[args.curSyrupPoolAddr].active, hasUserLimit: args.poolsInfo[args.curSyrupPoolAddr].hasUserLimit}
+            }
+		}
 
         if (Date.now() - args.lastActionTimestamp > this.harvestInterval) {
 
