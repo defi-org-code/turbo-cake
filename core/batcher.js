@@ -3,7 +3,7 @@ const {TxManager} = require("./txManager");
 const {
     CAKE_ADDRESS, MASTER_CHEF_ADDRESS, ROUTER_ADDRESS,
 } = require('./params')
-const {DO_HARD_WORK_BATCH_SIZE} = require('../config')
+const {DO_HARD_WORK_BATCH_SIZE, RunningMode, DEV_RAND_BATCHER_FAILURES} = require('../config')
 
 const {
     MASTERCHEF_ABI,
@@ -13,7 +13,7 @@ const {
 
 const {Logger} = require('../logger')
 const logger = new Logger('batcher')
-const {assert, getWorkerEndIndex} = require('../helpers')
+const {assert, getRandomInt, getWorkerEndIndex} = require('../helpers')
 
 const BigNumber = require('bignumber.js')
 BigNumber.config({POW_PRECISION: 100, EXPONENTIAL_AT: 1e+9})
@@ -31,6 +31,7 @@ class Batcher extends TxManager {
         this.swapSlippage = args.swapSlippage;
         this.swapTimeLimit = args.swapTimeLimit;
 		this.redisClient = args.redisClient;
+		this.runningMode = args.runningMode
         this.execCache = {};
         this.trace = [];
         this.result = null;
@@ -76,11 +77,13 @@ class Batcher extends TxManager {
 
 			endIndex = getWorkerEndIndex(workerIndices, startIndex, DO_HARD_WORK_BATCH_SIZE, nWorkersToProcess)
 
+			logger.info(`startIndex=${startIndex}, endIndex=${endIndex}, nWorkersToProcess=${nWorkersToProcess}`)
+
 			nWorkersToProcess -= (endIndex-startIndex)
 
 			assert (startIndex < endIndex, `startIndex = ${startIndex} is expected to be smaller than endIndex = ${endIndex}`)
 
-			await this.worker(startIndex, endIndex, action)
+			await this.worker(workerIndices[startIndex], workerIndices[endIndex-1]+1, action)
 
 			if (nWorkersToProcess <= 0) {
 				break
@@ -95,11 +98,11 @@ class Batcher extends TxManager {
         logger.debug(`batcher.worker startIndex=${startIndex}, endIndex=${endIndex}: action: `);
         console.log(action)
 
-		// if ((this.runningMode === RunningMode.DEV) && (DEV_RAND_HAS_USER_LIMIT !== 0)) {
-		// 	this.poolsInfo[poolAddr]['hasUserLimit'] = (getRandomInt(DEV_RAND_HAS_USER_LIMIT) === 0)
-		// }
-
         try {
+
+			if ((this.runningMode === RunningMode.DEV) && (DEV_RAND_BATCHER_FAILURES !== 0)) {
+				assert (getRandomInt(DEV_RAND_BATCHER_FAILURES) === 0, `worker: simulating random failure`)
+			}
 
             switch (action.name) {
 

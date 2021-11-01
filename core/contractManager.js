@@ -50,7 +50,7 @@ class ContractManager extends TxManager {
 		// await this.transferToManager(0, 0, 7)
 		await this.addWorkers(5) // TODO: remove me
 		await this.setNWorkers()
-		await this.setWorkersBalanceInfo(poolsInfo)
+		await this.fetchWorkersBalanceInfo(poolsInfo)
 		// await this.transferRewardsToManager()
 		this.setWorkersBalance()
 		this.setNActiveWorkers()
@@ -58,10 +58,7 @@ class ContractManager extends TxManager {
 
 		await this.setTotalBalance()
 		// this.initWorkersSync()
-		await this.setWorkersStakingAddr()
-
-
-		return this.stakedAddr
+		return this.getWorkersStakingAddr()
 	}
 
 	getContract(contractAbi, contractAddress) {
@@ -107,15 +104,14 @@ class ContractManager extends TxManager {
 			cakeBalance = await this.cakeContract.methods.balanceOf(this.workersAddr[i]).call();
 			this.workersBalanceInfo[i][CAKE_ADDRESS] = cakeBalance
 		}
-
 	}
 
-	async setWorkersBalanceInfo(poolsInfo) {
-		let res, poolContract, rewardContract, rewardToken
+	async fetchWorkersBalanceInfo(poolsInfo) {
+		let res, poolContract //, rewardContract, rewardToken
 		let workersBalanceInfo = {}
 		let cakeBalance
 
-		logger.info(`setWorkersBalanceInfo started ...`)
+		logger.info(`fetchWorkersBalanceInfo started ...`)
 		await this.fetchWorkersAddr()
 
 		if (this.workersAddr.length === 0) {
@@ -134,8 +130,8 @@ class ContractManager extends TxManager {
 		for (const poolAddr of Object.keys(poolsInfo)) {
 			poolContract = this.getContract(SMARTCHEF_INITIALIZABLE_ABI, poolAddr)
 
-			rewardToken = await poolContract.methods.rewardToken().call()
-			rewardContract = this.getContract(BEP_20_ABI, rewardToken)
+			// rewardToken = await poolContract.methods.rewardToken().call()
+			// rewardContract = this.getContract(BEP_20_ABI, rewardToken)
 
 			for (let i=0; i<this.workersAddr.length; i++) {
 				res = await poolContract.methods.userInfo(this.workersAddr[i]).call()
@@ -144,11 +140,11 @@ class ContractManager extends TxManager {
 					workersBalanceInfo[i][poolAddr] = res['amount']
 				}
 
-				res = await rewardContract.methods.balanceOf(this.workersAddr[i]).call()
-
-				if (res !== '0') {
-					workersBalanceInfo[i][rewardToken] = res
-				}
+				// res = await rewardContract.methods.balanceOf(this.workersAddr[i]).call()
+				//
+				// if (res !== '0') {
+				// 	workersBalanceInfo[i][rewardToken] = res
+				// }
 			}
 		}
 
@@ -158,12 +154,13 @@ class ContractManager extends TxManager {
 	}
 
 	async transferRewardsToManager() {
-		// if reward found call setWorkersBalanceInfo in order to update workersBalanceInfo
+		// if reward found call fetchWorkersBalanceInfo in order to update workersBalanceInfo
 		throw Error('Not Implemented')
 	}
 
 	async setManagerBalance() {
 		this.managerBalance = await this.cakeContract.methods.balanceOf(this.manager.options.address).call();
+		logger.info(`setManagerBalance: mangerBalance was set to ${this.managerBalance}`)
 	}
 
 	setWorkersBalance() {
@@ -240,7 +237,7 @@ class ContractManager extends TxManager {
 		}
 	}
 
-	async setWorkersStakingAddr() {
+	getWorkersStakingAddr() {
 
 		// updates workersBalance
 		let workersStakingBalance = {}
@@ -268,6 +265,8 @@ class ContractManager extends TxManager {
 		logger.info(`stakingAddr: ${stakingAddr}`)
 		logger.info(`workersStakingBalance: `)
 		console.log(workersStakingBalance)
+
+		return this.stakedAddr
 	}
 
 	initWorkersSync() {
@@ -312,11 +311,6 @@ class ContractManager extends TxManager {
 
 		if (!poolAddr) {
 			return false
-		}
-
-		if (new BigNumber(this.managerBalance).gt(MIN_AMOUNT_FOR_REBALANCE)) {
-			logger.info(`manager balance = ${this.managerBalance}, sending rebalance signal ...`)
-			return true
 		}
 
 		let hasUserLimit = poolsInfo[poolAddr].hasUserLimit
@@ -426,7 +420,7 @@ class ContractManager extends TxManager {
 	}
 
 	availableCakesForStaking() {
-		return (this.getUnstakedWorkers().length !== 0)
+		return (this.getUnstakedWorkers().length !== 0) || (new BigNumber(this.managerBalance).gt(MIN_AMOUNT_FOR_REBALANCE))
 	}
 
 	getEmptyWorkers() {
@@ -531,7 +525,7 @@ class ContractManager extends TxManager {
 		logger.info(`transferAllCakesToWorker0: `)
 		console.log(res)
 
-		logger.info(`transferred all cakes successfully to worker 0`)
+		logger.info(`transferred all cakes successfully to worker 0 (amount=${amount})`)
 	}
 
 	async transferCakesToWorkers(workersId) {
@@ -618,7 +612,9 @@ class ContractManager extends TxManager {
 
 			endIndex = getWorkerEndIndex(workersId, startIndex, TRANSFER_BATCH_SIZE, nWorkersToProcess)
 
-			logger.info(`transferCakesFromWorkersToMng: startIndex=${startIndex}, endIndex=${endIndex}, nWorkersToProcess=${nWorkersToProcess}: `)
+			logger.info(`transferCakesFromWorkersToMng: startIndex=${startIndex}, endIndex=${endIndex},
+			workerStartIndex=${workersId[startIndex]}, workerEndIndex=${workersId[endIndex-1]+1}, nWorkersToProcess=${nWorkersToProcess}: `)
+
 			nWorkersToProcess -= (endIndex-startIndex)
 
 			const tx = await this.manager.methods.transferToManager([CAKE_ADDRESS, 0, workersId[startIndex], workersId[endIndex-1]+1]).encodeABI()
@@ -668,10 +664,14 @@ class ContractManager extends TxManager {
 			// remove worker 0 from unstakedWorkersId
 			logger.info(`removing worker[0] from unstakedWorkersId, no need to transfer cakes from worker[0] to manager in order to enter pool`)
 			unstakedWorkersId.shift()
+			logger.info(`unstakedWorkersId: ${unstakedWorkersId}`)
 		}
 
 		// worker 0 was removed from unstakedWorkersId
 		await this.transferCakesFromWorkersToMng(unstakedWorkersId)
+
+		await this.fetchWorkersCakeBalance()
+		this.setWorkersBalance()
 
 		await this.transferAllCakesToWorker0()
 
@@ -692,6 +692,8 @@ class ContractManager extends TxManager {
 		// fetch and update workers cake balance and set workersBalance object
 		await this.fetchWorkersCakeBalance()
 		this.setWorkersBalance()
+
+		// TODO: optimize all workers ready for staking + manager balance = 0
 
 		// transfer cakes from full workers to manager
 		let fullWorkersId = this.getFullWorkers()
@@ -748,7 +750,7 @@ class ContractManager extends TxManager {
 
 		if ((nextAction.name !== Action.NO_OP) || (Date.now() - this.lastWorkersValidate > this.workersValidateInterval)) {
 			this.lastWorkersValidate = Date.now()
-			await this.setWorkersBalanceInfo(poolsInfo)
+			await this.fetchWorkersBalanceInfo(poolsInfo)
 			this.setWorkersBalance()
 			await this.setTotalBalance()
 			this.setNActiveWorkers()

@@ -81,6 +81,7 @@ class Controller {
 			swapTimeLimit: config.swapTimeLimit,
 			redisClient: this.redisClient,
 			contractManager: manager,
+			runningMode: runningMode
 		});
 
         this.nextAction = {name: Action.NO_OP,};
@@ -220,6 +221,8 @@ class Controller {
 
 			await this.contractManager.postRun(nextAction, this.ps.poolsInfo);
 
+			this.curSyrupPoolAddr = this.contractManager.getWorkersStakingAddr()
+
             this.scheduleNextRun();
 
         } catch (e) {
@@ -265,7 +268,6 @@ class Controller {
 					action = ${JSON.stringify(action)}
 		            exec time(sec) = ${(Date.now() - startTime) / 1000}`);
 
-        this.curSyrupPoolAddr = action.to.address
 		await this.setLastActionTimestamp()
 
         if (action.name === Action.HARVEST) {
@@ -279,8 +281,6 @@ class Controller {
 					action = ${JSON.stringify(action)}
 		            exec time(sec) = ${(Date.now() - startTime) / 1000}; `);
 
-        // TODO: continue flow according to trace - batcher.retry
-        // TODO: limit number of tries and remove set last action
         await this.setLastActionTimestamp()
     }
 
