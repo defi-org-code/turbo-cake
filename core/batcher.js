@@ -1,26 +1,17 @@
 const {Action} = require("./policy");
 const {TxManager} = require("./txManager");
 const {
-    SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS, MASTER_CHEF_ADDRESS, WBNB_ADDRESS, ROUTER_ADDRESS,
+    CAKE_ADDRESS, MASTER_CHEF_ADDRESS, ROUTER_ADDRESS,
 } = require('./params')
 
 const {
     MASTERCHEF_ABI,
-    SMARTCHEF_INITIALIZABLE_ABI,
     CAKE_ABI,
-    BEP_20_ABI,
     ROUTER_V2_ABI,
 } = require('../abis')
-const {TransactionFailure, FatalError, GasError, NotImplementedError} = require('../errors');
 
 const {Logger} = require('../logger')
 const logger = new Logger('batcher')
-
-const SyrupPoolType = {
-    MANUAL_CAKE: "masterchef",
-    SMARTCHEF: "smartchef",
-    OTHER: "unsupported",
-}
 
 const BigNumber = require('bignumber.js')
 BigNumber.config({POW_PRECISION: 100, EXPONENTIAL_AT: 1e+9})
@@ -175,38 +166,6 @@ class Batcher extends TxManager {
         logger.debug("batcher.harvest: end");
     }
 
-    async withdraw(syrupPool, amount) {
-        logger.debug(`batcher.withdraw: from pool ${syrupPool.options.address} type ${SyrupPoolType.SMARTCHEF} the amount ${amount}`);
-
-        const result = {
-            step: "withdraw",
-            poolAddress: syrupPool.options.address,
-            amount: amount,
-            syrupType: syrupPool.syrupType,
-            rewardTokenAddr: null,
-            receipt: null,
-        };
-
-        let tx;
-        let gas;
-
-        if (syrupPool.syrupType === SyrupPoolType.SMARTCHEF) {
-            result.rewardTokenAddr = await syrupPool.methods.rewardToken().call();
-            tx = await syrupPool.methods.withdraw(amount).encodeABI();
-            gas = await syrupPool.methods.withdraw(amount).estimateGas();
-
-        } else if (syrupPool.syrupType === SyrupPoolType.MANUAL_CAKE) {
-            result.rewardTokenAddr = CAKE_ADDRESS;
-            tx = await syrupPool.methods.leaveStaking(amount).encodeABI();
-            gas = await syrupPool.methods.leaveStaking(amount).estimateGas();
-        }
-
-        result.receipt = await this.sendTransactionWait(tx, syrupPool.options.address, gas);
-        this.trace.push(result);
-
-        return result;
-    }
-
     invalidAction() {
         return Promise.resolve(undefined);
     }
@@ -248,7 +207,6 @@ class Batcher extends TxManager {
 			else {
 				await this.onFailure(this.trace);
 			}
-
 		}
     }
 }
