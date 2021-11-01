@@ -576,7 +576,7 @@ class ContractManager extends TxManager {
 			logger.info(`transferCakesToWorkers: startIndex=${startIndex}, endIndex=${endIndex}: `)
 			nWorkersToProcess -= (endIndex-startIndex)
 
-			const tx = await this.manager.methods.transferToWorkers([CAKE_ADDRESS, amount, workersId[startIndex], workersId[endIndex]]).encodeABI()
+			const tx = await this.manager.methods.transferToWorkers([CAKE_ADDRESS, amount, workersId[startIndex], workersId[endIndex-1]+1]).encodeABI()
 			const res = await this.sendTransactionWait(tx, this.manager.options.address)
 
 			console.log(res)
@@ -621,7 +621,7 @@ class ContractManager extends TxManager {
 			logger.info(`transferCakesFromWorkersToMng: startIndex=${startIndex}, endIndex=${endIndex}, nWorkersToProcess=${nWorkersToProcess}: `)
 			nWorkersToProcess -= (endIndex-startIndex)
 
-			const tx = await this.manager.methods.transferToManager([CAKE_ADDRESS, 0, workersId[startIndex], workersId[endIndex]]).encodeABI()
+			const tx = await this.manager.methods.transferToManager([CAKE_ADDRESS, 0, workersId[startIndex], workersId[endIndex-1]+1]).encodeABI()
 			const res = await this.sendTransactionWait(tx, this.manager.options.address)
 
 			console.log(res)
