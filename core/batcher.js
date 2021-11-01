@@ -13,6 +13,7 @@ const {
 
 const {Logger} = require('../logger')
 const logger = new Logger('batcher')
+const {assert} = require('../helpers')
 
 const BigNumber = require('bignumber.js')
 BigNumber.config({POW_PRECISION: 100, EXPONENTIAL_AT: 1e+9})
@@ -80,6 +81,8 @@ class Batcher extends TxManager {
 
 			nWorkersToProcess -= (endIndex-startIndex)
 
+			assert (startIndex < endIndex, `startIndex = ${startIndex} is expected to be smaller than endIndex = ${endIndex}`)
+
 			await this.worker(startIndex, endIndex, action)
 
 			if (nWorkersToProcess <= 0) {
@@ -125,7 +128,7 @@ class Batcher extends TxManager {
             this.handleExecutionError(err);
 
         } finally {
-            await this.handleExecutionResult(workerIndex);
+            await this.handleExecutionResult(startIndex, endIndex);
         }
     }
 
@@ -213,9 +216,9 @@ class Batcher extends TxManager {
         this.notif.sendDiscord(err);
     }
 
-    async handleExecutionResult(workerIndex) {
-		this.workersCnt += 1
-		logger.info(`handleExecutionResult: workerIndex ${workerIndex}, totalWorkers=${this.totalWorkers}`)
+    async handleExecutionResult(startIndex, endIndex) {
+		this.workersCnt += (endIndex-startIndex)
+		logger.info(`handleExecutionResult: startIndex=${startIndex}, endIndex=${endIndex}, totalWorkers=${this.totalWorkers}`)
 
 		if (this.workersCnt === this.totalWorkers) {
 

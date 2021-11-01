@@ -3,6 +3,8 @@ const {SMARTCHEF_FACTORY_ABI, CAKE_ABI, BEP_20_ABI, SMARTCHEF_INITIALIZABLE_ABI,
 const {MASTER_CHEF_ADDRESS, SMARTCHEF_FACTORY_ADDRESS, CAKE_ADDRESS, BNB_ADDRESS, BUSD_ADDRESS, ROUTER_V2_ADDRESS, ROUTES_TO_CAKE} = require('./params')
 const nodeFetch = require("node-fetch")
 const Contract = require('web3-eth-contract') // workaround for web3 leakage
+const {getRandomInt} = require('../helpers')
+const {RunningMode, DEV_RAND_HAS_USER_LIMIT} = require("../config");
 
 const {FatalError} = require('../errors');
 require('dotenv').config();
@@ -29,7 +31,7 @@ class Pancakeswap {
 
 	EXCLUDED_POOLS = ["0xa80240Eb5d7E05d3F250cF000eEc0891d00b51CC"]
 
-    constructor(redisClient, web3, notif, bestRouteUpdateInterval) {
+    constructor(redisClient, web3, notif, bestRouteUpdateInterval, runningMode) {
         this.redisClient = redisClient;
         this.bestRouteUpdateInterval = bestRouteUpdateInterval;
         this.psLastUpdate = null;
@@ -42,6 +44,9 @@ class Pancakeswap {
         this.investInfo = {}
         this.workersAddr = []
         this.totalBalance = null
+
+		this.runningMode = runningMode
+
     }
 
 	async init() {
@@ -301,6 +306,10 @@ class Pancakeswap {
 		this.poolsInfo[poolAddr]['bonusEndBlock'] = await poolContract.methods.bonusEndBlock().call()
 		this.poolsInfo[poolAddr]['startBlock'] =  await poolContract.methods.startBlock().call()
 		this.poolsInfo[poolAddr]['hasUserLimit'] = await poolContract.methods.hasUserLimit().call()
+
+		if ((this.runningMode === RunningMode.DEV) && (DEV_RAND_HAS_USER_LIMIT !== 0)) {
+			this.poolsInfo[poolAddr]['hasUserLimit'] = (getRandomInt(DEV_RAND_HAS_USER_LIMIT) === 0)
+		}
 
 		// logger.info(`updating pool rewards for ${poolAddr}`)
 		this.poolsInfo[poolAddr]['poolRewards'] = await this.fetchPoolRewards(poolAddr)
