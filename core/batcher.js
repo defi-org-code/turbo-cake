@@ -13,7 +13,7 @@ const {
 
 const {Logger} = require('../logger')
 const logger = new Logger('batcher')
-const {assert} = require('../helpers')
+const {assert, getWorkerEndIndex} = require('../helpers')
 
 const BigNumber = require('bignumber.js')
 BigNumber.config({POW_PRECISION: 100, EXPONENTIAL_AT: 1e+9})
@@ -68,16 +68,13 @@ class Batcher extends TxManager {
         this.totalWorkers = workerIndices.length
         this.successCnt = 0
 
-		let startIndex = workerIndices[0]
+		let startIndex = 0
 		let endIndex
 		let nWorkersToProcess = workerIndices.length
 
 		while (true) {
 
-			endIndex = Math.min(startIndex + DO_HARD_WORK_BATCH_SIZE, startIndex + nWorkersToProcess)
-			if (endIndex !== workerIndices[endIndex-1]+1) {
-				endIndex = startIndex + 1
-			}
+			endIndex = getWorkerEndIndex(workerIndices, startIndex, DO_HARD_WORK_BATCH_SIZE, nWorkersToProcess)
 
 			nWorkersToProcess -= (endIndex-startIndex)
 
@@ -97,6 +94,10 @@ class Batcher extends TxManager {
 
         logger.debug(`batcher.worker startIndex=${startIndex}, endIndex=${endIndex}: action: `);
         console.log(action)
+
+		// if ((this.runningMode === RunningMode.DEV) && (DEV_RAND_HAS_USER_LIMIT !== 0)) {
+		// 	this.poolsInfo[poolAddr]['hasUserLimit'] = (getRandomInt(DEV_RAND_HAS_USER_LIMIT) === 0)
+		// }
 
         try {
 

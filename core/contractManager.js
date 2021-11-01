@@ -5,7 +5,7 @@ const {Action} = require("./policy");
 const {MASTER_CHEF_ADDRESS, CAKE_ADDRESS} = require('./params')
 const {assert} = require('../helpers')
 const {RunningMode} = require("../config");
-const {getRandomInt} = require('../helpers')
+const {getRandomInt, getWorkerEndIndex} = require('../helpers')
 
 const {Logger} = require('../logger')
 const logger = new Logger('ContractManager')
@@ -549,43 +549,40 @@ class ContractManager extends TxManager {
 
 		await this.setManagerBalance()
 
-		if (this.managerBalance.toString() === '0') {
-			logger.info(`manager balance is 0, nothing to transfer to workers`)
+		if (new BigNumber(this.managerBalance).lt(MIN_AMOUNT_FOR_REBALANCE)) {
+			logger.info(`manager balance is smaller than MIN_AMOUNT_FOR_REBALANCE, nothing to transfer to workers`)
 			return
 		}
 
 		if ((this.runningMode === RunningMode.DEV) && (DEV_RAND_FAILURES !== 0)) {
 			logger.warning(`RANDOM failure mode is on ...`)
-			assert (getRandomInt(DEV_RAND_FAILURES) !== 0, `transferToWorkers: simulating random failure`)
+			assert (getRandomInt(DEV_RAND_FAILURES) !== 0, `transferCakesToWorkers: simulating random failure`)
 		}
 
-		let nWorkers = Math.ceil(Number((new BigNumber(this.managerBalance).dividedBy(WORKER_START_BALANCE)).toString()))
+		const nWorkers = Math.ceil(Number((new BigNumber(this.managerBalance).dividedBy(WORKER_START_BALANCE)).toString()))
 		assert (nWorkers <= workersId.length, `nWorkers = ${nWorkers} >= workersId.length = ${workersId.length}, can not send cakes to workers`)
 
 		const amount = (new BigNumber(this.managerBalance).dividedBy(nWorkers)).integerValue(BigNumber.ROUND_FLOOR).toString()
-		logger.info(`transferToWorkers: amount=${amount}, managerBalance=${this.managerBalance}`)
+		logger.info(`transferCakesToWorkers: nWorkers=${nWorkers}, amount=${amount}, managerBalance=${this.managerBalance}`)
 
-		let startIndex = workersId[0]
+		let startIndex = 0
 		let endIndex
+		let nWorkersToProcess = nWorkers
 
 		while (true) {
 
-			endIndex = Math.min(startIndex+TRANSFER_BATCH_SIZE, startIndex+nWorkers)
-			// if wi
-			if (endIndex !== workersId[endIndex-1]+1) {
-				endIndex = startIndex + 1
-			}
+			endIndex = getWorkerEndIndex(workersId, startIndex, TRANSFER_BATCH_SIZE, nWorkersToProcess)
 
-			logger.info(`transferToWorkers: startIndex=${startIndex}, endIndex=${endIndex}, nWorkers=${nWorkers}: `)
-			nWorkers -= (endIndex-startIndex)
+			logger.info(`transferCakesToWorkers: startIndex=${startIndex}, endIndex=${endIndex}: `)
+			nWorkersToProcess -= (endIndex-startIndex)
 
-			const tx = await this.manager.methods.transferToWorkers([CAKE_ADDRESS, amount, startIndex, endIndex]).encodeABI()
+			const tx = await this.manager.methods.transferToWorkers([CAKE_ADDRESS, amount, workersId[startIndex], workersId[endIndex]]).encodeABI()
 			const res = await this.sendTransactionWait(tx, this.manager.options.address)
 
 			console.log(res)
 
-			if (nWorkers <= 0) {
-				logger.info(`breaking loop on nWorkers=${nWorkers}`)
+			if (nWorkersToProcess <= 0) {
+				logger.info(`breaking loop on nWorkers=${nWorkersToProcess}`)
 				break
 			}
 
@@ -613,21 +610,18 @@ class ContractManager extends TxManager {
 			assert (getRandomInt(DEV_RAND_FAILURES) !== 0, `transferCakesFromWorkersToMng: simulating random failure`)
 		}
 
-		let startIndex = workersId[0]
+		let startIndex = 0
 		let endIndex
 		let nWorkersToProcess = workersId.length
 
 		while (true) {
 
-			endIndex = Math.min(startIndex + TRANSFER_BATCH_SIZE, startIndex + nWorkersToProcess)
-			if (endIndex !== workersId[endIndex-1]+1) {
-				endIndex = startIndex + 1
-			}
+			endIndex = getWorkerEndIndex(workersId, startIndex, TRANSFER_BATCH_SIZE, nWorkersToProcess)
 
 			logger.info(`transferCakesFromWorkersToMng: startIndex=${startIndex}, endIndex=${endIndex}, nWorkersToProcess=${nWorkersToProcess}: `)
 			nWorkersToProcess -= (endIndex-startIndex)
 
-			const tx = await this.manager.methods.transferToManager([CAKE_ADDRESS, 0, startIndex, endIndex]).encodeABI()
+			const tx = await this.manager.methods.transferToManager([CAKE_ADDRESS, 0, workersId[startIndex], workersId[endIndex]]).encodeABI()
 			const res = await this.sendTransactionWait(tx, this.manager.options.address)
 
 			console.log(res)
@@ -702,6 +696,9 @@ class ContractManager extends TxManager {
 		// transfer cakes from full workers to manager
 		let fullWorkersId = this.getFullWorkers()
 		await this.transferCakesFromWorkersToMng(fullWorkersId)
+
+		await this.fetchWorkersCakeBalance()
+		this.setWorkersBalance()
 
 		// get empty workers list, calc amount to transfer to each worker and transfer cakes from manager to empty workers
 		const emptyWorkersId = this.getEmptyWorkers()
