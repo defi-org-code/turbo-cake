@@ -163,6 +163,12 @@ class ContractManager extends TxManager {
 		logger.info(`setManagerBalance: mangerBalance was set to ${this.managerBalance}`)
 	}
 
+	async fetchSetWorkersCakeBalance() {
+
+		await this.fetchWorkersCakeBalance()
+		this.setWorkersBalance()
+	}
+
 	setWorkersBalance() {
 
 		// updates workersBalance
@@ -652,8 +658,7 @@ class ContractManager extends TxManager {
 		*/
 
 		// fetch and update workers cake balance and set workersBalance object
-		await this.fetchWorkersCakeBalance()
-		this.setWorkersBalance()
+		await this.fetchSetWorkersCakeBalance()
 
 		// get list of all unstaked workers
 		let unstakedWorkersId = this.getUnstakedWorkers()
@@ -672,8 +677,7 @@ class ContractManager extends TxManager {
 		// worker 0 was removed from unstakedWorkersId
 		await this.transferCakesFromWorkersToMng(unstakedWorkersId)
 
-		await this.fetchWorkersCakeBalance()
-		this.setWorkersBalance()
+		await this.fetchSetWorkersCakeBalance()
 
 		await this.transferAllCakesToWorker0()
 
@@ -692,25 +696,20 @@ class ContractManager extends TxManager {
 		*/
 
 		// fetch and update workers cake balance and set workersBalance object
-		await this.fetchWorkersCakeBalance()
-		this.setWorkersBalance()
-
-		// TODO: optimize all workers ready for staking + manager balance = 0
+		await this.fetchSetWorkersCakeBalance()
 
 		// transfer cakes from full workers to manager
 		let fullWorkersId = this.getFullWorkers()
 		await this.transferCakesFromWorkersToMng(fullWorkersId)
 
-		await this.fetchWorkersCakeBalance()
-		this.setWorkersBalance()
+		await this.fetchSetWorkersCakeBalance()
 
 		// get empty workers list, calc amount to transfer to each worker and transfer cakes from manager to empty workers
 		const emptyWorkersId = this.getEmptyWorkers()
 		await this.transferCakesToWorkers(emptyWorkersId)
 
 		// fetch and update workers cake balance and set workersBalance object
-		await this.fetchWorkersCakeBalance()
-		this.setWorkersBalance()
+		await this.fetchSetWorkersCakeBalance()
 
 		return this.getUnstakedWorkers()
 	}
