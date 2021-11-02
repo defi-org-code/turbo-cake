@@ -206,7 +206,7 @@ class ContractManager extends TxManager {
 
 			if (workerBalance.unstaked !== '0') {
 
-				assert(workerBalance.staked === '0', `unexpected state, worker ${workerIndex} has both staked and unstaked balance: ${workerBalance}`)
+				// assert(workerBalance.staked === '0', `unexpected state, worker ${workerIndex} has both staked and unstaked balance`)
 				nUnstakedWorkers += 1
 			}
 		}
@@ -518,6 +518,8 @@ class ContractManager extends TxManager {
 
 		const startIndex = 0, endIndex = 1
 		let amount = this.managerBalance.toString()
+
+		logger.info(`transferAllCakesToWorker0: amount=${amount}`)
 
 		const tx = await this.manager.methods.transferToWorkers([CAKE_ADDRESS, amount, startIndex, endIndex]).encodeABI()
 		const res = await this.sendTransactionWait(tx, this.manager.options.address)

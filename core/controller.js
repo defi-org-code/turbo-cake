@@ -227,7 +227,10 @@ class Controller {
 
         } catch (e) {
 
-			this.beforeExit(e)
+			this.notif.sendDiscord(`ERROR: ${e}`)
+			logger.debug(e.stack)
+
+			// this.beforeExit(e)
         }
     }
 
