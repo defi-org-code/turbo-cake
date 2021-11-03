@@ -6,7 +6,7 @@ const KeyEncryption = require('./keyEncryption');
 const env = require('dotenv').config();
 const { Controller } = require('./core/controller');
 const { RunningMode, CAKE_WHALE_ACCOUNT, CAKE_ADDRESS, OWNER_ADDRESS, MANAGER_ADDRESS} = require('./config');
-const {ROUTES_TO_CAKE} = require('core/params')
+const {ROUTES_TO_CAKE} = require('./core/params')
 const yargs = require('yargs/yargs');
 const {CAKE_ABI} = require("./abis");
 const { hideBin } = require('yargs/helpers');
@@ -16,10 +16,10 @@ const {Logger} = require('./logger')
 const logger = new Logger('main')
 const Notifications = require('./notifications');
 
-// const managerAbi = require('./hardhat/artifacts/contracts/Manager.sol/Manager.json').abi
-// const managerBytecode = require('./hardhat/artifacts/contracts/Manager.sol/Manager.json').bytecode
-const managerAbi = require('/Users/ami/orbs/turbo-cake-contracts/artifacts/contracts/Manager.sol/Manager.json').abi
-const managerBytecode = require('/Users/ami/orbs/turbo-cake-contracts/artifacts/contracts/Manager.sol/Manager.json').bytecode
+const managerAbi = require('./hardhat/artifacts/contracts/Manager.sol/Manager.json').abi
+const managerBytecode = require('./hardhat/artifacts/contracts/Manager.sol/Manager.json').bytecode
+// const managerAbi = require('/Users/ami/orbs/turbo-cake-contracts/artifacts/contracts/Manager.sol/Manager.json').abi
+// const managerBytecode = require('/Users/ami/orbs/turbo-cake-contracts/artifacts/contracts/Manager.sol/Manager.json').bytecode
 
 
 async function main() {
@@ -56,7 +56,8 @@ async function main() {
 
         managerContract =  new web3.eth.Contract(managerAbi);
 
-        let res = await managerContract.deploy({data: managerBytecode, arguments: [OWNER_ADDRESS, admin.address, ROUTES_TO_CAKE]}).send({from: admin.address})
+        let res = await managerContract.deploy({data: managerBytecode, arguments: [OWNER_ADDRESS, admin.address]}).send({from: admin.address})
+        // let res = await managerContract.deploy({data: managerBytecode, arguments: [OWNER_ADDRESS, admin.address, ROUTES_TO_CAKE]}).send({from: admin.address})
 		logger.info(`deployed at address ${res.options.address}`)
 
 		managerContract = new web3.eth.Contract(managerAbi, res.options.address, {from: admin.address});

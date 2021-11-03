@@ -1,4 +1,4 @@
-const {WORKER_START_BALANCE, WORKER_END_BALANCE, OWNER_ADDRESS, TRANSFER_BATCH_SIZE, DEV_RAND_FAILURES, MIN_AMOUNT_FOR_REBALANCE} = require("../config");
+const {MIN_WORKER_STAKE_BALANCE, WORKER_STAKE_BALANCE, WORKER_START_BALANCE, WORKER_END_BALANCE, OWNER_ADDRESS, TRANSFER_BATCH_SIZE, DEV_RAND_FAILURES, MIN_AMOUNT_FOR_REBALANCE} = require("../config");
 const Contract = require('web3-eth-contract') // workaround for web3 leakage
 const {CAKE_ABI, SMARTCHEF_INITIALIZABLE_ABI, BEP_20_ABI} = require('../abis')
 const {Action} = require("./policy");
@@ -30,7 +30,7 @@ class ContractManager extends TxManager {
 		this.balance = null
 		this.nActiveWorkers = null
 		this.workersAddr = []
-		this.workersBalanceInfo = null
+		this.workersBalanceInfo = []
 		this.stakedAddr = null
 		this.managerBalance = 0
 		this.lastWorkersValidate = 0
@@ -108,14 +108,14 @@ class ContractManager extends TxManager {
 
 	async fetchWorkersBalanceInfo(poolsInfo) {
 		let res, poolContract //, rewardContract, rewardToken
-		let workersBalanceInfo = {}
+		let workersBalanceInfo = []
 		let cakeBalance
 
 		logger.info(`fetchWorkersBalanceInfo started ...`)
 		await this.fetchWorkersAddr()
 
 		if (this.workersAddr.length === 0) {
-			this.workersBalanceInfo = {}
+			this.workersBalanceInfo = []
 			return
 		}
 
@@ -158,9 +158,9 @@ class ContractManager extends TxManager {
 		throw Error('Not Implemented')
 	}
 
-	async setManagerBalance() {
+	async fetchManagerBalance() {
 		this.managerBalance = await this.cakeContract.methods.balanceOf(this.manager.options.address).call();
-		logger.info(`setManagerBalance: mangerBalance was set to ${this.managerBalance}`)
+		logger.info(`fetchManagerBalance: mangerBalance was set to ${this.managerBalance}`)
 	}
 
 	async fetchSetWorkersCakeBalance() {
@@ -172,7 +172,7 @@ class ContractManager extends TxManager {
 	setWorkersBalance() {
 
 		// updates workersBalance
-		let workersBalance = {}
+		let workersBalance = []
 		let workerInfo;
 
 		for (let workerIndex=0; workerIndex<this.workersAddr.length; workerIndex++) {
@@ -204,7 +204,7 @@ class ContractManager extends TxManager {
 
 		let nStakedWorkers = 0, nUnstakedWorkers = 0
 
-		for (let [workerIndex, workerBalance] of Object.entries(this.workersBalance)) {
+		for (const workerBalance of this.workersBalance) {
 
 			if (workerBalance.staked !== '0') {
 				nStakedWorkers += 1
@@ -226,16 +226,16 @@ class ContractManager extends TxManager {
 
 	validateWorkers() {
 
-		if (Object.keys(this.workersBalanceInfo).length === 0) {
+		if (this.workersBalanceInfo.length === 0) {
 
 			assert(this.nActiveWorkers === 0, `workers are out of sync: nActiveWorkers=${this.nActiveWorkers} while there is no active workersBalanceInfo`)
 			return
 		}
 
-		let workerInfo
-		for (let workerIndex=0; workerIndex<this.workersAddr.length; workerIndex++) {
+		assert(this.workersAddr.length === this.workersBalanceInfo.length, `worksAddr length (${this.workersAddr.length}) != workersBalanceInfo.length (${this.workersBalanceInfo.length})`)
 
-			assert(workerIndex in this.workersBalanceInfo, `worker ${workerIndex} was not found in workersBalanceInfo: ${JSON.stringify(this.workersBalanceInfo)}`)
+		let workerInfo
+		for (let workerIndex=0; workerIndex<this.workersBalanceInfo.length; workerIndex++) {
 
 			workerInfo = this.workersBalanceInfo[workerIndex]
 			// only cake or cake + 1 pool is expected
@@ -249,7 +249,7 @@ class ContractManager extends TxManager {
 		let workersStakingBalance = {}
 		let workerInfo, stakingAddr = null;
 
-		for (let workerIndex=0; workerIndex<this.workersAddr.length; workerIndex++) {
+		for (let workerIndex=0; workerIndex<this.workersBalanceInfo.length; workerIndex++) {
 
 			workerInfo = this.workersBalanceInfo[workerIndex]
 			workersStakingBalance[workerIndex] = null
@@ -289,12 +289,12 @@ class ContractManager extends TxManager {
 
 	async setTotalBalance() {
 
-		await this.setManagerBalance()
+		await this.fetchManagerBalance()
 		logger.info(`manager total balance: ${this.managerBalance}`)
 		let totalBalance = {unstaked: new BigNumber(this.managerBalance), staked: new BigNumber(0)}
 		let maxStaked = 0
 
-		for (let workerBalance of Object.values(this.workersBalance)) {
+		for (let workerBalance of this.workersBalance) {
 			totalBalance.staked = totalBalance.staked.plus(workerBalance.staked)
 			totalBalance.unstaked = totalBalance.unstaked.plus(workerBalance.unstaked)
 
@@ -366,7 +366,7 @@ class ContractManager extends TxManager {
 			assert (getRandomInt(DEV_RAND_FAILURES) !== 0, `transferToWorkers: simulating random failure`)
 		}
 
-		await this.setManagerBalance()
+		await this.fetchManagerBalance()
 		const amount = (new BigNumber(this.managerBalance).dividedBy(endIndex-startIndex)).integerValue(BigNumber.ROUND_FLOOR).toString()
 		logger.info(`transferToWorkers: amount=${amount}, startIndex=${startIndex}, endIndex=${endIndex}, managerBalance=${this.managerBalance}`)
 
@@ -436,9 +436,11 @@ class ContractManager extends TxManager {
 		*/
 
 		let workersId = []
+		let workerBalance
 
-		for (let [workerIndex, workerBalance] of Object.entries(this.workersBalance)) {
+		for (let workerIndex=0; workerIndex <  this.workersBalance.length; workerIndex++) {
 
+			workerBalance = this.workersBalance[workerIndex]
 			if ((workerBalance.staked === '0') && (workerBalance.unstaked === '0')) {
 				workersId.push(Number(workerIndex))
 			}
@@ -455,8 +457,11 @@ class ContractManager extends TxManager {
 		*/
 
 		let workersId = []
+		let workerBalance
 
-		for (let [workerIndex, workerBalance] of Object.entries(this.workersBalance)) {
+		for (let workerIndex=0; workerIndex <  this.workersBalance.length; workerIndex++) {
+
+			workerBalance = this.workersBalance[workerIndex]
 
 			if (workerBalance.unstaked !== '0') {
 				workersId.push(Number(workerIndex))
@@ -474,8 +479,11 @@ class ContractManager extends TxManager {
 		*/
 
 		let workersId = []
+		let workerBalance
 
-		for (let [workerIndex, workerBalance] of Object.entries(this.workersBalance)) {
+		for (let workerIndex=0; workerIndex <  this.workersBalance.length; workerIndex++) {
+
+			workerBalance = this.workersBalance[workerIndex]
 
 			if (workerBalance.staked !== '0') {
 				workersId.push(Number(workerIndex))
@@ -493,10 +501,13 @@ class ContractManager extends TxManager {
 		*/
 
 		let fullWorkersId = []
+		let workerBalance
 
-		for (let [workerIndex, workerBalance] of Object.entries(this.workersBalance)) {
+		for (let workerIndex=0; workerIndex <  this.workersBalance.length; workerIndex++) {
 
-			if (new BigNumber(workerBalance.unstaked).gt(WORKER_END_BALANCE)) {
+			workerBalance = this.workersBalance[workerIndex]
+
+			if (new BigNumber(workerBalance.unstaked).gt(WORKER_STAKE_BALANCE)) {
 				fullWorkersId.push(Number(workerIndex))
 			}
 		}
@@ -510,7 +521,7 @@ class ContractManager extends TxManager {
 		* transfer all cakes from manager to worker 0
 		*/
 
-		await this.setManagerBalance()
+		await this.fetchManagerBalance()
 
 		if (this.managerBalance.toString() === '0') {
 			logger.info(`manager balance is 0, nothing to transfer to worker`)
@@ -536,6 +547,26 @@ class ContractManager extends TxManager {
 		logger.info(`transferred all cakes successfully to worker 0 (amount=${amount})`)
 	}
 
+	async transferCakesRemainderToWorker(workerId) {
+
+		// fetch manager balance - should be smaller than 100 cakes
+		await this.fetchManagerBalance()
+
+		if (new BigNumber(this.managerBalance).lt(MIN_WORKER_STAKE_BALANCE)) {
+			logger.info(`manager balance is smaller than MIN_WORKER_STAKE_BALANCE, nothing to transfer to workers`)
+			return
+		}
+
+		const amount = this.managerBalance
+
+		// transfer the remainder
+		const tx = await this.manager.methods.transferToWorkers([CAKE_ADDRESS, amount, workerId, workerId+1]).encodeABI()
+		const res = await this.sendTransactionWait(tx, this.manager.options.address)
+
+		console.log(res)
+		logger.info(`transferred ${amount} cakes (remainder) successfully to worker ${workerId}`)
+	}
+
 	async transferCakesToWorkers(workersId) {
 		/*
 		* calculate number of workers needed to transfer WORKER_START_BALANCE
@@ -549,7 +580,7 @@ class ContractManager extends TxManager {
 			return
 		}
 
-		await this.setManagerBalance()
+		await this.fetchManagerBalance()
 
 		if (new BigNumber(this.managerBalance).lt(MIN_AMOUNT_FOR_REBALANCE)) {
 			logger.info(`manager balance is smaller than MIN_AMOUNT_FOR_REBALANCE, nothing to transfer to workers`)
@@ -592,6 +623,66 @@ class ContractManager extends TxManager {
 		}
 
 		logger.info(`transferred cakes successfully to ${workersId.length} workers`)
+	}
+
+	async _transferCakesToWorkers(workersId) {
+		/*
+		* calculate number of workers needed to transfer WORKER_START_BALANCE
+		* and transfer from manager to empty workers from given list (there might be empty workers that will stay empty)
+		* empty workers are workers with cake balance = 0 and staked balance also 0
+		* some workers might have different amount than the amount transferred in this function (any amount > 0, but it should be close to WORKER_START_BALANCE)
+		*/
+
+		if (workersId.length === 0) {
+			logger.info(`no empty worker, all workers have either cake in balance or staked in syrup pool`)
+			return
+		}
+
+		await this.fetchManagerBalance()
+
+		if (new BigNumber(this.managerBalance).lt(MIN_AMOUNT_FOR_REBALANCE)) {
+			logger.info(`manager balance is smaller than MIN_AMOUNT_FOR_REBALANCE, nothing to transfer to workers`)
+			return
+		}
+
+		if ((this.runningMode === RunningMode.DEV) && (DEV_RAND_FAILURES !== 0)) {
+			logger.warning(`RANDOM failure mode is on ...`)
+			assert (getRandomInt(DEV_RAND_FAILURES) !== 0, `transferCakesToWorkers: simulating random failure`)
+		}
+
+		const nWorkers = parseInt((new BigNumber(this.managerBalance).dividedBy(WORKER_STAKE_BALANCE)).toString())
+		assert (nWorkers + 1 <= workersId.length, `nWorkers +1 = ${nWorkers+1} >= workersId.length = ${workersId.length}, can not send cakes to workers`)
+
+		// const amount = (new BigNumber(this.managerBalance).dividedBy(nWorkers)).integerValue(BigNumber.ROUND_FLOOR).toString()
+		logger.info(`transferCakesToWorkers: nWorkers=${nWorkers}, amount=${WORKER_STAKE_BALANCE}, managerBalance=${this.managerBalance}`)
+
+		let startIndex = 0
+		let endIndex
+		let nWorkersToProcess = nWorkers
+
+		while (true) {
+
+			endIndex = getWorkerEndIndex(workersId, startIndex, TRANSFER_BATCH_SIZE, nWorkersToProcess)
+
+			logger.info(`transferCakesToWorkers: startIndex=${startIndex}, endIndex=${endIndex}: `)
+			nWorkersToProcess -= (endIndex-startIndex)
+
+			const tx = await this.manager.methods.transferToWorkers([CAKE_ADDRESS, WORKER_STAKE_BALANCE, workersId[startIndex], workersId[endIndex-1]+1]).encodeABI()
+			const res = await this.sendTransactionWait(tx, this.manager.options.address)
+
+			console.log(res)
+
+			if (nWorkersToProcess <= 0) {
+				logger.info(`breaking loop on nWorkers=${nWorkersToProcess}`)
+				startIndex = endIndex
+				break
+			}
+
+			startIndex = endIndex
+		}
+
+		logger.info(`transferred ${WORKER_STAKE_BALANCE} cakes successfully to ${workersId.length} workers`)
+		await this.transferCakesRemainderToWorker(workersId[startIndex])
 	}
 
 	async transferCakesFromWorkersToMng(workersId) {
@@ -712,6 +803,14 @@ class ContractManager extends TxManager {
 		await this.fetchSetWorkersCakeBalance()
 
 		return this.getUnstakedWorkers()
+	}
+
+	async swapToCakes(rewardsToken) {
+
+	}
+
+	async swapAllToCakes(poolsInfo) {
+
 	}
 
 	async prepare(nextAction) {
