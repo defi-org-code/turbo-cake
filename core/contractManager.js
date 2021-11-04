@@ -52,8 +52,8 @@ class ContractManager extends TxManager {
 
 		// #########################################################
 		// TODO: REMOVE ME
-		await this.addRoutes()
-		await this.addWorkers(8)
+		// await this.addRoutes()
+		// await this.addWorkers(8)
 		// #########################################################
 
 		await this.setNWorkers()
