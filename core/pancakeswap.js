@@ -199,9 +199,9 @@ class Pancakeswap {
 	async updateSingleRoute(poolAddr) {
 		let res, amount, bestRes
 
-		if (this.poolsInfo[poolAddr]['active'] === false) {
-			return
-		}
+		// if (this.poolsInfo[poolAddr]['active'] === false) {
+		// 	return
+		// }
 
 		const rewardPerBlock = new BigNumber(this.poolsInfo[poolAddr]['rewardPerBlock'])
 		// estimate route based on daily rewards
@@ -264,7 +264,7 @@ class Pancakeswap {
 
 		res = await this.routerV2Contract.methods.getAmountsOut(amountIn, this.poolsInfo[poolAddr]['swapRoute']).call()
 
-		logger.debug(`getTokenCakeRate: poolAddr=${poolAddr}, res=${res}, amountIn=${amountIn.toString()}, rate=${(new BigNumber(res[res.length-1]).dividedBy(amountIn)).toString()}`)
+		// logger.debug(`getTokenCakeRate: poolAddr=${poolAddr}, res=${res}, amountIn=${amountIn.toString()}, rate=${(new BigNumber(res[res.length-1]).dividedBy(amountIn)).toString()}`)
 		return (new BigNumber(res[res.length-1]).dividedBy(amountIn)).toString()
 	}
 
@@ -290,8 +290,8 @@ class Pancakeswap {
 
 		const apr = cakeForYear.div(poolTvl).multipliedBy(100);
 
-		logger.debug(`poolName= ${this.poolsInfo[poolAddr]['rewardSymbol']} poolAddr=${poolAddr}, rewardPerBlock=${rewardPerBlock.toString()}, totalBalance=${JSON.stringify(this.totalBalance)},
-		tokenCakeRate=${tokenCakeRate}, poolTvl=${poolTvl.toString()}, rewardForYear=${rewardForYear}, cakeForYear=${cakeForYear}, apr=${apr}`)
+		// logger.debug(`poolName= ${this.poolsInfo[poolAddr]['rewardSymbol']} poolAddr=${poolAddr}, rewardPerBlock=${rewardPerBlock.toString()}, totalBalance=${JSON.stringify(this.totalBalance)},
+		// tokenCakeRate=${tokenCakeRate}, poolTvl=${poolTvl.toString()}, rewardForYear=${rewardForYear}, cakeForYear=${cakeForYear}, apr=${apr}`)
 
 		// TODO: harvest cost
 		return this.aprToApy(apr.toString())

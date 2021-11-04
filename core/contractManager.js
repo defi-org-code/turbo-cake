@@ -168,7 +168,7 @@ class ContractManager extends TxManager {
 			rewardToken = await poolContract.methods.rewardToken().call()
 			rewardContract = this.getContract(BEP_20_ABI, rewardToken)
 
-			logger.info(`rewardToken=${rewardToken}, poolAddr=${poolAddr}`)
+			// logger.info(`rewardToken=${rewardToken}, poolAddr=${poolAddr}`)
 
 			this.workersWithRewardsByPool[poolAddr] = []
 
@@ -190,6 +190,9 @@ class ContractManager extends TxManager {
 
 		logger.info(`workersRewardsBalance: `)
 		console.log(this.workersRewardsBalance)
+
+		logger.info(`workersWithRewardsByPool: `)
+		console.log(this.workersWithRewardsByPool)
 	}
 
 	async fetchWorkersAllBalances(poolsInfo) {
@@ -206,6 +209,10 @@ class ContractManager extends TxManager {
 		logger.info(`transfer rewards to manager ...`)
 
 		for (const poolAddr of Object.keys(poolsInfo)) {
+
+			if (this.workersWithRewardsByPool[poolAddr].length === 0) {
+				continue
+			}
 
 			await this.pullRewardsFromWorkers(poolAddr, this.workersWithRewardsByPool[poolAddr])
 			await this.swapRewardsToCakes(poolAddr, poolsInfo[poolAddr].swapRouterId)
@@ -754,7 +761,6 @@ class ContractManager extends TxManager {
 		const res = await this.sendTransactionWait(tx, this.manager.options.address)
 
 		console.log(res)
-
 	}
 
 
@@ -870,7 +876,10 @@ class ContractManager extends TxManager {
 			case Action.EXIT:
 			case Action.HARVEST:
 
-				await this.fetchWorkersRewardsBalance([poolsInfo[nextAction.from.address]])
+				let fromPool = {}
+				fromPool[nextAction.from.address] = poolsInfo[nextAction.from.address]
+
+				await this.fetchWorkersRewardsBalance(fromPool)
 				await this.pullRewardsFromWorkers(nextAction.from.address, nextAction.workerIndices)
 				await this.swapRewardsToCakes(nextAction.from.address, poolsInfo[nextAction.from.address].swapRouterId)
 				break
@@ -878,7 +887,7 @@ class ContractManager extends TxManager {
 
 		if ((nextAction.name !== Action.NO_OP) || (Date.now() - this.lastWorkersValidate > this.workersValidateInterval)) {
 			this.lastWorkersValidate = Date.now()
-			await this.fetchWorkersAllBalances([poolsInfo[nextAction.from.address]])
+			await this.fetchWorkersAllBalances(poolsInfo)
 			this.setWorkersBalance()
 			await this.setTotalBalance()
 			this.setNActiveWorkers()

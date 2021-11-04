@@ -219,9 +219,6 @@ class Controller {
 
             await this.batcherRun(startTime, nextAction);
 
-			logger.info(`before call to postRun: nextAction: `)
-			console.log(nextAction)
-
 			await this.contractManager.postRun(nextAction, this.ps.poolsInfo);
 
 			this.curSyrupPoolAddr = this.contractManager.getCurrStakingAddr()
