@@ -33,6 +33,7 @@ class ContractManager extends TxManager {
 		this.workersCakeBalance = []
 		this.workersPoolsBalance = []
 		this.workersRewardsBalance = []
+		this.workersWithRewardsByPool = {}
 		this.stakedAddr = null
 		this.managerBalance = 0
 		this.lastWorkersValidate = 0
@@ -48,17 +49,19 @@ class ContractManager extends TxManager {
 	async init(poolsInfo) {
 
 		await this.validateAddr()
-		// await this.transferToManager(0, 0, 7)
 
-		await this.addRoutes() // TODO: remove me
-		await this.addWorkers(5) // TODO: remove me
+		// #########################################################
+		// TODO: REMOVE ME
+		await this.addRoutes()
+		await this.addWorkers(5)
+		// #########################################################
 
 		await this.setNWorkers()
 
 		await this.fetchWorkersAddr()
 		this.initWorkersBalanceObj()
 		await this.fetchWorkersAllBalances(poolsInfo)
-		// await this.transferRewardsToManager()
+		await this.transferRewardsToManager(poolsInfo)
 		this.setWorkersBalance()
 		this.setNActiveWorkers()
 		this.validateWorkers()
@@ -167,6 +170,8 @@ class ContractManager extends TxManager {
 
 			logger.info(`rewardToken=${rewardToken}, poolAddr=${poolAddr}`)
 
+			this.workersWithRewardsByPool[poolAddr] = []
+
 			for (let i=0; i<this.workersAddr.length; i++) {
 
 				if (!('balanceOf' in rewardContract.methods)) {
@@ -178,6 +183,7 @@ class ContractManager extends TxManager {
 
 				if (res !== '0') {
 					this.workersRewardsBalance[i][rewardToken] = res
+					this.workersWithRewardsByPool[poolAddr].push(i)
 				}
 			}
 		}
@@ -195,11 +201,17 @@ class ContractManager extends TxManager {
 		await this.fetchWorkersRewardsBalance(poolsInfo)
 	}
 
-	async transferRewardsToManager() {
+	async transferRewardsToManager(poolsInfo) {
 
-		await this.pullRewardsFromWorkers(nextAction.workerIndices)
-		await this.swapRewardsToCakes(nextAction.from.address, poolsInfo[nextAction.from.address].swapRouterId)
+		logger.info(`transfer rewards to manager ...`)
 
+		for (const poolAddr of Object.keys(poolsInfo)) {
+
+			await this.pullRewardsFromWorkers(poolAddr, this.workersWithRewardsByPool[poolAddr])
+			await this.swapRewardsToCakes(poolAddr, poolsInfo[poolAddr].swapRouterId)
+		}
+
+		logger.info(`transfer rewards to manager all done`)
 	}
 
 	async fetchManagerBalance() {
@@ -695,7 +707,7 @@ class ContractManager extends TxManager {
 		logger.info(`pullRewardsFromWorkers: poolAddr=${poolAddr}, workersId=${workersId}`)
 
 		if (workersId.length === 0) {
-			logger.info(`pullRewardsFromWorkers: empty workersId`)
+			logger.info(`pullRewardsFromWorkers: empty workersId on pool ${poolAddr}`)
 			return
 		}
 
