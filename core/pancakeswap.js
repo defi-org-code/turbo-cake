@@ -58,7 +58,7 @@ class Pancakeswap {
 		await this.getPsLastUpdate()
 		await this.getPoolsInfo()
 
-		await this.update({'staked': 0, 'unstaked': 0})
+		await this.update({'staked': 0, 'unstaked': '100e18'})
 
  		logger.debug(`init ps ended successfully`)
 	}

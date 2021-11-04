@@ -18,9 +18,9 @@ function getRandomInt(max) {
 function getWorkerEndIndex(workerIndices, startIndex, batchSize, nWorkersToProcess) {
 
 	let size = Math.min(batchSize, nWorkersToProcess)
-	let endIndex = startIndex + size
-	if (workerIndices[startIndex] + size - 1 !== workerIndices[endIndex - 1]) {
-		endIndex = startIndex + 1
+	let endIndex = startIndex + size - 1
+	if (workerIndices[startIndex] + size - 1 !== workerIndices[endIndex]) {
+		endIndex = startIndex
 	}
 
 	return endIndex

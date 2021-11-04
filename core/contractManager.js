@@ -375,8 +375,8 @@ class ContractManager extends TxManager {
 
 	async transferToManager(startIndex, endIndex) {
 
-		if (startIndex >= endIndex) {
-			logger.error(`startIndex ${startIndex} >= endIndex ${endIndex}`)
+		if (startIndex > endIndex) {
+			logger.error(`startIndex ${startIndex} > endIndex ${endIndex}`)
 			return
 		}
 
@@ -386,7 +386,7 @@ class ContractManager extends TxManager {
 		}
 
 		let _endIndex
-		while (startIndex < endIndex) {
+		while (startIndex <= endIndex) {
 
 			_endIndex = Math.min(endIndex, startIndex + TRANSFER_BATCH_SIZE)
 
@@ -517,7 +517,7 @@ class ContractManager extends TxManager {
 			assert (getRandomInt(DEV_RAND_FAILURES) !== 0, `transferAllCakesToWorker0: simulating random failure`)
 		}
 
-		const startIndex = 0, endIndex = 1
+		const startIndex = 0, endIndex = 0
 		let amount = this.managerBalance.toString()
 
 		logger.info(`transferAllCakesToWorker0: amount=${amount}`)
@@ -544,69 +544,11 @@ class ContractManager extends TxManager {
 		const amount = this.managerBalance
 
 		// transfer the remainder
-		const tx = await this.manager.methods.setWorkersCakeBalance(workerId, workerId+1, amount).encodeABI()
+		const tx = await this.manager.methods.setWorkersCakeBalance(workerId, workerId, amount).encodeABI()
 		const res = await this.sendTransactionWait(tx, this.manager.options.address)
 
 		console.log(res)
 		logger.info(`transferred ${amount} cakes (remainder) successfully to worker ${workerId}`)
-	}
-
-	async _transferCakesToWorkers(workersId) {
-		/*
-		* calculate number of workers needed to transfer WORKER_START_BALANCE
-		* and transfer from manager to empty workers from given list (there might be empty workers that will stay empty)
-		* empty workers are workers with cake balance = 0 and staked balance also 0
-		* some workers might have different amount than the amount transferred in this function (any amount > 0, but it should be close to WORKER_START_BALANCE)
-		*/
-
-		if (workersId.length === 0) {
-			logger.info(`no empty worker, all workers have either cake in balance or staked in syrup pool`)
-			return
-		}
-
-		await this.fetchManagerBalance()
-
-		if (new BigNumber(this.managerBalance).lt(MIN_AMOUNT_FOR_REBALANCE)) {
-			logger.info(`manager balance is smaller than MIN_AMOUNT_FOR_REBALANCE, nothing to transfer to workers`)
-			return
-		}
-
-		if ((this.runningMode === RunningMode.DEV) && (DEV_RAND_FAILURES !== 0)) {
-			logger.warning(`RANDOM failure mode is on ...`)
-			assert (getRandomInt(DEV_RAND_FAILURES) !== 0, `transferCakesToWorkers: simulating random failure`)
-		}
-
-		const nWorkers = Math.ceil(Number((new BigNumber(this.managerBalance).dividedBy(WORKER_START_BALANCE)).toString()))
-		assert (nWorkers <= workersId.length, `nWorkers = ${nWorkers} >= workersId.length = ${workersId.length}, can not send cakes to workers`)
-
-		const amount = (new BigNumber(this.managerBalance).dividedBy(nWorkers)).integerValue(BigNumber.ROUND_FLOOR).toString()
-		logger.info(`transferCakesToWorkers: nWorkers=${nWorkers}, amount=${amount}, managerBalance=${this.managerBalance}`)
-
-		let startIndex = 0
-		let endIndex
-		let nWorkersToProcess = nWorkers
-
-		while (true) {
-
-			endIndex = getWorkerEndIndex(workersId, startIndex, TRANSFER_BATCH_SIZE, nWorkersToProcess)
-
-			logger.info(`transferCakesToWorkers: startIndex=${startIndex}, endIndex=${endIndex}: `)
-			nWorkersToProcess -= (endIndex-startIndex)
-
-			const tx = await this.manager.methods.setWorkersCakeBalance(workersId[startIndex], workersId[endIndex-1]+1, amount).encodeABI()
-			const res = await this.sendTransactionWait(tx, this.manager.options.address)
-
-			console.log(res)
-
-			if (nWorkersToProcess <= 0) {
-				logger.info(`breaking loop on nWorkers=${nWorkersToProcess}`)
-				break
-			}
-
-			startIndex = endIndex
-		}
-
-		logger.info(`transferred cakes successfully to ${workersId.length} workers`)
 	}
 
 	async transferCakesToWorkers(workersId) {
@@ -649,20 +591,22 @@ class ContractManager extends TxManager {
 			endIndex = getWorkerEndIndex(workersId, startIndex, TRANSFER_BATCH_SIZE, nWorkersToProcess)
 
 			logger.info(`transferCakesToWorkers: startIndex=${startIndex}, endIndex=${endIndex}: `)
-			nWorkersToProcess -= (endIndex-startIndex)
+			nWorkersToProcess -= (endIndex - startIndex + 1)
 
-			const tx = await this.manager.methods.setWorkersCakeBalance(workersId[startIndex], workersId[endIndex-1]+1, WORKER_STAKE_BALANCE).encodeABI()
+			const tx = await this.manager.methods.setWorkersCakeBalance(workersId[startIndex], workersId[endIndex], WORKER_STAKE_BALANCE).encodeABI()
 			const res = await this.sendTransactionWait(tx, this.manager.options.address)
 
 			console.log(res)
 
-			if (nWorkersToProcess <= 0) {
+			assert (nWorkersToProcess >= 0, `nWorkersToProcess (=${nWorkersToProcess}) is expected to be > 0`)
+
+			if (nWorkersToProcess === 0) {
 				logger.info(`breaking loop on nWorkers=${nWorkersToProcess}`)
-				startIndex = endIndex
+				startIndex = endIndex + 1
 				break
 			}
 
-			startIndex = endIndex
+			startIndex = endIndex + 1
 		}
 
 		logger.info(`transferred ${WORKER_STAKE_BALANCE} cakes successfully to ${workersId.length} workers`)
@@ -696,21 +640,23 @@ class ContractManager extends TxManager {
 			endIndex = getWorkerEndIndex(workersId, startIndex, TRANSFER_BATCH_SIZE, nWorkersToProcess)
 
 			logger.info(`transferCakesFromWorkersToMng: startIndex=${startIndex}, endIndex=${endIndex},
-			workerStartIndex=${workersId[startIndex]}, workerEndIndex=${workersId[endIndex-1]+1}, nWorkersToProcess=${nWorkersToProcess}: `)
+			workerStartIndex=${workersId[startIndex]}, workerEndIndex=${workersId[endIndex]}, nWorkersToProcess=${nWorkersToProcess}: `)
 
-			nWorkersToProcess -= (endIndex-startIndex)
+			nWorkersToProcess -= (endIndex - startIndex + 1)
 
-			const tx = await this.manager.methods.setWorkersCakeBalance(workersId[startIndex], workersId[endIndex-1]+1, 0).encodeABI()
+			const tx = await this.manager.methods.setWorkersCakeBalance(workersId[startIndex], workersId[endIndex], 0).encodeABI()
 			const res = await this.sendTransactionWait(tx, this.manager.options.address)
 
 			console.log(res)
 
-			if (nWorkersToProcess <= 0) {
+			assert (nWorkersToProcess >= 0, `nWorkersToProcess (=${nWorkersToProcess}) is expected to be > 0`)
+
+			if (nWorkersToProcess === 0) {
 				logger.info(`transferCakesFromWorkersToMng: breaking loop on nWorkersToProcess=${nWorkersToProcess}`)
 				break
 			}
 
-			startIndex = endIndex
+			startIndex = endIndex + 1
 		}
 
 		logger.info(`transferred cakes successfully from ${workersId.length} workers`)
@@ -739,19 +685,21 @@ class ContractManager extends TxManager {
 			endIndex = getWorkerEndIndex(workersId, startIndex, TRANSFER_BATCH_SIZE, nWorkersToProcess)
 
 			logger.info(`pullRewardsFromWorkers: startIndex=${startIndex}, endIndex=${endIndex}: `)
-			nWorkersToProcess -= (endIndex-startIndex)
+			nWorkersToProcess -= (endIndex - startIndex + 1)
 
-			const tx = await this.manager.methods.pullRewardsFromWorkers([poolAddr, workersId[startIndex], workersId[endIndex-1]+1]).encodeABI()
+			const tx = await this.manager.methods.pullRewardsFromWorkers([poolAddr, workersId[startIndex], workersId[endIndex]]).encodeABI()
 			const res = await this.sendTransactionWait(tx, this.manager.options.address)
 
 			console.log(res)
 
-			if (nWorkersToProcess <= 0) {
+			assert (nWorkersToProcess >= 0, `nWorkersToProcess (=${nWorkersToProcess}) is expected to be > 0`)
+
+			if (nWorkersToProcess === 0) {
 				logger.info(`pullRewardsFromWorkers: breaking loop on nWorkers=${nWorkersToProcess}`)
 				break
 			}
 
-			startIndex = endIndex
+			startIndex = endIndex + 1
 		}
 
 		logger.info(`pullRewardsFromWorkers: successfully pulled rewards from ${workersId.length} workers`)
@@ -793,6 +741,7 @@ class ContractManager extends TxManager {
 		let unstakedWorkersId = this.getUnstakedWorkers()
 
 		if ((unstakedWorkersId.length === 1) && (unstakedWorkersId[0] === 0)) {
+			await this.transferAllCakesToWorker0()
 			logger.info(`only worker[0] has cake balance != 0, ready to enter pool`)
 			return [0]
 

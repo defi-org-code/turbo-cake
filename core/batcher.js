@@ -79,13 +79,14 @@ class Batcher extends TxManager {
 
 			logger.info(`startIndex=${startIndex}, endIndex=${endIndex}, nWorkersToProcess=${nWorkersToProcess}`)
 
-			nWorkersToProcess -= (endIndex-startIndex)
+			nWorkersToProcess -= (endIndex - startIndex + 1)
 
-			assert (startIndex < endIndex, `startIndex = ${startIndex} is expected to be smaller than endIndex = ${endIndex}`)
+			assert (startIndex <= endIndex, `startIndex = ${startIndex} is expected to be smaller than endIndex = ${endIndex}`)
+			assert (nWorkersToProcess >= 0, `nWorkersToProcess (=${nWorkersToProcess}) is expected to be > 0`)
 
-			await this.worker(workerIndices[startIndex], workerIndices[endIndex-1]+1, action)
+			await this.worker(workerIndices[startIndex], workerIndices[endIndex], action)
 
-			if (nWorkersToProcess <= 0) {
+			if (nWorkersToProcess === 0) {
 				break
 			}
 
