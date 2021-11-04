@@ -8,7 +8,7 @@ const { Controller } = require('./core/controller');
 const { RunningMode, CAKE_WHALE_ACCOUNT, CAKE_ADDRESS, OWNER_ADDRESS, MANAGER_ADDRESS} = require('./config');
 const {ROUTES_TO_CAKE} = require('./core/params')
 const yargs = require('yargs/yargs');
-const {CAKE_ABI} = require("./abis");
+const {CAKE_ABI, MANAGER_ABI} = require("./abis");
 const { hideBin } = require('yargs/helpers');
 const argv = yargs(hideBin(process.argv)).argv;
 
@@ -18,8 +18,6 @@ const Notifications = require('./notifications');
 
 // const managerAbi = require('./hardhat/artifacts/contracts/Manager.sol/Manager.json').abi
 // const managerBytecode = require('./hardhat/artifacts/contracts/Manager.sol/Manager.json').bytecode
-const managerAbi = require('/Users/ami/orbs/turbo-cake-contracts/artifacts/contracts/Manager.sol/Manager.json').abi
-const managerBytecode = require('/Users/ami/orbs/turbo-cake-contracts/artifacts/contracts/Manager.sol/Manager.json').bytecode
 
 
 async function main() {
@@ -32,12 +30,16 @@ async function main() {
 
     if (runningMode === RunningMode.PRODUCTION) {
     	const Web3 = require("web3");
-		web3 = new Web3(process.env.ENDPOINT_HTTPS);
+
+    	web3 = new Web3(process.env.ENDPOINT_HTTPS);
 	    admin = web3.eth.accounts.privateKeyToAccount(await new KeyEncryption().loadKey());
 
-		managerContract = new web3.eth.Contract(managerAbi, MANAGER_ADDRESS, {from: admin.address});
+		managerContract = new web3.eth.Contract(MANAGER_ABI, MANAGER_ADDRESS, {from: admin.address});
 
     } else if (runningMode === RunningMode.DEV) {
+
+		const managerAbi = require('/Users/ami/orbs/turbo-cake-contracts/artifacts/contracts/Manager.sol/Manager.json').abi
+		const managerBytecode = require('/Users/ami/orbs/turbo-cake-contracts/artifacts/contracts/Manager.sol/Manager.json').bytecode
 
         admin = web3.eth.accounts.create();
 
