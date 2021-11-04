@@ -177,16 +177,6 @@ class GreedyPolicy extends Policy {
 
         if (Date.now() - args.lastActionTimestamp > this.harvestInterval) {
 
-			if (args.rebalance) {
-				logger.info(`received rebalance signal from controller, sending exit order ...`)
-
-				return {
-					name: Action.EXIT,
-					from: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy, active: args.poolsInfo[args.curSyrupPoolAddr].active, hasUserLimit: args.poolsInfo[args.curSyrupPoolAddr].hasUserLimit, routeToCake: args.poolsInfo[args.curSyrupPoolAddr].routeToCake},
-					to: {address: null}
-				};
-			}
-
             return {
                 name: Action.HARVEST,
                 from: {address: args.curSyrupPoolAddr, name: args.poolsInfo[args.curSyrupPoolAddr].rewardSymbol, apy: args.poolsInfo[args.curSyrupPoolAddr].apy, active: args.poolsInfo[args.curSyrupPoolAddr].active, hasUserLimit: args.poolsInfo[args.curSyrupPoolAddr].hasUserLimit, routeToCake: args.poolsInfo[args.curSyrupPoolAddr].routeToCake},

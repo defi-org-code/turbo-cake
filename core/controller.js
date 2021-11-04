@@ -221,7 +221,7 @@ class Controller {
 
 			await this.contractManager.postRun(nextAction, this.ps.poolsInfo);
 
-			this.curSyrupPoolAddr = this.contractManager.getWorkersStakingAddr()
+			this.curSyrupPoolAddr = this.contractManager.getCurrStakingAddr()
 
             this.scheduleNextRun();
 
@@ -243,7 +243,6 @@ class Controller {
             'lastActionTimestamp': this.lastActionTimestamp,
             'lastAction': lastAction,
             'balance': this.contractManager.balance,
-            'rebalance': this.contractManager.shouldRebalance(this.ps.poolsInfo, this.curSyrupPoolAddr),
             'availableCakesForStaking': this.contractManager.availableCakesForStaking()
         });
 

@@ -208,10 +208,11 @@ class Pancakeswap {
 		// const rewardForDay = rewardPerBlock.multipliedBy(this.BLOCKS_PER_DAY)
 
 		bestRes = new BigNumber(0)
+		let route
 
-		for (let route of ROUTES_TO_CAKE) {
+		for (let i=0; i<ROUTES_TO_CAKE.length; i++) {
 
-			route = [this.poolsInfo[poolAddr]['rewardToken']].concat(route)
+			route = [this.poolsInfo[poolAddr]['rewardToken']].concat(ROUTES_TO_CAKE[i])
 			try {
 				res = await this.routerV2Contract.methods.getAmountsOut(rewardPerBlock, route).call()
 			}
@@ -225,7 +226,7 @@ class Pancakeswap {
 
 			if (amount.gt(bestRes)) {
 				bestRes = amount
-				this.poolsInfo[poolAddr]['routeToCake'] = route
+				this.poolsInfo[poolAddr]['swapRouterId'] = i
 				logger.debug(`setting ${this.poolsInfo[poolAddr]['rewardSymbol']} (addr=${poolAddr}) best route to ${route}`)
 			}
 		}
@@ -255,11 +256,11 @@ class Pancakeswap {
 		let res;
 		// TODO: check and verify calculations
 		// TODO: pool EMA
-		if (this.poolsInfo[poolAddr]['routeToCake'] == null) {
+		if (this.poolsInfo[poolAddr]['swapRouterId'] == null) {
 			await this.updateSingleRoute(poolAddr)
 		}
 
-		res = await this.routerV2Contract.methods.getAmountsOut(amountIn, this.poolsInfo[poolAddr]['routeToCake']).call()
+		res = await this.routerV2Contract.methods.getAmountsOut(amountIn, ROUTES_TO_CAKE[this.poolsInfo[poolAddr]['swapRouterId']]).call()
 
 		// logger.debug(`getTokenCakeRate: poolAddr=${poolAddr}, res=${res}, amountIn=${amountIn.toString()}, rate=${(new BigNumber(res[res.length-1]).dividedBy(amountIn)).toString()}`)
 		return (new BigNumber(res[res.length-1]).dividedBy(amountIn)).toString()
@@ -471,7 +472,7 @@ class Pancakeswap {
 					'hasUserLimit': hasUserLimit,
 					'rewardPerBlock': rewardPerBlock,
 					'startBlock': startBlock,
-					'routeToCake': null,
+					'swapRouterId': null,
 					'active': true, // default, will be set to false on setActivePools
 				}
 

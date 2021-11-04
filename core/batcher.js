@@ -110,15 +110,15 @@ class Batcher extends TxManager {
                     break;
 
                 case Action.ENTER:
-                    await this.enterPosition(startIndex, endIndex, action.to.address);
+                    await this.enterPosition(action.to.address, startIndex, endIndex);
                     break;
 
                 case Action.HARVEST:
-                    await this.harvest(startIndex, endIndex, action.to.address, action.from.routeToCake);
+                    await this.harvest(action.from.address, startIndex, endIndex);
                     break;
 
                 case Action.EXIT:
-                    await this.exitPosition(startIndex, endIndex, action.from.address, action.from.routeToCake);
+                    await this.exitPosition(action.from.address, startIndex, endIndex);
                     break;
 
                 default:
@@ -136,17 +136,13 @@ class Batcher extends TxManager {
         }
     }
 
-    async enterPosition(startIndex, endIndex, addr) {
+    async enterPosition(addr, startIndex, endIndex) {
         logger.debug(`batcher.enterPosition: start pool ${addr} `);
 
-		let withdraw=false, swap=false, deposit=true, stakedPoolAddr=addr, newPoolAddr=addr, amount=0;
-		let multiplier = 0, path = [], deadline = 0;
-		let swapParams = [ROUTER_ADDRESS, multiplier, path, deadline];
-
-		let estimatedGas = 2 * (await this.contractManager.methods.doHardWork([withdraw, swap, deposit, stakedPoolAddr, newPoolAddr, amount, startIndex, endIndex, swapParams]).estimateGas())
+		let estimatedGas = 2 * (await this.contractManager.methods.depositCake(addr, startIndex, endIndex).estimateGas())
 		console.log(`estimatedGas: ${estimatedGas}`)
 
-		const tx = this.contractManager.methods.doHardWork([withdraw, swap, deposit, stakedPoolAddr, newPoolAddr, amount, startIndex, endIndex, swapParams]).encodeABI();
+		const tx = this.contractManager.methods.depositCake(addr, startIndex, endIndex).encodeABI();
 		const res = await this.sendTransactionWait(tx, this.contractManager.options.address, estimatedGas)
 
 		logger.info(`enterPosition: `)
@@ -155,17 +151,13 @@ class Batcher extends TxManager {
         logger.debug("batcher.enterPosition: end");
     }
 
-    async exitPosition(startIndex, endIndex, addr, routeToCake) {
+    async exitPosition(addr, startIndex, endIndex) {
         logger.debug(`batcher.exitPosition: exit pool ${addr}`);
 
-		let withdraw=true, swap=true, deposit=false, stakedPoolAddr=addr, newPoolAddr=addr, amount=1; // amount - any value which is not 0 to withdraw all, 0 to take rewards only
-		let multiplier = 0, deadline = Date.now() + this.swapTimeLimit; // TODO: multiplier
-		let swapParams = [ROUTER_ADDRESS, multiplier, routeToCake, deadline];
-
-		let estimatedGas = 2 * (await this.contractManager.methods.doHardWork([withdraw, swap, deposit, stakedPoolAddr, newPoolAddr, amount, startIndex, endIndex, swapParams]).estimateGas())
+		let estimatedGas = 2 * (await this.contractManager.methods.withdrawCakeDeposit(addr, startIndex, endIndex).estimateGas())
 		console.log(`estimatedGas: ${estimatedGas}`)
 
-		const tx = this.contractManager.methods.doHardWork([withdraw, swap, deposit, stakedPoolAddr, newPoolAddr, amount, startIndex, endIndex, swapParams]).encodeABI();
+		const tx = this.contractManager.methods.withdrawCakeDeposit(addr, startIndex, endIndex).encodeABI();
 		const res = await this.sendTransactionWait(tx, this.contractManager.options.address, estimatedGas)
 
 		logger.info(`exitPosition: `)
@@ -173,17 +165,13 @@ class Batcher extends TxManager {
         logger.debug("batcher.exitPosition: end");
     }
 
-    async harvest(startIndex, endIndex, addr, routeToCake) {
+    async harvest(addr, startIndex, endIndex) {
         logger.debug(`batcher.harvest: pool ${addr}`);
 
-		let withdraw=true, swap=true, deposit=true, stakedPoolAddr=addr, newPoolAddr=addr, amount=0;
-		let multiplier = 0, deadline = Date.now() + this.swapTimeLimit;
-		let swapParams = [ROUTER_ADDRESS, multiplier, routeToCake, deadline];
-
-		let estimatedGas = 2 * (await this.contractManager.methods.doHardWork([withdraw, swap, deposit, stakedPoolAddr, newPoolAddr, amount, startIndex, endIndex, swapParams]).estimateGas())
+		let estimatedGas = 2 * (await this.contractManager.methods.claimRewards(addr, startIndex, endIndex).estimateGas())
 		console.log(`estimatedGas: ${estimatedGas}`)
 
-		const tx = this.contractManager.methods.doHardWork([withdraw, swap, deposit, stakedPoolAddr, newPoolAddr, amount, startIndex, endIndex, swapParams]).encodeABI();
+		const tx = this.contractManager.methods.claimRewards(addr, startIndex, endIndex).encodeABI();
 		const res = await this.sendTransactionWait(tx, this.contractManager.options.address, estimatedGas)
 
 		logger.info(`harvest: `)
