@@ -30,11 +30,11 @@ async function deploy() {
 
 	managerContract =  new web3.eth.Contract(managerAbi);
 
-	await managerContract.deploy({data: managerBytecode, arguments: [OWNER_ADDRESS, ADMIN_ADDRESS]}).estimateGas(function(err, gas) {
+	await managerContract.deploy({data: managerBytecode, arguments: [ADMIN_ADDRESS, ADMIN_ADDRESS]}).estimateGas(function(err, gas) {
 	    console.log(gas);
 	});
 
-	let res = await managerContract.deploy({data: managerBytecode, arguments: [OWNER_ADDRESS, ADMIN_ADDRESS]})
+	let res = await managerContract.deploy({data: managerBytecode, arguments: [ADMIN_ADDRESS, ADMIN_ADDRESS]})
 	.send({from: deployer.address, gas: 5000000})
 	.then(function(newContractInstance) {
     	console.log(newContractInstance.options.address) // instance with the new contract address

@@ -213,7 +213,7 @@ class Batcher extends TxManager {
 		this.workersCnt += (endIndex-startIndex)
 		logger.info(`handleExecutionResult: startIndex=${startIndex}, endIndex=${endIndex}, workersCnt=${this.workersCnt}, totalWorkers=${this.totalWorkers}`)
 
-		if (this.workersCnt === this.totalWorkers) {
+		if (this.workersCnt === this.totalWorkers - 1) {
 
 			if (this.successCnt === this.totalWorkers) {
 				await this.onSuccess(this.trace);

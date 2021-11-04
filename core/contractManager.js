@@ -2,7 +2,7 @@ const {MIN_WORKER_STAKE_BALANCE, WORKER_STAKE_BALANCE, WORKER_START_BALANCE, WOR
 const Contract = require('web3-eth-contract') // workaround for web3 leakage
 const {CAKE_ABI, SMARTCHEF_INITIALIZABLE_ABI, BEP_20_ABI} = require('../abis')
 const {Action} = require("./policy");
-const {MASTER_CHEF_ADDRESS, CAKE_ADDRESS} = require('./params')
+const {ROUTES_TO_CAKE, CAKE_ADDRESS} = require('./params')
 const {assert} = require('../helpers')
 const {RunningMode} = require("../config");
 const {getRandomInt, getWorkerEndIndex} = require('../helpers')
@@ -49,8 +49,14 @@ class ContractManager extends TxManager {
 
 		await this.validateAddr()
 		// await this.transferToManager(0, 0, 7)
+
+		await this.addRoutes() // TODO: remove me
 		await this.addWorkers(5) // TODO: remove me
+
 		await this.setNWorkers()
+
+		await this.fetchWorkersAddr()
+		this.initWorkersBalanceObj()
 		await this.fetchWorkersAllBalances(poolsInfo)
 		// await this.transferRewardsToManager()
 		this.setWorkersBalance()
@@ -119,12 +125,6 @@ class ContractManager extends TxManager {
 
 		let res, poolContract
 
-		this.workersPoolsBalance = []
-
-		for (let i=0; i<this.workersAddr.length; i++) {
-			this.workersPoolsBalance[i] = {}
-		}
-
 		logger.info(`fetching workers pool balance ...`)
 
 		for (const poolAddr of Object.keys(poolsInfo)) {
@@ -143,15 +143,20 @@ class ContractManager extends TxManager {
 		console.log(this.workersPoolsBalance)
 	}
 
-	async fetchWorkersRewardsBalance(poolsInfo) {
+	initWorkersBalanceObj() {
 
-		let res, poolContract, rewardToken, rewardContract
-
-		this.workersRewardsBalance = []
+		for (let i=0; i<this.workersAddr.length; i++) {
+			this.workersPoolsBalance[i] = {}
+		}
 
 		for (let i=0; i<this.workersAddr.length; i++) {
 			this.workersRewardsBalance[i] = {}
 		}
+	}
+
+	async fetchWorkersRewardsBalance(poolsInfo) {
+
+		let res, poolContract, rewardToken, rewardContract
 
 		logger.info(`fetching workers rewards balance ...`)
 
@@ -184,7 +189,6 @@ class ContractManager extends TxManager {
 	async fetchWorkersAllBalances(poolsInfo) {
 
 		logger.info(`fetchWorkersBalance started ...`)
-		await this.fetchWorkersAddr()
 
 		await this.fetchWorkersCakeBalance()
 		await this.fetchWorkersPoolsBalance(poolsInfo)
@@ -192,7 +196,10 @@ class ContractManager extends TxManager {
 	}
 
 	async transferRewardsToManager() {
-		throw Error('Not Implemented')
+
+		await this.pullRewardsFromWorkers(nextAction.workerIndices)
+		await this.swapRewardsToCakes(nextAction.from.address, poolsInfo[nextAction.from.address].swapRouterId)
+
 	}
 
 	async fetchManagerBalance() {
@@ -373,6 +380,25 @@ class ContractManager extends TxManager {
 		await this.setNWorkers()
 	}
 
+	async addRoutes() {
+
+		let estimatedGas = 2 * (await this.manager.methods.addRoutes(ROUTES_TO_CAKE).estimateGas())
+
+		const tx = await this.manager.methods.addRoutes(ROUTES_TO_CAKE).encodeABI()
+		const res = await this.sendTransactionWait(tx, this.manager.options.address, estimatedGas)
+		logger.info(`addRoutes: `)
+		console.log(res)
+
+		let addr
+		for (let i=0; i<ROUTES_TO_CAKE.length; i++) {
+			for (let j=0; j<ROUTES_TO_CAKE[i].length; j++) {
+				addr = await this.manager.methods.swapRoutes(i, j).call()
+				assert(ROUTES_TO_CAKE[i][j] === addr, `ROUTES_TO_CAKE[${i}] != ${addr}`)
+			}
+		}
+
+	}
+
 	async transferToManager(startIndex, endIndex) {
 
 		if (startIndex > endIndex) {
@@ -548,7 +574,7 @@ class ContractManager extends TxManager {
 		const res = await this.sendTransactionWait(tx, this.manager.options.address)
 
 		console.log(res)
-		logger.info(`transferred ${amount} cakes (remainder) successfully to worker ${workerId}`)
+		logger.info(`transferred ${amount} cakes (remainder) successfully to workerId=${workerId}`)
 	}
 
 	async transferCakesToWorkers(workersId) {
@@ -609,7 +635,7 @@ class ContractManager extends TxManager {
 			startIndex = endIndex + 1
 		}
 
-		logger.info(`transferred ${WORKER_STAKE_BALANCE} cakes successfully to ${workersId.length} workers`)
+		logger.info(`transferred ${WORKER_STAKE_BALANCE} cakes successfully to ${nWorkers} workers`)
 		await this.transferCakesRemainderToWorker(workersId[startIndex])
 	}
 
@@ -666,6 +692,8 @@ class ContractManager extends TxManager {
 		/*
 		*/
 
+		logger.info(`pullRewardsFromWorkers: poolAddr=${poolAddr}, workersId=${workersId}`)
+
 		if (workersId.length === 0) {
 			logger.info(`pullRewardsFromWorkers: empty workersId`)
 			return
@@ -687,7 +715,7 @@ class ContractManager extends TxManager {
 			logger.info(`pullRewardsFromWorkers: startIndex=${startIndex}, endIndex=${endIndex}: `)
 			nWorkersToProcess -= (endIndex - startIndex + 1)
 
-			const tx = await this.manager.methods.pullRewardsFromWorkers([poolAddr, workersId[startIndex], workersId[endIndex]]).encodeABI()
+			const tx = await this.manager.methods.pullRewardsFromWorkers(poolAddr, workersId[startIndex], workersId[endIndex]).encodeABI()
 			const res = await this.sendTransactionWait(tx, this.manager.options.address)
 
 			console.log(res)
@@ -710,7 +738,7 @@ class ContractManager extends TxManager {
 		logger.info(`swapRewardsToCakes: poolAddr=${poolAddr}, swapRouterId=${swapRouterId}`)
 
 		const cakeAmountOutMin = 0 // TODO: FIXME
-		const tx = await this.manager.methods.swapRewardsToCake([poolAddr, swapRouterId, cakeAmountOutMin]).encodeABI()
+		const tx = await this.manager.methods.swapRewardsToCake(poolAddr, swapRouterId, cakeAmountOutMin).encodeABI()
 		const res = await this.sendTransactionWait(tx, this.manager.options.address)
 
 		console.log(res)
@@ -806,7 +834,8 @@ class ContractManager extends TxManager {
 				nextAction.workerIndices = await this.prepareEnter(nextAction.to.hasUserLimit)
 				break
 
-			case Action.EXIT: case Action.HARVEST:
+			case Action.EXIT:
+			case Action.HARVEST:
 				nextAction.workerIndices = this.getStakedWorkers()
 				break
 		}
@@ -816,7 +845,7 @@ class ContractManager extends TxManager {
 
 	async postRun(nextAction, poolsInfo) {
 
-		switch (nextAction) {
+		switch (nextAction.name) {
 
 			case Action.TRANSFER_TO_OWNER:
 
@@ -826,16 +855,18 @@ class ContractManager extends TxManager {
 				await this.transferToOwner()
 				break
 
+			case Action.EXIT:
 			case Action.HARVEST:
 
-				await this.pullRewardsFromWorkers(nextAction.workerIndices)
+				await this.fetchWorkersRewardsBalance([poolsInfo[nextAction.from.address]])
+				await this.pullRewardsFromWorkers(nextAction.from.address, nextAction.workerIndices)
 				await this.swapRewardsToCakes(nextAction.from.address, poolsInfo[nextAction.from.address].swapRouterId)
 				break
 		}
 
 		if ((nextAction.name !== Action.NO_OP) || (Date.now() - this.lastWorkersValidate > this.workersValidateInterval)) {
 			this.lastWorkersValidate = Date.now()
-			await this.fetchWorkersAllBalances(poolsInfo)
+			await this.fetchWorkersAllBalances([poolsInfo[nextAction.from.address]])
 			this.setWorkersBalance()
 			await this.setTotalBalance()
 			this.setNActiveWorkers()

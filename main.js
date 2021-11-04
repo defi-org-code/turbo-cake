@@ -54,7 +54,7 @@ async function main() {
         managerContract =  new web3.eth.Contract(managerAbi);
 
         // let res = await managerContract.deploy({data: managerBytecode, arguments: [OWNER_ADDRESS, admin.address]}).send({from: admin.address})
-        let res = await managerContract.deploy({data: managerBytecode, arguments: [admin.address, admin.address, ROUTES_TO_CAKE]}).send({from: admin.address})
+        let res = await managerContract.deploy({data: managerBytecode, arguments: [admin.address, admin.address]}).send({from: admin.address})
 		logger.info(`deployed at address ${res.options.address}`)
 
 		managerContract = new web3.eth.Contract(managerAbi, res.options.address, {from: admin.address});

@@ -58,7 +58,7 @@ class Pancakeswap {
 		await this.getPsLastUpdate()
 		await this.getPoolsInfo()
 
-		await this.update({'staked': 0, 'unstaked': '100e18'})
+		await this.update({'staked': 0, 'unstaked': new BigNumber(100e18).toString()})
 
  		logger.debug(`init ps ended successfully`)
 	}
@@ -213,6 +213,7 @@ class Pancakeswap {
 		for (let i=0; i<ROUTES_TO_CAKE.length; i++) {
 
 			route = [this.poolsInfo[poolAddr]['rewardToken']].concat(ROUTES_TO_CAKE[i])
+
 			try {
 				res = await this.routerV2Contract.methods.getAmountsOut(rewardPerBlock, route).call()
 			}
@@ -227,7 +228,8 @@ class Pancakeswap {
 			if (amount.gt(bestRes)) {
 				bestRes = amount
 				this.poolsInfo[poolAddr]['swapRouterId'] = i
-				logger.debug(`setting ${this.poolsInfo[poolAddr]['rewardSymbol']} (addr=${poolAddr}) best route to ${route}`)
+				this.poolsInfo[poolAddr]['swapRoute'] = route
+				// logger.debug(`setting ${this.poolsInfo[poolAddr]['rewardSymbol']} (addr=${poolAddr}) best route to ${route}, index=${i}`)
 			}
 		}
 	}
@@ -260,9 +262,9 @@ class Pancakeswap {
 			await this.updateSingleRoute(poolAddr)
 		}
 
-		res = await this.routerV2Contract.methods.getAmountsOut(amountIn, ROUTES_TO_CAKE[this.poolsInfo[poolAddr]['swapRouterId']]).call()
+		res = await this.routerV2Contract.methods.getAmountsOut(amountIn, this.poolsInfo[poolAddr]['swapRoute']).call()
 
-		// logger.debug(`getTokenCakeRate: poolAddr=${poolAddr}, res=${res}, amountIn=${amountIn.toString()}, rate=${(new BigNumber(res[res.length-1]).dividedBy(amountIn)).toString()}`)
+		logger.debug(`getTokenCakeRate: poolAddr=${poolAddr}, res=${res}, amountIn=${amountIn.toString()}, rate=${(new BigNumber(res[res.length-1]).dividedBy(amountIn)).toString()}`)
 		return (new BigNumber(res[res.length-1]).dividedBy(amountIn)).toString()
 	}
 
@@ -288,8 +290,8 @@ class Pancakeswap {
 
 		const apr = cakeForYear.div(poolTvl).multipliedBy(100);
 
-		// logger.debug(`poolName= ${this.poolsInfo[poolAddr]['rewardSymbol']} poolAddr=${poolAddr}, rewardPerBlock=${rewardPerBlock.toString()},
-		// tokenCakeRate=${tokenCakeRate}, poolTvl=${poolTvl.toString()}, rewardForYear=${rewardForYear}, cakeForYear=${cakeForYear}, apr=${apr}`)
+		logger.debug(`poolName= ${this.poolsInfo[poolAddr]['rewardSymbol']} poolAddr=${poolAddr}, rewardPerBlock=${rewardPerBlock.toString()}, totalBalance=${JSON.stringify(this.totalBalance)},
+		tokenCakeRate=${tokenCakeRate}, poolTvl=${poolTvl.toString()}, rewardForYear=${rewardForYear}, cakeForYear=${cakeForYear}, apr=${apr}`)
 
 		// TODO: harvest cost
 		return this.aprToApy(apr.toString())
@@ -309,7 +311,7 @@ class Pancakeswap {
 		this.poolsInfo[poolAddr]['hasUserLimit'] = await poolContract.methods.hasUserLimit().call()
 
 		if ((this.runningMode === RunningMode.DEV) && (DEV_RAND_HAS_USER_LIMIT !== 0)) {
-			this.poolsInfo[poolAddr]['hasUserLimit'] = (getRandomInt(DEV_RAND_HAS_USER_LIMIT) === 0)
+			this.poolsInfo[poolAddr]['hasUserLimit'] = (getRandomInt(DEV_RAND_HAS_USER_LIMIT) === 0) || this.poolsInfo[poolAddr]['hasUserLimit']
 		}
 
 		// logger.info(`updating pool rewards for ${poolAddr}`)
@@ -473,6 +475,7 @@ class Pancakeswap {
 					'rewardPerBlock': rewardPerBlock,
 					'startBlock': startBlock,
 					'swapRouterId': null,
+					'swapRoute': null,
 					'active': true, // default, will be set to false on setActivePools
 				}
 
