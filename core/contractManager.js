@@ -52,8 +52,8 @@ class ContractManager extends TxManager {
 
 		// #########################################################
 		// TODO: REMOVE ME
-		// await this.addRoutes()
-		// await this.addWorkers(5)
+		await this.addRoutes()
+		await this.addWorkers(8)
 		// #########################################################
 
 		await this.setNWorkers()
@@ -880,8 +880,7 @@ class ContractManager extends TxManager {
 				fromPool[nextAction.from.address] = poolsInfo[nextAction.from.address]
 
 				await this.fetchWorkersRewardsBalance(fromPool)
-				await this.pullRewardsFromWorkers(nextAction.from.address, nextAction.workerIndices)
-				await this.swapRewardsToCakes(nextAction.from.address, poolsInfo[nextAction.from.address].swapRouterId)
+				await this.transferRewardsToManager(poolsInfo)
 				break
 		}
 

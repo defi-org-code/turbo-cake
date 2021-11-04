@@ -26,7 +26,7 @@ async function deploy() {
 
  	web3.eth.accounts.wallet.add(deployer);
 
-	console.log(deployer.address)
+	console.log(`deployer address: ${deployer.address}`)
 
 	managerContract =  new web3.eth.Contract(managerAbi);
 
