@@ -464,7 +464,7 @@ class Pancakeswap {
 
 		} else if (this.lastBlockUpdate > blockNum) {
 
-			this.notif(`[WARNING] lastBlockUpdate (${this.lastBlockUpdate}) > blockNum (${blockNum})`)
+			this.notif.sendDiscord(`[WARNING] lastBlockUpdate (${this.lastBlockUpdate}) > blockNum (${blockNum})`)
 			return
 		}
 
