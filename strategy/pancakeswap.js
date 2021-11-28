@@ -36,7 +36,6 @@ class Pancakeswap {
         this.lastUpdate = Date.now() - Math.max(pancakeUpdateInterval, bestRouteUpdateInterval);
         this.web3 = web3
         this.notif = notif
-
         this.poolsInfo = {}
         this.lastBlockUpdate = null
         this.balance = {
@@ -100,16 +99,17 @@ class Pancakeswap {
 	}
 
 	async updateBalance(curSyrupPoolAddr) {
-
+		console.log("in updateBalance")
 		let contract = this.getContract(CAKE_ABI, CAKE_ADDRESS)
 		this.balance.unstaked = await contract.methods.balanceOf(this.botAddress).call()
 
 		if (curSyrupPoolAddr === null) {
+			console.log("in updateBalance syrup is null")
 			logger.info(`updateBalance: curr pool is null, only unstaked cakes: ${this.balance.unstaked}`)
 			this.balance.staked = 0;
 
 		} else {
-
+console.log("in updateBalance syrup not null")
 			contract = this.getContract(this.poolsInfo[curSyrupPoolAddr]['abi'], curSyrupPoolAddr)
 			let res
 
@@ -123,6 +123,8 @@ class Pancakeswap {
 
 			this.balance.staked = res['amount']
 		}
+
+		console.log("in updateBalance balance ", this.balance)
 		logger.info(`balance=${JSON.stringify(this.balance)}`)
 	}
 
@@ -207,9 +209,10 @@ class Pancakeswap {
 			}
 
 			await this.updatePoolsApy()
+			return 'success'
 
         } catch (e) {
-            throw new FatalError(`pancake update error: ${e}`);
+            return new FatalError(`pancake update error: ${e}`);
         }
     }
 
