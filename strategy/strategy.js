@@ -82,6 +82,7 @@ class Strategy {
         this.name = "pancakeswap-strategy";
         this.lastActionTimestamp = null;
         this.inTransition = false;
+        this.updateFailure = [];
 
 		this.reporter = new Reporter(runningMode)
     }
@@ -163,11 +164,23 @@ class Strategy {
             }
 
             this.inTransition = true;
+            let updateResult = await this.ps.update(this.curSyrupPoolAddr);
+            if (updateResult == 'success') {
+                this.updateFailure = [];
+                logger.debug('ps udpate ended successfully')
+                await this.setAction();
+                logger.debug('set action ended')
 
-            await this.ps.update(this.curSyrupPoolAddr);
-            logger.debug('ps udpate ended')
-            await this.setAction();
-            logger.debug('set action ended')
+            } else {
+                this.updateFailure.push(updateResult);
+                logger.debug(`ps udpate failed ${updateResult}  failure #${this.updateFailure.length}`)
+                if (this.updateFailure.length == 10) {
+                    throw new FatalError(`pancake update error x10 times ${JSON.stringify(this.updateFailure)} `);
+                }
+                this.nextAction = {name: Action.NO_OP}
+                logger.debug('set NO_OP action')
+            }
+
             await this.executeAction();
             logger.debug('executeAction ended')
 
